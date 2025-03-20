@@ -1,7 +1,7 @@
 import * as fs from "fs"
 import { group } from "radash"
 import { describe, expect, it } from "vitest"
-import { PARSERS } from "../src/parsers"
+import { PARSERS } from "../src/lib/parsers"
 import longLog from "./logs/full.json"
 
 function expectParseToEqual(

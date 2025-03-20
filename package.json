@@ -15,5 +15,8 @@
         "vite-plugin-monkey": "^5.0.8",
         "vitest": "^3.0.9"
     },
-    "type": "module"
+    "type": "module",
+    "dependencies": {
+        "idb": "^8.0.2"
+    }
 }

@@ -1,5 +1,22 @@
 import { HvEvent, ParserSchema, t } from "./parserSchema"
-import { Result } from "./utils/typeUtils"
+import { Result, ValueOf } from "./utils/typeUtils"
+
+export function parseLine(
+    line: string
+): Result<ValueOf<HvEventMap>, string[]> {
+    const errors: string[] = []
+
+    for (const parser of ALL_PARSERS) {
+        const [result, err] = parser.parse(line)
+        if (result !== null) {
+            return [result, null]
+        } else if (err) {
+            errors.push(err.detail)
+        }
+    }
+
+    return [null, errors]
+}
 
 export class EventParser<
     TSchema extends ParserSchema = any,
@@ -36,7 +53,7 @@ export class EventParser<
                     const d = match.groups?.[k]
 
                     if (d === undefined) {
-                        if (!term.is_optional) {
+                        if (!term.isOptional) {
                             throw new Error(
                                 `Schema property ${k} for event ${this.name} was not captured in ${this.patt}. Line ${line}`
                             )
@@ -447,6 +464,49 @@ export const PARSERS = {
         }
     ),
 } as const
+
+export const ALL_PARSERS = Object.values(PARSERS)
+
+// Run most likely parsers first
+const parserFrequency = {
+    DEBUFF: 13619,
+    PLAYER_DODGE: 11264,
+    PLAYER_ATTACK: 10311,
+    SPAWN: 8383,
+    DEATH: 8383,
+    PLAYER_SKILL: 6326,
+    ENEMY_BASIC: 5235,
+    DROP: 4580,
+    EFFECT_RESTORE: 4316,
+    COOLDOWN_EXPIRE: 2065,
+    SPIRIT_SHIELD: 1274,
+    ROUND_START: 1000,
+    ROUND_END: 1000,
+    EXPERIENCE: 1000,
+    CURE_RESTORE: 958,
+    ENEMY_SKILL_MISS: 851,
+    PLAYER_BUFF: 640,
+    RESIST: 558,
+    PLAYER_ITEM: 465,
+    ITEM_RESTORE: 413,
+    ENEMY_SKILL_SUCCESS: 374,
+    DEBUFF_EXPIRE: 125,
+    AUTO_SELL: 117,
+    DISPEL: 96,
+    SPARK_TRIGGER: 81,
+    PROFICIENCY: 29,
+    ENEMY_SKILL_ABSORB: 26,
+    RIDDLE_MASTER: 14,
+    RIDDLE_RESTORE: 14,
+    GEM: 1,
+    CREDITS: 1,
+} as Record<string, number>
+
+ALL_PARSERS.sort(
+    (a, b) =>
+        (parserFrequency[a.name] ?? 0) -
+        (parserFrequency[b.name] ?? 0)
+).reverse()
 
 type _P = typeof PARSERS
 export type HvEventMap = {

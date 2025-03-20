@@ -6,13 +6,13 @@ export class SchemaTerm<
     TOptional extends boolean = boolean
 > {
     // @ts-ignore
-    is_optional: TOptional = false
+    isOptional: TOptional = false
 
     constructor(public type: TType) {}
 
     optional(): SchemaTerm<TType, true> {
         // @ts-ignore
-        this.is_optional = true
+        this.isOptional = true
 
         // @ts-ignore
         return this
@@ -20,7 +20,7 @@ export class SchemaTerm<
 
     required(): SchemaTerm<TType, false> {
         // @ts-ignore
-        this.is_optional = false
+        this.isOptional = false
 
         // @ts-ignore
         return this
@@ -34,7 +34,10 @@ export function t<TType extends "string" | "number" | "boolean">(
 
 export type ParserSchema = Record<string, SchemaTerm>
 
-export type HvEvent<TSchema extends ParserSchema, TName = string> = {
+export type HvEvent<
+    TSchema extends ParserSchema = ParserSchema,
+    TName extends string = string
+> = {
     event_type: TName
 } & {
     [K in keyof TSchema]: ReadOptionalProp<
