@@ -1,6 +1,7 @@
 import * as idb from "idb"
 import { isEqual } from "radash"
 import { HvEvent } from "./parserSchema"
+import { ValueOf } from "./utils/typeUtils"
 
 const COMPLETE_STORE = "complete"
 const LIVE_STORE = "live"
@@ -40,13 +41,19 @@ export class LogDb {
         }
     }
 
-    async appendToLiveLog(lines: HvEvent[]): Promise<void> {
+    async appendToLiveLog(lines: LogEvent[]): Promise<void> {
         for (const line of lines) {
             await this.db.add(LIVE_STORE, line)
         }
+
+        this.set(
+            LIVE_META_STORE,
+            "last_update",
+            new Date().toISOString()
+        )
     }
 
-    async isNewLine(line: HvEvent): Promise<boolean> {
+    async isNewLine(line: LogEvent): Promise<boolean> {
         let isNew = true
 
         const cursor = await this.db
@@ -62,12 +69,10 @@ export class LogDb {
     async compileLiveLog(): Promise<CompleteLog> {
         // Build metadata
         const meta = {} as LogMeta
-        for await (const cursor of this.db.transaction(
-            LIVE_META_STORE
-        ).store) {
+        const metaStore = this.db.transaction(LIVE_META_STORE).store
+        for await (const cursor of metaStore) {
             meta[cursor.key] = cursor.value
         }
-        meta["end"] = meta["end"] ?? new Date().toISOString()
 
         // Validate
         if (!validateMeta(meta)) {
@@ -84,7 +89,7 @@ export class LogDb {
             throw new Error("Tried to archive empty log")
         }
 
-        const log: HvEvent[] = []
+        const log: LogEvent[] = []
         for await (const line of cursor) {
             log.push(line.value)
         }
@@ -93,7 +98,9 @@ export class LogDb {
         return { meta, log }
 
         function validateMeta(meta: any) {
-            const keys = ["start", "end"] as Array<keyof LogMeta>
+            const keys = ["start", "last_update"] satisfies Array<
+                keyof LogMeta
+            >
             for (const key of keys) {
                 if (!(key in meta)) {
                     return false
@@ -110,15 +117,34 @@ export class LogDb {
             "readwrite"
         )
         await txn.objectStore("live").clear()
+
         await txn.objectStore(LIVE_META_STORE).clear()
+        await this.set(
+            txn.objectStore(LIVE_META_STORE),
+            "last_update",
+            new Date().toISOString()
+        )
+
         await txn.done
     }
 
-    async setLiveStart(): Promise<void> {
-        const now = new Date().toISOString()
-        await this.db
-            .transaction("live_meta", "readwrite")
-            .store.add(now, "start")
+    async get<TStore extends idb.StoreNames<LogDbSchema>>(
+        store: TStore,
+        key: idb.StoreKey<LogDbSchema, TStore>
+    ): Promise<idb.StoreValue<LogDbSchema, TStore>> {
+        return (await this.db.transaction(store).store.get(key))!
+    }
+
+    async set<TStore extends idb.StoreNames<LogDbSchema>>(
+        store: TStore | LogDbStore<TStore, "readwrite">,
+        key: idb.StoreKey<LogDbSchema, TStore>,
+        value: idb.StoreValue<LogDbSchema, TStore>
+    ): Promise<void> {
+        store =
+            typeof store === "string"
+                ? this.db.transaction(store, "readwrite").store
+                : store
+        await store.add(value, key)
     }
 }
 
@@ -129,11 +155,11 @@ interface LogDbSchema extends idb.DBSchema {
     }
     live_meta: {
         key: keyof LogMeta
-        value: string
+        value: ValueOf<LogMeta>
     }
     live: {
         key: number
-        value: HvEvent
+        value: LogEvent
     }
 }
 
@@ -141,10 +167,19 @@ type ISODate = string
 
 export interface LogMeta {
     start: ISODate
-    end: ISODate
+    last_update: ISODate
 }
 
 export interface CompleteLog {
-    meta: LogMeta
-    log: HvEvent[]
+    meta: Pick<LogMeta, "start" | "last_update">
+    log: LogEvent[]
 }
+
+export type LogEvent =
+    | { type: "event"; event: HvEvent }
+    | { type: "error"; detail: string }
+
+type LogDbStore<
+    TStore extends idb.StoreNames<LogDbSchema>,
+    TMode extends IDBTransactionMode = "readonly"
+> = idb.IDBPObjectStore<LogDbSchema, any, TStore, TMode>

@@ -1,3 +1,5 @@
+import { range, sleep } from "radash"
+
 export function split<T, TPass extends T = T, TFail extends T = T>(
     xs: T[],
     condition: (x: T) => boolean
@@ -38,4 +40,25 @@ export function splitMap<T, TPass extends T = T, TFail extends T = T>(
     }
 
     return [pass, fail]
+}
+
+export interface SleepUntilOpts {
+    check: () => boolean
+    tries?: number
+    delay?: number
+}
+
+/** Defaults to 60 tries @ 50ms = 3s retry period */
+export async function sleepUntil(opts: SleepUntilOpts) {
+    const n = opts?.tries ?? 60
+    for (let _ of range(n - 1)) {
+        const value = opts.check()
+        if (value) {
+            return true
+        }
+
+        await sleep(opts.delay ?? 50)
+    }
+
+    return false
 }

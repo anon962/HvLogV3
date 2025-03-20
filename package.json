@@ -17,6 +17,7 @@
     },
     "type": "module",
     "dependencies": {
+        "@mongodb-js/zstd": "^2.0.1",
         "idb": "^8.0.2"
     }
 }
