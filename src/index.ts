@@ -1,6 +1,6 @@
-import { sleep, sort } from "radash"
-import { LogDb, LogEvent } from "./lib/db"
-import { parseLine } from "./lib/parsers"
+import { last, sleep, sort } from "radash"
+import { LogDb, LogEntry, LogHash } from "./lib/db"
+import { isEventFrom, parseLine, PARSERS } from "./lib/parsers"
 
 // @todo: compression
 // @todo: monitor
@@ -9,12 +9,12 @@ import { parseLine } from "./lib/parsers"
 async function main() {
     const db = await LogDb.init()
 
-    const isInBattle = !!document.querySelector("#textlog")
-    if (isInBattle) {
+    if (!!document.querySelector("#textlog")) {
         await initialLogScan(db)
         await watchLog(db)
+    } else if (!!document.querySelector("#riddlemaster")) {
     } else {
-        handleIdle()
+        await handleOutOfCombat(db)
     }
 }
 
@@ -27,18 +27,50 @@ async function initialLogScan(db: LogDb): Promise<void> {
         .map((text) => parseLogText(text))
 
     // Check if already seen (page was refreshed)
-    if (!db.isNewLine(entries[0])) {
+    if (!(await db.isNewLine(entries[0]))) {
+        console.debug("Ignoring dupe log lines (page was refreshed)")
         return
     }
 
     // Check if new log
+    const oldHash = await db.getLogHash()
+    const lst = last(entries)!
+    if (
+        lst.type === "event" &&
+        isEventFrom(lst.event, PARSERS.ROUND_START)
+    ) {
+        const hash: LogHash = {
+            currentRound: lst.event.current,
+            maxRound: lst.event.max,
+            battleType: lst.event.battle_type,
+        }
 
+        if (oldHash.battleType === "") {
+            // Old log doesn't have hash yet
+            // (fresh install + mid-battle)
+            await db.putLogHash(hash)
+        } else if (!isSameBattle(hash, oldHash)) {
+            await db.flushLiveLog()
+            await db.putLogHash(hash)
+        } else {
+            await db.putLogHash(hash)
+        }
+    }
+
+    // Add new entries
+    console.debug("Resuming log")
     await db.appendToLiveLog(entries.reverse())
 
-    function isNewLog() {}
+    function isSameBattle(curr: LogHash, prev: LogHash) {
+        return (
+            curr.battleType === prev.battleType &&
+            curr.maxRound === prev.maxRound &&
+            curr.currentRound >= prev.currentRound
+        )
+    }
 }
 
-async function watchLog(db: LogDb): Promise<never> {
+async function watchLog(db: LogDb): Promise<void> {
     const logEl = document.querySelector("#textlog > tbody")!
 
     const newLines: string[] = []
@@ -49,7 +81,9 @@ async function watchLog(db: LogDb): Promise<never> {
             ),
             (el) => el.offsetTop,
             true
-        ).map((el) => el.textContent!)
+        )
+            .map((el) => el.textContent!)
+            .filter((text) => text.length > 0)
         newLines.push(...lines)
     })
     observer.observe(logEl, {
@@ -58,20 +92,37 @@ async function watchLog(db: LogDb): Promise<never> {
         characterData: false,
     })
 
-    while (true) {
-        const newEntries: LogEvent[] = []
+    let isActive = true
+
+    const onSoftRefresh = () => {
+        console.debug("Recreating observer")
+        isActive = false
+        observer.disconnect()
+        initialLogScan(db).then(() => watchLog(db))
+        document.removeEventListener(
+            "DOMContentLoaded",
+            onSoftRefresh
+        )
+    }
+    document.addEventListener("DOMContentLoaded", onSoftRefresh)
+
+    while (isActive) {
+        const newEntries: LogEntry[] = []
         while (newLines.length) {
             const text = newLines.shift()!
             const entry = parseLogText(text)
             newEntries.push(entry)
         }
-        await db.appendToLiveLog(newEntries)
+
+        if (newEntries.length) {
+            await db.appendToLiveLog(newEntries)
+        }
 
         await sleep(1)
     }
 }
 
-function parseLogText(line: string): LogEvent {
+function parseLogText(line: string): LogEntry {
     const [event, errors] = parseLine(line)
     return event
         ? { type: "event", event }
@@ -83,6 +134,8 @@ function parseLogText(line: string): LogEvent {
           }
 }
 
-async function handleIdle(): Promise<void> {}
+async function handleOutOfCombat(db: LogDb): Promise<void> {
+    await db.flushLiveLog()
+}
 
 main()

@@ -7,6 +7,7 @@ export default defineConfig((config) => {
             monkey({
                 entry: "src/index.ts",
                 userscript: {
+                    name: "HvLog",
                     match: [
                         "https://hentaiverse.org/*",
                         "http://alt.hentaiverse.org/*",

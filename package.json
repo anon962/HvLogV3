@@ -4,7 +4,7 @@
     "scripts": {
         "dev": "vite build --watch --mode development",
         "build": "vite build",
-        "monkey": "python3 -m http.server --directory dist",
+        "monkey": "python3 -m http.server --directory dist 5648",
         "test": "vitest"
     },
     "devDependencies": {

@@ -512,3 +512,10 @@ type _P = typeof PARSERS
 export type HvEventMap = {
     [K in keyof _P]: HvEvent<_P[K]["schema"], _P[K]["name"]>
 }
+
+export function isEventFrom<TParser extends ValueOf<_P>>(
+    event: any,
+    parser: TParser
+): event is HvEventMap[TParser["name"]] {
+    return event?.event_type === parser.name
+}
