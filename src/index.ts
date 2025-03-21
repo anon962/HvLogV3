@@ -1,10 +1,14 @@
 import { last, sleep, sort } from "radash"
 import { LogDb, LogEntry, LogHash } from "./lib/db"
+import { LiveStats } from "./lib/liveStats"
 import { isEventFrom, parseLine, PARSERS } from "./lib/parsers"
 
 // @todo: compression
 // @todo: monitor
 // @todo: config (monaco)
+
+const stats = new LiveStats()
+window.addEventListener("beforeunload", () => stats.save())
 
 async function main() {
     const db = await LogDb.init()
@@ -50,8 +54,9 @@ async function initialLogScan(db: LogDb): Promise<void> {
             // (fresh install + mid-battle)
             await db.putLogHash(hash)
         } else if (!isSameBattle(hash, oldHash)) {
-            await db.flushLiveLog()
             await db.putLogHash(hash)
+            await db.flushLiveLog()
+            stats.clear()
         } else {
             await db.putLogHash(hash)
         }
@@ -59,7 +64,7 @@ async function initialLogScan(db: LogDb): Promise<void> {
 
     // Add new entries
     console.debug("Resuming log")
-    await db.appendToLiveLog(entries.reverse())
+    await appendLogEntries(db, entries.reverse())
 
     function isSameBattle(curr: LogHash, prev: LogHash) {
         return (
@@ -115,7 +120,7 @@ async function watchLog(db: LogDb): Promise<void> {
         }
 
         if (newEntries.length) {
-            await db.appendToLiveLog(newEntries)
+            await appendLogEntries(db, newEntries)
         }
 
         await sleep(1)
@@ -136,6 +141,16 @@ function parseLogText(line: string): LogEntry {
 
 async function handleOutOfCombat(db: LogDb): Promise<void> {
     await db.flushLiveLog()
+}
+
+async function appendLogEntries(db: LogDb, entries: LogEntry[]) {
+    for (const entry of entries) {
+        if (entry.type === "event") {
+            stats.append(entry.event)
+        }
+    }
+
+    await db.appendToLiveLog(entries)
 }
 
 main()

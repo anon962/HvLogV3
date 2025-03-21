@@ -18,6 +18,7 @@
     "type": "module",
     "dependencies": {
         "@mongodb-js/zstd": "^2.0.1",
+        "chart.js": "^4.4.8",
         "idb": "^8.0.2"
     }
 }

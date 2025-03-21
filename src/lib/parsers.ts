@@ -1,4 +1,4 @@
-import { HvEvent, ParserSchema, t } from "./parserSchema"
+import { BaseHvEvent, ParserSchema, t } from "./parserSchema"
 import { Result, ValueOf } from "./utils/typeUtils"
 
 export function parseLine(
@@ -41,7 +41,7 @@ export class EventParser<
 
     parse(
         line: string
-    ): Result<HvEvent<TSchema, TName> | null, ParseError> {
+    ): Result<BaseHvEvent<TSchema, TName> | null, ParseError> {
         const match = this.patt.exec(line)
         if (match === null) {
             return [null, null]
@@ -89,7 +89,10 @@ export class EventParser<
 
                     return ev
                 },
-                { event_type: this.name } as HvEvent<TSchema, TName>
+                { event_type: this.name } as BaseHvEvent<
+                    TSchema,
+                    TName
+                >
             )
 
             return [result, null]
@@ -510,8 +513,10 @@ ALL_PARSERS.sort(
 
 type _P = typeof PARSERS
 export type HvEventMap = {
-    [K in keyof _P]: HvEvent<_P[K]["schema"], _P[K]["name"]>
+    [K in keyof _P]: BaseHvEvent<_P[K]["schema"], _P[K]["name"]>
 }
+
+export type HvEvent = ValueOf<HvEventMap>
 
 export function isEventFrom<TParser extends ValueOf<_P>>(
     event: any,

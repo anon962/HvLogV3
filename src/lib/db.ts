@@ -39,8 +39,8 @@ export class LogDb {
         return logDb
     }
 
-    async appendToLiveLog(lines: LogEntry[]): Promise<void> {
-        for (const line of lines) {
+    async appendToLiveLog(entries: LogEntry[]): Promise<void> {
+        for (const line of entries) {
             await this.db.add(LIVE_STORE, line)
         }
         // console.log("append", lines)

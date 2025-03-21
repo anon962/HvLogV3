@@ -34,7 +34,7 @@ export function t<TType extends "string" | "number" | "boolean">(
 
 export type ParserSchema = Record<string, SchemaTerm>
 
-export type HvEvent<
+export type BaseHvEvent<
     TSchema extends ParserSchema = ParserSchema,
     TName extends string = string
 > = {
