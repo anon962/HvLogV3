@@ -7,10 +7,16 @@
     "lib": [
       "ESNext",
       "DOM",
-      "DOM.Iterable"
+      "DOM.Iterable",
     ],
     "moduleResolution": "bundler",
     "noEmit": true,
     "resolveJsonModule": true,
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ]
+    },
+    "jsx": "react-jsxdev"
   }
 }

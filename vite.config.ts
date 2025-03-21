@@ -1,3 +1,4 @@
+import path from "path"
 import { defineConfig } from "vite"
 import monkey from "vite-plugin-monkey"
 
@@ -13,12 +14,19 @@ export default defineConfig((config) => {
                         "http://alt.hentaiverse.org/*",
                     ],
                     grant: [],
-                    // "run-at": "document-idle",
                 },
             }),
         ],
         test: {
             testTimeout: 30_000,
+        },
+        build: {
+            outDir: "dist/userscript/",
+        },
+        resolve: {
+            alias: {
+                "@": path.resolve(__dirname, "./src"),
+            },
         },
     }
 })
