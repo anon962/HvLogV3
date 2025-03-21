@@ -1,22 +1,25 @@
 import { last, sleep, sort } from "radash"
+import { ChartManager } from "./lib/charts/chartManager"
+import { HealChart } from "./lib/charts/customChart"
 import { LogDb, LogEntry, LogHash } from "./lib/db"
-import { LiveStats } from "./lib/liveStats"
 import { isEventFrom, parseLine, PARSERS } from "./lib/parsers"
 
 // @todo: compression
 // @todo: monitor
 // @todo: config (monaco)
 
-const stats = new LiveStats()
+const stats = new ChartManager()
+stats.addChart(new HealChart("heals", stats.containerEl))
 window.addEventListener("beforeunload", () => stats.save())
 
 async function main() {
     const db = await LogDb.init()
 
-    if (!!document.querySelector("#textlog")) {
+    if (!!document.querySelector("#riddlemaster")) {
+        return
+    } else if (!!document.querySelector("#textlog")) {
         await initialLogScan(db)
         await watchLog(db)
-    } else if (!!document.querySelector("#riddlemaster")) {
     } else {
         await handleOutOfCombat(db)
     }
