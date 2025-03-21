@@ -1,4 +1,5 @@
 import { App } from "./lib/app/app"
+import { registerLiveStatsToggle } from "./lib/app/registerLiveStatsToggle"
 
 // @todo: compression
 // @todo: live stats
@@ -8,6 +9,8 @@ import { App } from "./lib/app/app"
 
 async function main() {
     const app = await App.ainit()
+
+    registerLiveStatsToggle(app)
 }
 
 main()

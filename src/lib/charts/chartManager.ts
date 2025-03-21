@@ -15,7 +15,7 @@ export class ChartManager {
 
     private storageData: Partial<ChartMgrStorage>
 
-    public constructor() {
+    public constructor(public enabled: boolean) {
         this.storageData = this.load()
         this.meta = { ...this.meta, ...(this.storageData.meta ?? {}) }
 
@@ -28,6 +28,7 @@ export class ChartManager {
 
     public addChart(chart: CustomChart): this {
         this.charts.push(chart)
+        chart.enabled = this.enabled
 
         const el = document.createElement("div")
         this.containerEl.appendChild(el)
@@ -81,6 +82,13 @@ export class ChartManager {
         } catch (e) {
             console.error(e)
             return {}
+        }
+    }
+
+    public setEnabled(enabled: boolean) {
+        this.enabled = enabled
+        for (const chart of this.charts) {
+            chart.enabled = enabled
         }
     }
 }

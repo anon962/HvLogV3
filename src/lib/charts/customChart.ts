@@ -2,6 +2,7 @@ import { HvEvent } from "../parsers"
 
 export interface CustomChart {
     id: string
+    enabled: boolean
 
     attach(el: HTMLElement): this
 

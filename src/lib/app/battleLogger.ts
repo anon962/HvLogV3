@@ -5,19 +5,18 @@ import { LogDb, LogEntry, LogHash } from "../db"
 import { isEventFrom, parseLine, PARSERS } from "../parsers"
 
 export class BattleLogger {
-    stats: ChartManager
+    constructor(public db: LogDb, public stats: ChartManager) {}
 
-    constructor(public db: LogDb) {
-        this.stats = new ChartManager()
-        this.stats.addChart(new HealChart("heals"))
-        window.addEventListener("beforeunload", () =>
-            this.stats.save()
-        )
-    }
+    public static async ainit(
+        enableStats: boolean
+    ): Promise<BattleLogger> {
+        const stats = new ChartManager(enableStats)
+        stats.addChart(new HealChart("heals"))
+        window.addEventListener("beforeunload", () => stats.save())
 
-    public static async ainit(): Promise<BattleLogger> {
-        const logger = new BattleLogger(await LogDb.ainit())
+        const logger = new BattleLogger(await LogDb.ainit(), stats)
         await logger.attach()
+
         return logger
     }
 

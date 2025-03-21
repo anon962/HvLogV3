@@ -4,6 +4,7 @@ import { CustomChart } from "./customChart"
 import { DataSeries } from "./dataSeries"
 
 export class HealChart implements CustomChart {
+    enabled = true
     containerEl?: HTMLElement
     plotEl?: Element
 
@@ -67,6 +68,10 @@ export class HealChart implements CustomChart {
 
     private update(): void {
         if (!this.containerEl) {
+            return
+        }
+
+        if (!this.enabled) {
             return
         }
 
