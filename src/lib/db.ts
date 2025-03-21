@@ -13,7 +13,7 @@ export class LogDb {
 
     constructor(public db: idb.IDBPDatabase<LogDbSchema>) {}
 
-    static async init(): Promise<LogDb> {
+    static async ainit(): Promise<LogDb> {
         let didUpgrade = false
         const db = await idb.openDB<LogDbSchema>("HvLog", 1, {
             upgrade: async (db) => {
