@@ -1,15 +1,17 @@
 import { last, sleep, sort } from "radash"
 import { ChartManager } from "./lib/charts/chartManager"
-import { HealChart } from "./lib/charts/customChart"
+import { HealChart } from "./lib/charts/healChart"
 import { LogDb, LogEntry, LogHash } from "./lib/db"
 import { isEventFrom, parseLine, PARSERS } from "./lib/parsers"
 
 // @todo: compression
-// @todo: monitor
+// @todo: live stats
 // @todo: config (monaco)
+// @todo: turn usage (attacks, debuffs, heals, other)
+// @todo: profits
 
 const stats = new ChartManager()
-stats.addChart(new HealChart("heals", stats.containerEl))
+stats.addChart(new HealChart("heals"))
 window.addEventListener("beforeunload", () => stats.save())
 
 async function main() {

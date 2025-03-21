@@ -18,7 +18,7 @@
     "type": "module",
     "dependencies": {
         "@mongodb-js/zstd": "^2.0.1",
-        "chart.js": "^4.4.8",
+        "@observablehq/plot": "^0.6.17",
         "idb": "^8.0.2"
     }
 }

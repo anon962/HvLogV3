@@ -1,28 +1,10 @@
-import {
-    CategoryScale,
-    Chart,
-    LinearScale,
-    LineController,
-    LineElement,
-    PointElement,
-    Title,
-} from "chart.js"
 import { HvEvent } from "../parsers"
 import { CustomChart } from "./customChart"
-
-Chart.register(
-    LineController,
-    LineElement,
-    PointElement,
-    LinearScale,
-    Title,
-    CategoryScale
-)
 
 const STORAGE_KEY = "hvlog_stats"
 
 export class ChartManager {
-    containerEl: HTMLCanvasElement
+    containerEl: HTMLDivElement
 
     meta: ChartMgrMeta = {
         currentRound: 1,
@@ -37,7 +19,7 @@ export class ChartManager {
         this.storageData = this.load()
         this.meta = { ...this.meta, ...(this.storageData.meta ?? {}) }
 
-        this.containerEl = document.createElement("canvas")
+        this.containerEl = document.createElement("div")
         document.body.appendChild(this.containerEl)
         document.addEventListener("DOMContentLoaded", () => {
             document.body.appendChild(this.containerEl)
@@ -46,7 +28,11 @@ export class ChartManager {
 
     public addChart(chart: CustomChart): this {
         this.charts.push(chart)
-        chart.load(this.storageData?.charts?.[chart.id])
+
+        const el = document.createElement("div")
+        this.containerEl.appendChild(el)
+        chart.load(this.storageData?.charts?.[chart.id]).attach(el)
+
         return this
     }
 
