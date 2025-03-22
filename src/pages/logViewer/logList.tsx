@@ -1,5 +1,5 @@
-import { ArchivedLog } from "@/lib/db"
-import { last, sleep } from "radash"
+import { CompleteLog } from "@/lib/db"
+import { sleep } from "radash"
 import { useContext, useEffect, useState } from "react"
 import { AppContext } from "./main"
 
@@ -22,24 +22,29 @@ export function LogList() {
 
 export function useLogs() {
     const app = useContext(AppContext)
-    const [logs, setLogs] = useState<ArchivedLog[]>([])
+    const [logs, setLogs] = useState<CompleteLog[]>([])
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
-        const result: ArchivedLog[] = []
+        const result: CompleteLog[] = []
+        const seen = new Set<string>()
+
         async function load() {
-            const iter = await app.db.iterArchive()
+            const iter = app.db.iterArchive()
+
             for await (const log of iter) {
-                if (result.length && last(result)!.id >= log.id) {
+                if (seen.has(log.id)) {
                     continue
+                } else {
+                    seen.add(log.id)
                 }
 
                 result.push(log)
-                setLogs(result)
+                setLogs([...result])
             }
 
             setLoading(false)
-            await sleep(5000)
+            await sleep(REFRESH_DELAY)
             load()
         }
 

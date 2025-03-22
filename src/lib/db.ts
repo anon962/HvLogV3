@@ -200,7 +200,7 @@ export class LogDb {
         this.logHashCache = hash
     }
 
-    async *iterArchive(): AsyncIterable<ArchivedLog> {
+    async *iterArchive(): AsyncIterable<CompleteLog> {
         const iter = await this.db
             .transaction(COMPLETE_STORE)
             .store.openCursor()
@@ -272,13 +272,11 @@ export interface LogHash {
     maxRound: number
 }
 
-interface CompleteLog {
+export interface CompleteLog {
     id: string
     meta: LogMeta
     entries: LogEntry[]
 }
-
-export type ArchivedLog = CompleteLog
 
 export type LogEntry =
     | { type: "event"; event: HvEvent }
