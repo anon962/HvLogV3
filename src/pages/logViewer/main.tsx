@@ -1,7 +1,7 @@
 import "@/lib/ui/global.css"
 import { createContext, StrictMode } from "react"
 import { createRoot } from "react-dom/client"
-import { LogList } from "./logList"
+import { LogList } from "./logTable"
 
 function main() {
     createRoot(document.getElementById("root")!).render(

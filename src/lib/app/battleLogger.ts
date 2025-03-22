@@ -1,7 +1,7 @@
 import { last, sleep, sort } from "radash"
 import { ChartManager } from "../charts/chartManager"
 import { HealChart } from "../charts/healChart"
-import { LogDb, LogEntry, LogHash } from "../db"
+import { LogDb, LogEntry, LogHash } from "../logDb"
 import { isEventFrom, parseLine, PARSERS } from "../parsers"
 
 export class BattleLogger {
@@ -62,8 +62,8 @@ export class BattleLogger {
             isEventFrom(lst.event, PARSERS.ROUND_START)
         ) {
             const hash: LogHash = {
-                currentRound: lst.event.current,
-                maxRound: lst.event.max,
+                currentRound: lst.event.current ?? 1,
+                maxRound: lst.event.max ?? 1,
                 battleType: lst.event.battle_type,
             }
 

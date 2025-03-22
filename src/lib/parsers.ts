@@ -337,11 +337,13 @@ export const PARSERS = {
         `Initializing ${Group(
             "battle_type",
             "[\\w\\s\\d#]+"
-        )} \\\(Round ${Num("current")} / ${Num("max")}\\\) \\.\\.\\.`,
+        )}(?: \\\(Round ${Num("current")} / ${Num(
+            "max"
+        )}\\\))? \\.\\.\\.`,
         {
             battle_type: t("string"),
-            current: t("number"),
-            max: t("number"),
+            current: t("number").optional(),
+            max: t("number").optional(),
         }
     ),
     ROUND_END: new EventParser(
@@ -349,9 +351,19 @@ export const PARSERS = {
         `You are Victorious!`,
         {}
     ),
+    DEFEAT: new EventParser(
+        "DEFEAT",
+        "You have been defeated\\.",
+        {}
+    ),
     FLEE: new EventParser(
         "FLEE",
         "You have escaped from the battle\\.",
+        {}
+    ),
+    PLAYER_DEATH: new EventParser(
+        "PLAYER_DEATH",
+        `You has been defeated\\.`,
         {}
     ),
     SPAWN: new EventParser(
@@ -367,9 +379,9 @@ export const PARSERS = {
             hp: t("number"),
         }
     ),
-    DEATH: new EventParser(
-        "DEATH",
-        `${Monster()} has been defeated\\.`,
+    MONSTER_DEATH: new EventParser(
+        "MONSTER_DEATH",
+        `^(?!you)${Monster()} has been defeated\\.$`,
         {
             monster: t("string"),
         }
@@ -476,7 +488,7 @@ const parserFrequency = {
     PLAYER_DODGE: 11264,
     PLAYER_ATTACK: 10311,
     SPAWN: 8383,
-    DEATH: 8383,
+    MONSTER_DEATH: 8383,
     PLAYER_SKILL: 6326,
     ENEMY_BASIC: 5235,
     DROP: 4580,

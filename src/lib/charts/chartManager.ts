@@ -2,7 +2,7 @@ import { HvEvent } from "../parsers"
 import { AnyFunction, EventMapFor } from "../utils/typeUtils"
 import { CustomChart } from "./customChart"
 
-const STORAGE_KEY = "hvlog_stats"
+const STORAGE_KEY = "hvlog_charts"
 
 export class ChartManager {
     containerEl: HTMLDivElement

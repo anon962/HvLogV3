@@ -1,4 +1,4 @@
-import { LogDb } from "../db"
+import { LogDb } from "../logDb"
 import { BattleLogger } from "./battleLogger"
 
 const STORAGE_KEY = "hvlog_config"

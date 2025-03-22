@@ -1,4 +1,5 @@
 import { range, sleep } from "radash"
+import { InferGuardType, Or } from "./typeUtils"
 
 export function split<T, TPass extends T = T, TFail extends T = T>(
     xs: T[],
@@ -73,4 +74,43 @@ export function uuidWithFallback() {
     }
 
     return randomUUID()
+}
+
+export function findNext<
+    TItem,
+    TCond extends (x: TItem) => boolean = (x: TItem) => boolean
+>(
+    xs: TItem[],
+    cond: TCond,
+    opts: {
+        reverse?: boolean
+        start?: number
+        end?: number
+        breakOn?: (x: TItem) => boolean
+    } = {}
+): [Or<InferGuardType<TCond>, TItem>, number] | [null, null] {
+    const reverse = opts.reverse ?? false
+
+    let start, end, step
+    if (reverse) {
+        start = opts.start ?? xs.length - 1
+        end = opts.end ?? 0
+        step = -1
+    } else {
+        start = opts.start ?? 0
+        end = opts.end ?? xs.length - 1
+        step = 1
+    }
+
+    for (let idx = start; idx <= end; idx += step) {
+        const x = xs[idx]
+
+        if (cond(x)) {
+            return [x as any, idx]
+        } else if (opts?.breakOn?.(x)) {
+            return [null, null]
+        }
+    }
+
+    return [null, null]
 }

@@ -1,4 +1,4 @@
-import { CompleteLog, LogDb, LogHash } from "@/lib/db"
+import { CompleteLog, LogDb, LogHash } from "@/lib/logDb"
 import { sleep } from "radash"
 import { useEffect, useState } from "react"
 
