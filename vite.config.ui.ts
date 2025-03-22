@@ -2,16 +2,19 @@ import tailwindcss from "@tailwindcss/vite"
 import react from "@vitejs/plugin-react"
 import path from "path"
 import { defineConfig } from "vite"
-import { viteSingleFile } from "vite-plugin-singlefile"
 
 export default defineConfig((config) => {
     return {
-        plugins: [tailwindcss(), react(), viteSingleFile()],
+        plugins: [tailwindcss(), react()],
         build: {
             outDir: "dist/ui",
             rollupOptions: {
                 input: {
                     app: "./src/pages/logViewer/main.html",
+                },
+                output: {
+                    format: "iife",
+                    entryFileNames: "ui.js",
                 },
             },
             minify: false,

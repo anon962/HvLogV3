@@ -41,14 +41,17 @@
         "dev-userscript": {
             "patterns": [
                 "src",
-                "dist/ui"
+                "dist/ui",
+                "vite.config.ts",
+                "vite.config.ui.ts"
             ],
             "extensions": "html,css,js,ts,tsx",
             "verbose": true
         },
         "dev-ui": {
             "patterns": [
-                "src"
+                "src",
+                "vite.config.ui.ts"
             ],
             "extensions": "html,css,js,ts,tsx",
             "verbose": true

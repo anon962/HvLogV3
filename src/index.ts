@@ -1,10 +1,10 @@
-import { unsafeWindow } from "vite-plugin-monkey/dist/client"
-
 import { App } from "./lib/app/app"
 import { registerViewLogs } from "./lib/app/registerViewLogs"
 
 // @ts-ignore
-import uiBundle from "../dist/ui/src/pages/logViewer/main.html?raw"
+import entryHtml from "../dist/ui/src/pages/logViewer/main.html?raw"
+// @ts-ignore
+import entryJs from "../dist/ui/ui.js?raw"
 
 // @todo: compression
 // @todo: live stats
@@ -14,7 +14,7 @@ import uiBundle from "../dist/ui/src/pages/logViewer/main.html?raw"
 
 async function main() {
     const app = await App.ainit()
-    unsafeWindow.HV_LOG = app
+    window.HV_LOG = app
 
     // registerLiveStatsToggle(app)
     registerViewLogs(app)
@@ -32,19 +32,9 @@ declare global {
 }
 
 async function routeLogViewer(app: App) {
-    document.write(uiBundle)
-
-    // <script>s don't auto run for some reason
-    for (const scriptEl of document.querySelectorAll("script")) {
-        console.log("script", scriptEl.textContent)
-
-        // eval(scriptEl.textContent!)
-
-        // const wrapped = `(HV_LOG) => {${scriptEl.textContent!}}`
-        const wrapped = `(HV_LOG) => ${scriptEl.textContent!}`
-        const fn = Function(wrapped)
-        fn(app)
-    }
+    document.write(entryHtml)
+    eval(`console.log(window.HV_LOG)`)
+    eval(entryJs)
 }
 
 main()

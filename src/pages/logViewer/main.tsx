@@ -7,8 +7,6 @@ function main() {
     createRoot(document.getElementById("root")!).render(
         <LogViewer></LogViewer>
     )
-
-    console.log("exit?")
 }
 
 function LogViewer() {
