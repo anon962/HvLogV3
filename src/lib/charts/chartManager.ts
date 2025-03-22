@@ -1,4 +1,5 @@
 import { HvEvent } from "../parsers"
+import { AnyFunction, EventMapFor } from "../utils/typeUtils"
 import { CustomChart } from "./customChart"
 
 const STORAGE_KEY = "hvlog_stats"
@@ -14,16 +15,54 @@ export class ChartManager {
     charts: CustomChart[] = []
 
     private storageData: Partial<ChartMgrStorage>
+    private eventHandlers: Record<string, AnyFunction> = {}
 
     public constructor(public enabled: boolean) {
         this.storageData = this.load()
         this.meta = { ...this.meta, ...(this.storageData.meta ?? {}) }
 
         this.containerEl = document.createElement("div")
+    }
+
+    public attach(): this {
         document.body.appendChild(this.containerEl)
-        document.addEventListener("DOMContentLoaded", () => {
-            document.body.appendChild(this.containerEl)
-        })
+
+        add(
+            this,
+            document,
+            "DOMContentLoaded",
+            this.handleDomLoad.bind(this)
+        )
+        add(this, window, "beforeunload", this.save.bind(this))
+
+        return this
+
+        function add<
+            T extends Window | Document | HTMLElement,
+            TKey extends keyof EventMapFor<T> & string
+        >(
+            self: ChartManager,
+            el: T,
+            ev: TKey,
+            cb: (ev: EventMapFor<T>[TKey]) => any
+        ) {
+            self.eventHandlers[ev] = cb
+            el.addEventListener(ev, cb as EventListener)
+        }
+    }
+
+    public detach(): this {
+        this.containerEl.remove()
+        remove(this, document, "DOMContentLoaded")
+        remove(this, window, "beforeunload")
+        return this
+
+        function remove<
+            T extends Window | Document | HTMLElement,
+            TKey extends keyof EventMapFor<T> & string
+        >(self: ChartManager, el: T, ev: TKey) {
+            el.removeEventListener(ev, self.eventHandlers[ev])
+        }
     }
 
     public addChart(chart: CustomChart): this {
@@ -87,8 +126,21 @@ export class ChartManager {
 
     public setEnabled(enabled: boolean) {
         this.enabled = enabled
+
         for (const chart of this.charts) {
             chart.enabled = enabled
+        }
+
+        if (enabled) {
+            this.attach()
+        } else {
+            this.detach()
+        }
+    }
+
+    private handleDomLoad() {
+        if (this.enabled) {
+            document.body.appendChild(this.containerEl)
         }
     }
 }

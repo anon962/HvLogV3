@@ -1,3 +1,4 @@
+import { LogDb } from "../db"
 import { BattleLogger } from "./battleLogger"
 
 const STORAGE_KEY = "hvlog_config"
@@ -13,17 +14,21 @@ const DEFAULT_CONFIG = () =>
 export class App {
     public constructor(
         public config: AppConfig,
+        public db: LogDb,
         public logger: BattleLogger
     ) {}
 
     public static async ainit(): Promise<App> {
         const config = App.loadConfig()
 
+        const db = await LogDb.ainit()
+
         const logger = await BattleLogger.ainit(
+            db,
             config.enableLiveStats
         )
 
-        const app = new App(config, logger)
+        const app = new App(config, db, logger)
         app.dumpConfig()
 
         return app

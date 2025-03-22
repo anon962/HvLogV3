@@ -8,13 +8,12 @@ export class BattleLogger {
     constructor(public db: LogDb, public stats: ChartManager) {}
 
     public static async ainit(
+        db: LogDb,
         enableStats: boolean
     ): Promise<BattleLogger> {
         const stats = new ChartManager(enableStats)
-        stats.addChart(new HealChart("heals"))
-        window.addEventListener("beforeunload", () => stats.save())
 
-        const logger = new BattleLogger(await LogDb.ainit(), stats)
+        const logger = new BattleLogger(db, stats)
         await logger.attach()
 
         return logger
@@ -24,10 +23,15 @@ export class BattleLogger {
         if (!!document.querySelector("#riddlemaster")) {
             return
         } else if (!!document.querySelector("#textlog")) {
+            this.stats.addChart(new HealChart("heals"))
+            this.stats.attach()
+
             while (true) {
                 await this.initialLogScan()
                 await this.watchLog()
             }
+        } else if (window.location.pathname.startsWith("/hvlog")) {
+            return
         } else {
             // out of combat
             await this.db.flushLiveLog()

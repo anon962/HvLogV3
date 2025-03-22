@@ -1,6 +1,8 @@
 import * as idb from "idb"
 import { isEqual } from "radash"
-import { HvEvent } from "./parserSchema"
+import { migrateLogDb } from "./migrateLogDb"
+import { HvEvent } from "./parsers"
+import { uuidWithFallback } from "./utils/miscUtils"
 import { ValueOf } from "./utils/typeUtils"
 
 const COMPLETE_STORE = "complete"
@@ -14,25 +16,34 @@ export class LogDb {
     constructor(public db: idb.IDBPDatabase<LogDbSchema>) {}
 
     static async ainit(): Promise<LogDb> {
-        let didUpgrade = false
+        let isNewDb = false
         const db = await idb.openDB<LogDbSchema>("HvLog", 1, {
-            upgrade: async (db) => {
-                console.debug("Initializing log db")
-                db.createObjectStore(COMPLETE_STORE, {
-                    autoIncrement: true,
-                })
-                db.createObjectStore(LIVE_STORE, {
-                    autoIncrement: true,
-                })
-                db.createObjectStore(LIVE_META_STORE)
-                db.createObjectStore(LIVE_HASH_STORE)
+            upgrade: (db, oldVersion, newVersion, txn) => {
+                console.debug(
+                    "Initializing log db",
+                    oldVersion,
+                    newVersion
+                )
 
-                didUpgrade = true
+                isNewDb = oldVersion === 0
+                if (isNewDb) {
+                    db.createObjectStore(COMPLETE_STORE, {
+                        keyPath: "id",
+                    })
+                    db.createObjectStore(LIVE_STORE, {
+                        autoIncrement: true,
+                    })
+                    db.createObjectStore(LIVE_META_STORE)
+                    db.createObjectStore(LIVE_HASH_STORE)
+                } else {
+                    migrateLogDb(db, oldVersion, txn)
+                }
             },
         })
 
         const logDb = new LogDb(db)
-        if (didUpgrade) {
+        if (isNewDb) {
+            // Initialize
             await logDb.clearLiveLog()
         }
 
@@ -78,7 +89,11 @@ export class LogDb {
             meta[cursor.key] = cursor.value
         }
 
-        const log: CompleteLog = { meta, entries: [] }
+        const log: CompleteLog = {
+            id: uuidWithFallback(),
+            meta,
+            entries: [],
+        }
 
         // Get events
         const cursor = await this.db
@@ -185,6 +200,22 @@ export class LogDb {
         this.logHashCache = hash
     }
 
+    async *iterArchive(): AsyncIterable<ArchivedLog> {
+        const iter = await this.db
+            .transaction(COMPLETE_STORE)
+            .store.openCursor()
+
+        if (!iter) {
+            return []
+        }
+
+        for await (const cursor of iter) {
+            yield cursor.value
+        }
+
+        return iter
+    }
+
     async get<TStore extends idb.StoreNames<LogDbSchema>>(
         store: TStore | LogDbStore<TStore>,
         key: idb.StoreKey<LogDbSchema, TStore>
@@ -209,9 +240,9 @@ export class LogDb {
     }
 }
 
-interface LogDbSchema extends idb.DBSchema {
+export interface LogDbSchema extends idb.DBSchema {
     complete: {
-        key: number
+        key: string
         value: CompleteLog
     }
     live: {
@@ -241,10 +272,13 @@ export interface LogHash {
     maxRound: number
 }
 
-export interface CompleteLog {
+interface CompleteLog {
+    id: string
     meta: LogMeta
     entries: LogEntry[]
 }
+
+export type ArchivedLog = CompleteLog
 
 export type LogEntry =
     | { type: "event"; event: HvEvent }
