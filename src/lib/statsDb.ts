@@ -17,7 +17,6 @@ export class LogStats {
 
     constructor() {
         this.data = this.load()
-        window.addEventListener("unload", () => this.save())
     }
 
     public get(id: string): LogAnalysis | null {
@@ -70,6 +69,7 @@ export class LogStats {
 
         if (opts.save ?? true) {
             this.data["data"][log.id] = analysis
+            this.save()
         }
 
         return analysis
@@ -103,7 +103,7 @@ export class LogStats {
         return parsed
     }
 
-    private save() {
+    public save() {
         localStorage.setItem(
             STORAGE_KEY,
             JSON.stringify(this.data, null, 2)

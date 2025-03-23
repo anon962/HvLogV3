@@ -11,6 +11,9 @@ import entryJs from "../dist/ui/ui.js?raw"
 // @todo: config (monaco)
 // @todo: turn usage (attacks, debuffs, heals, other)
 // @todo: profits
+// @todo: export / import logs
+// @todo: prefix alert() errors with HvLog
+// @todo: test turn split
 
 async function main() {
     const app = await App.ainit()
@@ -33,7 +36,6 @@ declare global {
 
 async function routeLogViewer(app: App) {
     document.write(entryHtml)
-    eval(`console.log(window.HV_LOG)`)
     eval(entryJs)
 }
 

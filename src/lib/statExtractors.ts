@@ -26,9 +26,6 @@ function filterEvents<TEvent extends keyof HvEventMap>(
 }
 
 export function extractBattleType(log: CompleteLog): {
-    // Corrupted if...
-    //   - Does not start at round 1
-    //   - Battle type changes
     battleType: LogAnalysis["battleType"] | null
     round: LogAnalysis["round"] | null
     inconsistentBattleTypes: boolean
@@ -107,7 +104,7 @@ export function extractNumTurns(log: CompleteLog): {
             //    Void Strike hits blah for 12345 blah damage
             // Otherwise there's hopefully another event inbetween turns (namely monster attack)
             if (ev.logIndex - acc.lastTurnIndex > 1) {
-                turnIndexes.push(ev.logIndex)
+                acc.turnIndexes.push(ev.logIndex)
             }
 
             acc.lastTurnIndex = ev.logIndex
@@ -141,6 +138,7 @@ export function extractCompletionType(
             endMarkers.has(x.event_type as any),
         { reverse: true }
     )
+    console.log("wtf", end, evs)
 
     switch (end?.event_type) {
         case "ROUND_END":
