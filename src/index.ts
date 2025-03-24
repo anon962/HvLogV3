@@ -6,7 +6,6 @@ import entryHtml from "../dist/ui/src/lib/ui/hvlog/main.html?raw"
 // @ts-ignore
 import entryJs from "../dist/ui/ui.js?raw"
 
-// @todo: detail view - turns
 // @todo: detail view - graphs
 // @todo: detail view - turn usage (attacks, debuffs, heals, other)
 // @todo: export / import logs

@@ -58,7 +58,7 @@ export function LogEventList(props: { log: LogWithAnalysis }) {
                     }`
 
                     els.push(
-                        <div className="round-label sticky py-4 pr-4 mb-8 top-0 flex justify-end bg-card font-bold border-b">
+                        <div className="round-label sticky py-4 pr-4 mb-4 top-0 flex justify-end bg-card font-bold border-b">
                             {label}
                         </div>
                     )

@@ -1,0 +1,16 @@
+.details-pane {
+    [data-slot="card"] {
+        margin-bottom: 0;
+    }
+
+    [role="tabpanel"] {
+        padding-bottom: 4rem;
+    }
+}
+
+@container (width > 20rem) {
+    .details-pane {
+        padding: calc(var(--spacing) * 8);
+        padding-bottom: 0;
+    }
+}
