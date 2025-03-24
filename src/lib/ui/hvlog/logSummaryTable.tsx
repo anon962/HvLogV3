@@ -1,5 +1,5 @@
 import { CompleteLog, LogDb, LogHash } from "@/lib/logDb"
-import { LogAnalysis, LogStats } from "@/lib/statsDb"
+import { LogAnalysis } from "@/lib/statsDb"
 import { RunIcon, Skull2Icon } from "@/lib/ui/icons/misc"
 import { Check, EyeIcon } from "@/lib/ui/icons/tailwind"
 import {
@@ -10,25 +10,26 @@ import {
     TableHeader,
     TableRow,
 } from "@/lib/ui/shadcn/table"
-import { alphabetical, sleep } from "radash"
+import { sleep } from "radash"
 import { useEffect, useMemo, useState } from "react"
+import { LogWithAnalysis } from "./main"
 
 export function LogSummaryTable(props: {
-    activeLog: string
     onClick?: (log: CompleteLog) => void
+
+    activeLog: string
+    logs: LogWithAnalysis[]
+    loading: boolean
 }) {
-    let { logs, loading } = useLogs()
     const status = useBattleStatus()
     const now = useNow()
 
-    logs = alphabetical(logs, (l) => l.log.meta.start, "desc")
-
-    let selectionIdx = logs.findIndex(
+    let selectionIdx = props.logs.findIndex(
         ({ log }) => log.id === props.activeLog
     )
     selectionIdx = selectionIdx > -1 ? selectionIdx : 0
 
-    const logEls = logs.map((log, idx) => {
+    const logEls = props.logs.map((log, idx) => {
         return (
             <LogRow
                 now={now}
@@ -69,7 +70,7 @@ export function LogSummaryTable(props: {
                     </TableHeader>
                     <TableBody>{logEls}</TableBody>
                 </Table>
-                {loading ? (
+                {props.loading ? (
                     <div>Loading...</div>
                 ) : status ? (
                     <div>
@@ -142,54 +143,6 @@ function LogRow(props: {
             props.selectionIdx,
         ]
     )
-}
-
-function useLogs(refreshDelay = 5000) {
-    const [completeLogs, setCompleteLogs] = useState<CompleteLog[]>(
-        []
-    )
-    const [loading, setLoading] = useState(true)
-
-    const stats = new LogStats()
-    const logs = useMemo(
-        () =>
-            completeLogs.map((log) => ({
-                log,
-                analysis: stats.get(log.id) ?? stats.analyze(log),
-            })),
-        [completeLogs]
-    )
-
-    useEffect(() => {
-        const result: CompleteLog[] = []
-        const seen = new Set<string>()
-
-        async function load() {
-            const db = await LogDb.ainit()
-            const iter = db.iterArchive()
-
-            for await (const log of iter) {
-                if (seen.has(log.id)) {
-                    continue
-                } else {
-                    seen.add(log.id)
-                }
-
-                result.push(log)
-                setCompleteLogs([...result])
-            }
-
-            setLoading(false)
-            await sleep(refreshDelay)
-            load()
-        }
-
-        load()
-
-        return () => {}
-    }, [])
-
-    return { logs, loading }
 }
 
 export function useBattleStatus(refreshDelay = 100) {

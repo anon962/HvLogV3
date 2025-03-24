@@ -1,0 +1,24 @@
+.log-event-list {
+    hr.round-start {
+        border-color: color-mix(
+            in oklab,
+            var(--muted-foreground) 100%,
+            transparent
+        ) !important;
+        border-style: solid !important;
+    }
+
+    hr.turn-start {
+        border-color: color-mix(
+            in oklab,
+            var(--muted-foreground) 75%,
+            transparent
+        ) !important;
+        border-style: dashed !important;
+    }
+
+    hr.round-start,
+    hr.turn-start {
+        border-top: 1px;
+    }
+}

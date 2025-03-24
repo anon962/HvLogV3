@@ -145,8 +145,6 @@ body,
     height: 100vh !important;
 }
 
-@import "./hvlog/logSummaryTable.css";
-
 /* From shadcn site: https://www.shadcn-svelte.com/examples/dashboard */
 ::-webkit-scrollbar {
     width: 0.5rem;
@@ -174,3 +172,6 @@ body,
     );
     scrollbar-track-color: var(--muted);
 }
+
+@import "./hvlog/logSummaryTable.css";
+@import "./hvlog/logEventList.css";

@@ -131,13 +131,14 @@ export const PARSERS = {
             "blasts"
         )} (?!you)${Monster()} for ${Num("value")} (?:${Word(
             "damage_type"
-        )} )?damage\\.?`,
+        )} )?damage${Resist}\\.?`,
         {
             spell: t("string"),
             multiplier_type: t("string"),
             monster: t("string"),
             damage_type: t("string").optional(),
             value: t("number"),
+            resist: t("number").optional(),
         }
     ),
     PLAYER_MISS: new EventParser(
@@ -446,7 +447,7 @@ export const PARSERS = {
     ),
     CLEAR_BONUS: new EventParser(
         "CLEAR_BONUS",
-        `Battle Clear Bonus! \\[${Words("item")}\\]`,
+        `Battle Clear Bonus! \\[\\(?${Words("item")}\\)?\\]`,
         {
             item: t("string"),
         }
