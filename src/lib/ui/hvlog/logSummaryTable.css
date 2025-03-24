@@ -35,7 +35,7 @@
             );
         }
     }
-    tr.selected-prev {
+    tr.selected-next {
         border-color: var(--color-yellow-400);
     }
     tr {

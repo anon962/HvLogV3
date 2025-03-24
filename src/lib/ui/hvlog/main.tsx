@@ -6,6 +6,7 @@ import {
 } from "@/lib/ui/shadcn/resizable"
 import { createContext, StrictMode } from "react"
 import { createRoot } from "react-dom/client"
+import { useLocalJsonState } from "./hooks"
 import { LogSummaryTable } from "./logSummaryTable"
 
 function main() {
@@ -15,12 +16,23 @@ function main() {
 }
 
 function LogViewer() {
+    const [activeLog, setActiveLog] = useLocalJsonState(
+        "",
+        "hvlog_active_log"
+    )
+
     return (
         <StrictMode>
             <AppContext.Provider value={window.HV_LOG}>
-                <ResizablePanelGroup direction="horizontal">
+                <ResizablePanelGroup
+                    direction="horizontal"
+                    autoSaveId="hvlog_detail_split"
+                >
                     <ResizablePanel className="overflow-auto!">
-                        <LogSummaryTable />
+                        <LogSummaryTable
+                            activeLog={activeLog}
+                            onClick={(log) => setActiveLog(log.id)}
+                        />
                     </ResizablePanel>
 
                     <ResizableHandle withHandle />

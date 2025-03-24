@@ -13,14 +13,20 @@ import {
 import { alphabetical, sleep } from "radash"
 import { useEffect, useMemo, useState } from "react"
 
-export function LogSummaryTable() {
+export function LogSummaryTable(props: {
+    activeLog: string
+    onClick?: (log: CompleteLog) => void
+}) {
     let { logs, loading } = useLogs()
     const status = useBattleStatus()
     const now = useNow()
 
     logs = alphabetical(logs, (l) => l.log.meta.start, "desc")
 
-    const selectionIdx = 0
+    let selectionIdx = logs.findIndex(
+        ({ log }) => log.id === props.activeLog
+    )
+    selectionIdx = selectionIdx > -1 ? selectionIdx : 0
 
     const logEls = logs.map((log, idx) => {
         return (
@@ -29,19 +35,20 @@ export function LogSummaryTable() {
                 {...log}
                 idx={idx}
                 selectionIdx={selectionIdx}
+                onClick={props.onClick}
             />
         )
     })
 
-    const headerSelected = selectionIdx === 0 ? " selected-prev" : ""
+    const headerSelected = selectionIdx === 0 ? " selected-next" : ""
 
     return (
         <div
             className="flex justify-center h-full"
             style={{ containerType: "inline-size" }}
         >
-            <div className="log-table-container overflow-auto h-full">
-                <Table className="log-table w-auto min-h-0">
+            <div className="log-table-container overflow-auto h-full pb-0!">
+                <Table className="log-table w-auto min-h-0 mb-8">
                     <TableHeader>
                         <TableRow className={"" + headerSelected}>
                             <TableHead className="w-[100px]">
@@ -81,6 +88,7 @@ function LogRow(props: {
     now: Date
     idx: number
     selectionIdx: number
+    onClick?: (log: CompleteLog) => void
 }) {
     const startDate = useDateFormatter(
         props.log.meta.start,
@@ -88,7 +96,7 @@ function LogRow(props: {
     )
 
     const isSelected = props.idx === props.selectionIdx
-    const isPrevSelected = props.idx === 1 + props.selectionIdx
+    const isNextSelected = props.idx === props.selectionIdx - 1
 
     const duration = formatDuration(props.log)
     const typeSummary = formatBattleType(props.analysis)
@@ -100,7 +108,7 @@ function LogRow(props: {
     // prettier-ignore
     const selectedClass = 
         isSelected ? " selected" :
-        isPrevSelected ? "selected-prev" :
+        isNextSelected ? " selected-next" :
         ""
 
     return useMemo(
@@ -108,6 +116,7 @@ function LogRow(props: {
             <TableRow
                 className={"py-2" + selectedClass}
                 data-id={props.log.id}
+                onClick={() => props.onClick?.(props.log)}
             >
                 <TableCell className="">{typeSummary}</TableCell>
                 <TableCell className=" text-right">{turns}</TableCell>
@@ -125,7 +134,13 @@ function LogRow(props: {
                 </TableCell>
             </TableRow>
         ),
-        [props.log, props.analysis, startDate]
+        [
+            props.log,
+            props.analysis,
+            startDate,
+            props.idx,
+            props.selectionIdx,
+        ]
     )
 }
 
