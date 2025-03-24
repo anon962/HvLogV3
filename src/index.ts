@@ -1,10 +1,11 @@
-import { App } from "./lib/app/app"
-import { registerViewLogs } from "./lib/app/registerViewLogs"
-
 // @ts-ignore
 import entryHtml from "../dist/ui/src/lib/ui/hvlog/main.html?raw"
 // @ts-ignore
 import entryJs from "../dist/ui/ui.js?raw"
+
+import { App } from "./lib/app/app"
+import { registerClearCache } from "./lib/app/registerClearCache"
+import { registerViewLogs } from "./lib/app/registerViewLogs"
 
 // @todo: detail view - graphs
 // @todo: detail view - turn usage (attacks, debuffs, heals, other)
@@ -23,8 +24,8 @@ async function main() {
     const app = await App.ainit()
     window.HV_LOG = app
 
-    // registerLiveStatsToggle(app)
     registerViewLogs(app)
+    registerClearCache(app)
 
     switch (window.location.pathname) {
         case "/hvlog/logs":

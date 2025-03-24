@@ -118,3 +118,7 @@ export function findNext<
 
     return [null, null]
 }
+
+export function enumerate<T>(xs: T[]): Array<[number, T]> {
+    return xs.map((x, idx) => [idx, x])
+}

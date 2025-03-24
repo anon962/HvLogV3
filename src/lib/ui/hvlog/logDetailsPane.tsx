@@ -5,6 +5,7 @@ import {
     TabsList,
     TabsTrigger,
 } from "../shadcn/tabs"
+import { DropStats } from "./dropStats"
 import { LogEventList } from "./logEventList"
 import { LogWithAnalysis } from "./main"
 
@@ -38,9 +39,13 @@ export function LogDetailsPane(props: {
                 </TabsList>
 
                 <TabsContent value="stats" className="h-full min-h-0">
-                    <Card className="min-h-full py-0">
+                    <Card className="min-h-full py-0 h-full">
                         <CardContent className="h-full p-8">
-                            Stats
+                            {props.selectedLog ? (
+                                <DropStats log={props.selectedLog} />
+                            ) : (
+                                ""
+                            )}
                         </CardContent>
                     </Card>
                 </TabsContent>

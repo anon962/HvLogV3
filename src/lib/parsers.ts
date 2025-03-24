@@ -415,7 +415,7 @@ export const PARSERS = {
     ),
     SOUL_FRAG_DROP: new EventParser(
         "SOUL_FRAG_DROP",
-        `You obtained ${Num("count")} \\[Soul Fragments\\]`,
+        `You obtained ${Num("count")}x \\[Soul Fragments\\]`,
         {
             count: t("number"),
         }
@@ -439,10 +439,14 @@ export const PARSERS = {
         "AUTO_SALVAGE",
         `A traveling salesmoogle salvages it into ${Num(
             "value"
-        )}x \\[${Words("item")}\\]`,
+        )}x \\[${Words("item")}\\](?: and ${Num(
+            "value2"
+        )}x \\[${Words("item2")}\\])`,
         {
             value: t("number"),
             item: t("string"),
+            value2: t("number").optional(),
+            item2: t("string").optional(),
         }
     ),
     AUTO_SELL: new EventParser(

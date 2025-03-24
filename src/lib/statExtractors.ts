@@ -2,7 +2,7 @@ import { last } from "radash"
 import { CompleteLog } from "./logDb"
 import { HvEvent, HvEventMap } from "./parsers"
 import { LogAnalysis } from "./statsDb"
-import { findNext } from "./utils/miscUtils"
+import { enumerate, findNext } from "./utils/miscUtils"
 import { InferCollectionType } from "./utils/typeUtils"
 
 function filterEvents<TEvent extends keyof HvEventMap>(
@@ -163,5 +163,78 @@ export function extractCompletionType(
             return "die"
         default:
             return null
+    }
+}
+
+export function extractDrops(log: CompleteLog): LogAnalysis["drops"] {
+    const drops: LogAnalysis["drops"] = {}
+
+    const add = (k: string, count: number, logIdx: number) => {
+        drops[k] = drops[k] ?? { name: k, entries: [] }
+        drops[k].entries.push({ logIdx, count })
+    }
+
+    for (const [idx, entry] of enumerate(log.entries)) {
+        if (entry.type !== "event") {
+            continue
+        }
+
+        const ev = entry.event
+        switch (ev.event_type) {
+            case "AUTO_SALVAGE":
+                add(ev.item, ev.value, idx)
+                if (ev.item2) add(ev.item2, ev.value2!, idx)
+                break
+            case "AUTO_SELL":
+                add("autosell", ev.value, idx)
+                break
+            case "CLEAR_BONUS":
+                add(ev.item, 1, idx)
+                break
+            case "CREDITS":
+                add("credits", ev.value, idx)
+                break
+            case "DROP":
+                {
+                    const [name, count] = extractNameCount(ev.item)
+                    add(name, count, idx)
+                }
+                break
+            case "EVENT_ITEM":
+                {
+                    const [name, count] = extractNameCount(ev.item)
+                    add(name, count, idx)
+                }
+                break
+            case "EXPERIENCE":
+                add("experience", ev.value, idx)
+                break
+            case "PROFICIENCY":
+                add("proficiency", ev.value, idx)
+                break
+            case "SOUL_FRAG_DROP":
+                add("Soul Fragment", ev.count, idx)
+                break
+            case "TOKEN_BONUS":
+                add(ev.item, 1, idx)
+                break
+        }
+    }
+
+    return drops
+
+    function extractNameCount(text: string) {
+        let name, count
+
+        const m = text.match(/(\d+)x? (.*)/)
+        if (m) {
+            count = parseInt(m[1])
+            name = m[2]
+        } else {
+            count = 1
+            name = text
+        }
+
+        return [name, count] as [string, number]
     }
 }

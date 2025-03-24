@@ -221,9 +221,9 @@ function LogEntryDetails(props: {
 
 const EVENT_SUMMARY_MAP = {
     AUTO_SALVAGE: (ev) =>
-        `Dropped ${ev.item.split(" ")[0]} for ${
-            ev.value
-        }c from auto-salvage`,
+        `Dropped ${ev.value} ${ev.item}${
+            ev.item2 ? " and " + ev.value + "x " + ev.item2 : ""
+        } from auto-salvage`,
     AUTO_SELL: (ev) => `Dropped ${ev.value}c from auto-sell`,
     BUFF_EXPIRE: (ev) => `${ev.effect} expired`,
     CLEAR_BONUS: (ev) => `Dropped (${ev.item})`,
