@@ -60,6 +60,9 @@
             &.re {
                 color: var(--color-purple-200);
             }
+            &.iw {
+                color: var(--color-amber-200);
+            }
         }
 
         .status {

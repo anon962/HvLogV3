@@ -278,8 +278,8 @@ export interface CompleteLog {
     entries: LogEntry[]
 }
 
-export type LogEntry =
-    | { type: "event"; event: HvEvent }
+export type LogEntry<TEvent extends HvEvent = HvEvent> =
+    | { type: "event"; event: TEvent }
     | { type: "error"; detail: string }
 
 type LogDbStore<

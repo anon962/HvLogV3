@@ -7,6 +7,8 @@ import { XIcon } from "../icons/tailwind"
 import { LogWithAnalysis } from "./main"
 
 export function LogEventList(props: { log: LogWithAnalysis }) {
+    // @todo: This index tracking is spaghetti. Need to group the log events by round / turn before trying to render it
+
     const [activeIdx, setActiveIdx] = useState({
         log: -1,
         turn: -1,
@@ -53,7 +55,7 @@ export function LogEventList(props: { log: LogWithAnalysis }) {
                     ) {
                         roundIdx = entry.event.current ?? 1
 
-                        const [nextRoundStartLogIdx] = findNext(
+                        const [__, nextRoundStartLogIdx] = findNext(
                             props.log.log.entries,
                             (entry) =>
                                 entry.type === "event" &&
@@ -228,7 +230,7 @@ const EVENT_SUMMARY_MAP = {
     COOLDOWN_EXPIRE: (ev) => `${ev.spell} ready`,
     CREDITS: (ev) => `Dropped ${ev.value} credits`,
     CURE_RESTORE: (ev) => `Healed ${ev.value} health using Cure`,
-    DEBUFF: (ev) => `Cast ${ev.name}`,
+    DEBUFF: (ev) => `Applied ${ev.name}`,
     DEBUFF_EXPIRE: (ev) => `${ev.effect} expired`,
     DEFEAT: (ev) => ``,
     DISPEL: (ev) => `Dispelled ${ev.effect}`,
