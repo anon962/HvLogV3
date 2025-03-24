@@ -71,6 +71,7 @@ export class BattleLogger {
                 // Old log doesn't have hash yet
                 // (fresh install + mid-battle)
                 await this.db.putLogHash(hash)
+                await this.db.clearLiveLog()
             } else if (!isSameBattle(hash, oldHash)) {
                 await this.db.putLogHash(hash)
                 await this.db.flushLiveLog()

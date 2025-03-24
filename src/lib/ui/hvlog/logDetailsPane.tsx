@@ -33,7 +33,7 @@ export function LogDetailsPane(props: {
                         value="events"
                         className="font-bold py-1"
                     >
-                        Details
+                        Log
                     </TabsTrigger>
                 </TabsList>
 

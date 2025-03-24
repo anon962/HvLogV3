@@ -46,21 +46,35 @@
         );
     }
 
-    /* Color icons in unselected rows */
+    /* Splash color on unselected rows */
     tbody tr:not(.selected) {
         cursor: pointer;
 
-        .finish {
-            color: var(--color-green-700);
+        .type {
+            &.rob {
+                color: var(--color-blue-300);
+            }
+            &.gf {
+                color: var(--color-green-200);
+            }
+            &.re {
+                color: var(--color-purple-200);
+            }
         }
-        .die {
-            color: var(--color-red-300);
-        }
-        .flee {
-            color: var(--color-yellow-500);
-        }
-        .mm {
-            color: var(--color-muted-foreground);
+
+        .status {
+            .finish {
+                /* color: var(--color-green-700); */
+            }
+            .die {
+                color: var(--color-red-300);
+            }
+            .flee {
+                color: var(--color-slate-300);
+            }
+            .mm {
+                color: var(--color-muted-foreground);
+            }
         }
 
         &:not(:hover) .view {

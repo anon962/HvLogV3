@@ -65,19 +65,19 @@ export function LogSummaryTable(props: {
                             <TableHead className="text-center">
                                 Status
                             </TableHead>
-                            <TableHead className="">View</TableHead>
+                            {/* <TableHead className="">View</TableHead> */}
                         </TableRow>
                     </TableHeader>
                     <TableBody>{logEls}</TableBody>
                 </Table>
-                {props.loading ? (
+                {/* {props.loading ? (
                     <div>Loading...</div>
                 ) : status ? (
                     <div>
                         In battle ({status.battleType}{" "}
                         {status.currentRound} / {status.maxRound})...
                     </div>
-                ) : null}
+                ) : null} */}
             </div>
         </div>
     )
@@ -127,12 +127,12 @@ function LogRow(props: {
                 <TableCell className="" title={props.log.meta.start}>
                     {startDate}
                 </TableCell>
-                <TableCell className="" title={statusTitle}>
+                <TableCell className="status" title={statusTitle}>
                     {status}
                 </TableCell>
-                <TableCell className="flex justify-center">
+                {/* <TableCell className="flex justify-center">
                     <ViewButton isSelected={isSelected} />
-                </TableCell>
+                </TableCell> */}
             </TableRow>
         ),
         [
@@ -266,37 +266,53 @@ const arenaAliases = {
 } as Record<number, string>
 
 function formatBattleType(anal: LogAnalysis) {
+    let className, label
+
     switch (anal.battleType?.name) {
         case "Grindfest":
-            return "Grindfest"
+            className = "gf"
+            label = "Grindfest"
+            break
         case "random encounter":
-            return "Random Encounter"
+            className = "re"
+            label = "Random Encounter"
+            break
         case "Item World":
+            className = "iw"
             if (anal.round) {
-                return `Item World - ${anal.round.max}r`
+                label = `Item World - ${anal.round.max}r`
             } else {
-                return `Item World`
+                label = `Item World`
             }
+            break
         case "Arena":
+            className = anal.battleType.id >= 100 ? "rob" : "arena"
+
             if (arenaAliases[anal.battleType.id]) {
-                return arenaAliases[anal.battleType.id]
+                label = arenaAliases[anal.battleType.id]
             } else if (anal.round?.max === 1) {
                 console.error(
                     `No alias for RoB #${anal.battleType.id}`,
                     anal
                 )
-                return `RoB #${anal.battleType.id}`
+                label = `RoB #${anal.battleType.id}`
             } else if (anal.round) {
-                return `Arena - ${anal.round.max}r`
+                label = `Arena - ${anal.round.max}r`
             } else {
                 console.error(
                     `No round date for arena #${anal.battleType.id}`
                 )
-                return `Arena`
+                label = `Arena`
             }
+            break
         default:
-            return "???"
+            className = ""
+            label = "???"
+            break
     }
+
+    className = "type " + className
+    return <span className={className}>{label}</span>
 }
 
 function formatCompletionType(anal: LogAnalysis) {
