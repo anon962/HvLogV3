@@ -5,70 +5,60 @@ import { JSX } from "react"
 import { LogWithAnalysis } from "./main"
 
 export function LogEventList(props: { log: LogWithAnalysis }) {
+    let turnIdx = -1
+
     return (
-        <div className="log-event-list flex flex-col overflow-auto">
-            {props.log.log.entries.flatMap((entry, idx) => {
+        <div className="log-event-list flex flex-col">
+            {props.log.log.entries.flatMap((entry, logIdx) => {
                 const els: JSX.Element[] = []
 
-                const isRoundStart =
-                    entry.type === "event" &&
-                    entry.event.event_type === "ROUND_START"
-                if (isRoundStart) {
-                    els.push(<hr className="round-start"></hr>)
-                }
-
                 const isNewTurn =
-                    props.log.analysis.turnIndexes.includes(idx)
+                    logIdx ===
+                    props.log.analysis.turnIndexes[turnIdx + 1]
                 if (isNewTurn) {
-                    els.push(<hr className="turn-start pb-4"></hr>)
+                    turnIdx += 1
+
+                    els.push(
+                        <div className="turn-start flex gap-2 px-6 pb-4 items-center">
+                            <span className="">{turnIdx + 1}</span>
+                            <hr className=""></hr>
+                        </div>
+                    )
                 }
 
                 if (
                     entry.type === "event" &&
                     entry.event.event_type === "ROUND_START"
                 ) {
-                    const turnIdxStart =
-                        props.log.analysis.turnIndexes.findIndex(
-                            (logIdx) => logIdx > idx
-                        )
-
-                    const [_, nextRoundLogIdx] = findNext(
+                    const [nextRoundStartLogIdx] = findNext(
                         props.log.log.entries,
                         (entry) =>
                             entry.type === "event" &&
                             entry.event.event_type === "ROUND_START",
                         {
-                            start:
-                                props.log.analysis.turnIndexes[
-                                    turnIdxStart
-                                ] + 1,
+                            start: logIdx + 1,
                         }
                     )
-                    const turnIdxEnd =
-                        props.log.analysis.turnIndexes.findIndex(
-                            (logIdx) =>
-                                logIdx >
-                                (nextRoundLogIdx ??
-                                    Number.POSITIVE_INFINITY)
-                        )
-                    console.log(
-                        turnIdxStart,
-                        nextRoundLogIdx,
-                        turnIdxEnd
+
+                    let [_, nextRoundStartTurnIdx] = findNext(
+                        props.log.analysis.turnIndexes,
+                        (nextLogIndex) =>
+                            nextLogIndex >
+                            (nextRoundStartLogIdx ??
+                                Number.POSITIVE_INFINITY),
+                        { start: turnIdx }
                     )
 
-                    let label = `Round ${entry.event.current}`
-                    if (turnIdxStart !== -1) {
-                        label += `, Turn ${turnIdxStart + 1}`
-                    }
-                    if (turnIdxEnd !== -1) {
-                        label += ` - ${turnIdxEnd}`
-                    } else {
-                        label += ` - ${props.log.analysis.turnIndexes.length}`
-                    }
+                    let label = `Round ${entry.event.current ?? 1}`
+                    label += `, Turns ${turnIdx + 2}`
+                    label += ` - ${
+                        nextRoundStartTurnIdx
+                            ? nextRoundStartTurnIdx
+                            : props.log.analysis.turnIndexes.length
+                    }`
 
                     els.push(
-                        <div className="sticky py-2 pr-4 top-0 flex justify-end bg-background font-bold">
+                        <div className="round-label sticky py-4 pr-4 mb-8 top-0 flex justify-end bg-card font-bold border-b">
                             {label}
                         </div>
                     )
@@ -95,7 +85,7 @@ function LogEntryRow(props: { entry: LogEntry }) {
 
         content = (
             <div className="flex">
-                <pre className="w-48 pr-4">
+                <pre className="min-w-48 pr-4">
                     {props.entry.event.event_type}
                 </pre>
                 <pre>{summary}</pre>
@@ -104,13 +94,13 @@ function LogEntryRow(props: { entry: LogEntry }) {
     } else {
         content = (
             <div className="flex">
-                <pre className="w-48 pr-4">ERROR</pre>
+                <pre className="min-w-48 pr-4">ERROR</pre>
                 <pre>{props.entry.detail}</pre>
             </div>
         )
     }
 
-    return <div className="pb-4">{content}</div>
+    return <div className="pb-4 px-12">{content}</div>
 }
 
 const EVENT_SUMMARY_MAP = {
@@ -143,9 +133,9 @@ const EVENT_SUMMARY_MAP = {
     MB_USAGE: (ev) => ``,
     MONSTER_DEATH: (ev) => ``,
     PLAYER_ATTACK: (ev) =>
-        `Dealt ${ev.value} ${ev.damage_type} damage (${
-            ev.resist ?? 0
-        }% resist).`,
+        `Dealt ${ev.value}${
+            ev.damage_type ? " " + ev.damage_type : ""
+        } damage (${ev.resist ?? 0}% resist).`,
     PLAYER_BUFF: (ev) => `Gained ${ev.effect}`,
     PLAYER_DODGE: (ev) => ``,
     PLAYER_ITEM: (ev) => `Cast ${ev.item}`,
@@ -167,3 +157,5 @@ const EVENT_SUMMARY_MAP = {
 } satisfies {
     [K in keyof HvEventMap]: (ev: HvEventMap[K]) => string
 }
+
+function useRoundTurnCounter(log: LogWithAnalysis) {}

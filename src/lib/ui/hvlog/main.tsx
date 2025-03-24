@@ -12,9 +12,17 @@ import {
     StrictMode,
     useEffect,
     useMemo,
+    useRef,
     useState,
 } from "react"
 import { createRoot } from "react-dom/client"
+import { Card, CardContent } from "../shadcn/card"
+import {
+    Tabs,
+    TabsContent,
+    TabsList,
+    TabsTrigger,
+} from "../shadcn/tabs"
 import { useLocalJsonState } from "./hooks"
 import { LogEventList } from "./logEventList"
 import { LogSummaryTable } from "./logSummaryTable"
@@ -38,6 +46,22 @@ function LogViewer() {
 
     const selectedLog = logs.find(({ log }) => log.id === activeLog)
 
+    const logScrollEl = useRef<HTMLDivElement>(null)
+
+    useEffect(() => {
+        const curr = console.log(
+            "reset",
+            activeLog,
+            logScrollEl.current
+        )
+        setTimeout(
+            () => logScrollEl.current?.scrollTo({ top: 0 }),
+            100
+        )
+
+        return () => logScrollEl.current?.scrollTo({ top: 0 })
+    }, [activeLog, logScrollEl.current])
+
     return (
         <StrictMode>
             <AppContext.Provider value={window.HV_LOG}>
@@ -57,11 +81,47 @@ function LogViewer() {
                     <ResizableHandle withHandle />
 
                     <ResizablePanel className="flex justify-center p-8">
-                        {selectedLog ? (
-                            <LogEventList log={selectedLog} />
-                        ) : (
-                            ""
-                        )}
+                        <Tabs defaultValue="stats" className="w-full">
+                            <TabsList className="grid grid-cols-2 w-full mb-2">
+                                <TabsTrigger
+                                    value="stats"
+                                    className="font-bold py-1"
+                                >
+                                    Stats
+                                </TabsTrigger>
+                                <TabsTrigger
+                                    value="events"
+                                    className="font-bold py-1"
+                                >
+                                    Details
+                                </TabsTrigger>
+                            </TabsList>
+
+                            <TabsContent value="stats">
+                                <Card className="min-h-full">
+                                    <CardContent>Stats</CardContent>
+                                </Card>
+                            </TabsContent>
+                            <TabsContent
+                                value="events"
+                                className="h-full pb-16"
+                            >
+                                <Card
+                                    ref={logScrollEl}
+                                    className="min-h-full overflow-auto h-full pt-0"
+                                >
+                                    <CardContent className="px-0">
+                                        {selectedLog ? (
+                                            <LogEventList
+                                                log={selectedLog}
+                                            />
+                                        ) : (
+                                            ""
+                                        )}
+                                    </CardContent>
+                                </Card>
+                            </TabsContent>
+                        </Tabs>
                     </ResizablePanel>
                 </ResizablePanelGroup>
             </AppContext.Provider>
