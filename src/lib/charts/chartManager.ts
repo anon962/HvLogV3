@@ -16,6 +16,7 @@ export class ChartManager {
 
     private storageData: Partial<ChartMgrStorage>
     private eventHandlers: Record<string, AnyFunction> = {}
+    private enableSave = false
 
     public constructor(public enabled: boolean) {
         this.storageData = this.load()
@@ -24,7 +25,7 @@ export class ChartManager {
         this.containerEl = document.createElement("div")
     }
 
-    public attach(): this {
+    public attach(opts: { enableSave?: boolean } = {}): this {
         document.body.appendChild(this.containerEl)
 
         add(
@@ -33,7 +34,11 @@ export class ChartManager {
             "DOMContentLoaded",
             this.handleDomLoad.bind(this)
         )
-        add(this, window, "beforeunload", this.save.bind(this))
+
+        this.enableSave = opts?.enableSave ?? true
+        if (this.enableSave) {
+            add(this, window, "beforeunload", this.save.bind(this))
+        }
 
         return this
 
@@ -78,8 +83,8 @@ export class ChartManager {
 
     public append(ev: HvEvent) {
         if (ev.event_type === "ROUND_START") {
-            this.meta.currentRound = ev.current
-            this.meta.maxRound = ev.max
+            this.meta.currentRound = ev.current ?? 1
+            this.meta.maxRound = ev.max ?? 1
             this.save()
         }
 

@@ -8,8 +8,9 @@ import entryJs from "../dist/ui/ui.js?raw"
 
 // @todo: detail view - graphs
 // @todo: detail view - turn usage (attacks, debuffs, heals, other)
-// @todo: export / import logs
-// @todo: config (monaco)
+// @todo: menu - export / import logs
+// @todo: menu - clear localstorage
+// @todo: menu - config (monaco)
 // @todo: profits
 // @todo: sort
 // @todo: filter

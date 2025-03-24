@@ -7,19 +7,25 @@ import { XIcon } from "../icons/tailwind"
 import { LogWithAnalysis } from "./main"
 
 export function LogEventList(props: { log: LogWithAnalysis }) {
-    const [activeEntryIdx, setActiveEntryIdx] = useState(0)
-
-    useEffect(() => {
-        setActiveEntryIdx(-1)
-    }, [props.log])
+    const [activeIdx, setActiveIdx] = useState({
+        log: -1,
+        turn: -1,
+        round: -1,
+    })
 
     let turnIdx = -1
     let roundIdx = 1
 
+    useEffect(() => {
+        setActiveIdx({ log: -1, turn: -1, round: -1 })
+    }, [props.log])
+
     return (
         <div className="log-event-list flex flex-col h-full">
             <div
-                onClick={() => setActiveEntryIdx(-1)}
+                onClick={() =>
+                    setActiveIdx({ log: -1, turn: -1, round: -1 })
+                }
                 className="flex flex-col h-full overflow-auto"
             >
                 {props.log.log.entries.flatMap((entry, logIdx) => {
@@ -79,12 +85,18 @@ export function LogEventList(props: { log: LogWithAnalysis }) {
                         }`
 
                         const activeClass =
-                            activeEntryIdx === logIdx ? " active" : ""
+                            activeIdx.log === logIdx ? " active" : ""
+
+                        const activeData = {
+                            log: logIdx,
+                            turn: turnIdx + 2,
+                            round: roundIdx,
+                        }
 
                         els.push(
                             <div
                                 onClick={(ev) => {
-                                    setActiveEntryIdx(logIdx)
+                                    setActiveIdx(activeData)
                                     ev.stopPropagation()
                                 }}
                                 className={
@@ -96,13 +108,19 @@ export function LogEventList(props: { log: LogWithAnalysis }) {
                             </div>
                         )
                     } else {
+                        const activeData = {
+                            log: logIdx,
+                            turn: turnIdx + 1,
+                            round: roundIdx,
+                        }
+
                         els.push(
                             <LogEntryRow
                                 onClick={() =>
-                                    setActiveEntryIdx(logIdx)
+                                    setActiveIdx(activeData)
                                 }
                                 entry={entry}
-                                isActive={activeEntryIdx === logIdx}
+                                isActive={activeIdx.log === logIdx}
                             />
                         )
                     }
@@ -111,11 +129,13 @@ export function LogEventList(props: { log: LogWithAnalysis }) {
                 })}
             </div>
 
-            {activeEntryIdx > -1 && (
+            {activeIdx.log > -1 && (
                 <LogEntryDetails
-                    onClose={() => setActiveEntryIdx(-1)}
-                    entry={props.log.log.entries[activeEntryIdx]}
-                    label={`Round ${roundIdx}, Turn ${turnIdx}`}
+                    onClose={() =>
+                        setActiveIdx({ log: -1, turn: -1, round: -1 })
+                    }
+                    entry={props.log.log.entries[activeIdx.log]}
+                    label={`Round ${activeIdx.round}, Turn ${activeIdx.turn}`}
                 />
             )}
         </div>
