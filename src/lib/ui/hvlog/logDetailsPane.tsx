@@ -49,8 +49,8 @@ export function LogDetailsPane(props: {
                     value="events"
                     className="h-full min-h-0"
                 >
-                    <Card className="min-h-0 overflow-auto h-full">
-                        <CardContent className="p-0">
+                    <Card className="min-h-0 h-full py-0">
+                        <CardContent className="p-0 min-h-0">
                             {props.selectedLog ? (
                                 <LogEventList
                                     log={props.selectedLog}

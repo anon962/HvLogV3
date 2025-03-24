@@ -1,106 +1,200 @@
 import { LogEntry } from "@/lib/logDb"
 import { HvEventMap } from "@/lib/parsers"
 import { findNext } from "@/lib/utils/miscUtils"
-import { JSX } from "react"
+import JsonView from "@uiw/react-json-view"
+import { JSX, useEffect, useMemo, useState } from "react"
+import { XIcon } from "../icons/tailwind"
 import { LogWithAnalysis } from "./main"
 
 export function LogEventList(props: { log: LogWithAnalysis }) {
+    const [activeEntryIdx, setActiveEntryIdx] = useState(0)
+
+    useEffect(() => {
+        setActiveEntryIdx(-1)
+    }, [props.log])
+
     let turnIdx = -1
+    let roundIdx = 1
 
     return (
-        <div className="log-event-list flex flex-col">
-            {props.log.log.entries.flatMap((entry, logIdx) => {
-                const els: JSX.Element[] = []
+        <div className="log-event-list flex flex-col h-full">
+            <div
+                onClick={() => setActiveEntryIdx(-1)}
+                className="flex flex-col h-full overflow-auto"
+            >
+                {props.log.log.entries.flatMap((entry, logIdx) => {
+                    const els: JSX.Element[] = []
 
-                const isNewTurn =
-                    logIdx ===
-                    props.log.analysis.turnIndexes[turnIdx + 1]
-                if (isNewTurn) {
-                    turnIdx += 1
+                    const isNewTurn =
+                        logIdx ===
+                        props.log.analysis.turnIndexes[turnIdx + 1]
+                    if (isNewTurn) {
+                        turnIdx += 1
 
-                    els.push(
-                        <div className="turn-start flex gap-2 px-6 pb-4 items-center">
-                            <span className="">{turnIdx + 1}</span>
-                            <hr className=""></hr>
-                        </div>
-                    )
-                }
+                        els.push(
+                            <div className="turn-start flex gap-2 px-6 pb-4 items-center">
+                                <span className="">
+                                    {turnIdx + 1}
+                                </span>
+                                <hr className=""></hr>
+                            </div>
+                        )
+                    }
 
-                if (
-                    entry.type === "event" &&
-                    entry.event.event_type === "ROUND_START"
-                ) {
-                    const [nextRoundStartLogIdx] = findNext(
-                        props.log.log.entries,
-                        (entry) =>
-                            entry.type === "event" &&
-                            entry.event.event_type === "ROUND_START",
-                        {
-                            start: logIdx + 1,
-                        }
-                    )
+                    if (
+                        entry.type === "event" &&
+                        entry.event.event_type === "ROUND_START"
+                    ) {
+                        roundIdx = entry.event.current ?? 1
 
-                    let [_, nextRoundStartTurnIdx] = findNext(
-                        props.log.analysis.turnIndexes,
-                        (nextLogIndex) =>
-                            nextLogIndex >
-                            (nextRoundStartLogIdx ??
-                                Number.POSITIVE_INFINITY),
-                        { start: turnIdx }
-                    )
+                        const [nextRoundStartLogIdx] = findNext(
+                            props.log.log.entries,
+                            (entry) =>
+                                entry.type === "event" &&
+                                entry.event.event_type ===
+                                    "ROUND_START",
+                            {
+                                start: logIdx + 1,
+                            }
+                        )
 
-                    let label = `Round ${entry.event.current ?? 1}`
-                    label += `, Turns ${turnIdx + 2}`
-                    label += ` - ${
-                        nextRoundStartTurnIdx
-                            ? nextRoundStartTurnIdx
-                            : props.log.analysis.turnIndexes.length
-                    }`
+                        let [_, nextRoundStartTurnIdx] = findNext(
+                            props.log.analysis.turnIndexes,
+                            (nextLogIndex) =>
+                                nextLogIndex >
+                                (nextRoundStartLogIdx ??
+                                    Number.POSITIVE_INFINITY),
+                            { start: turnIdx }
+                        )
 
-                    els.push(
-                        <div className="round-label sticky py-4 pr-4 mb-4 top-0 flex justify-end bg-card font-bold border-b">
-                            {label}
-                        </div>
-                    )
-                } else {
-                    els.push(<LogEntryRow entry={entry} />)
-                }
+                        let label = `Round ${
+                            entry.event.current ?? 1
+                        }`
+                        label += `, Turns ${turnIdx + 2}`
+                        label += ` - ${
+                            nextRoundStartTurnIdx
+                                ? nextRoundStartTurnIdx
+                                : props.log.analysis.turnIndexes
+                                      .length
+                        }`
 
-                return els
-            })}
+                        const activeClass =
+                            activeEntryIdx === logIdx ? " active" : ""
+
+                        els.push(
+                            <div
+                                onClick={(ev) => {
+                                    setActiveEntryIdx(logIdx)
+                                    ev.stopPropagation()
+                                }}
+                                className={
+                                    "round-label sticky py-4 pr-4 mb-4 top-0 flex justify-end bg-card font-bold border-b" +
+                                    activeClass
+                                }
+                            >
+                                {label}
+                            </div>
+                        )
+                    } else {
+                        els.push(
+                            <LogEntryRow
+                                onClick={() =>
+                                    setActiveEntryIdx(logIdx)
+                                }
+                                entry={entry}
+                                isActive={activeEntryIdx === logIdx}
+                            />
+                        )
+                    }
+
+                    return els
+                })}
+            </div>
+
+            {activeEntryIdx > -1 && (
+                <LogEntryDetails
+                    onClose={() => setActiveEntryIdx(-1)}
+                    entry={props.log.log.entries[activeEntryIdx]}
+                    label={`Round ${roundIdx}, Turn ${turnIdx}`}
+                />
+            )}
         </div>
     )
 }
 
-function LogEntryRow(props: { entry: LogEntry }) {
-    let content
-    if (props.entry.type === "event") {
-        const eventType = props.entry.event.event_type
-        const summary =
-            eventType in EVENT_SUMMARY_MAP
-                ? EVENT_SUMMARY_MAP[eventType](
-                      props.entry.event as any
-                  )
-                : JSON.stringify(props.entry.event)
+function LogEntryRow(props: {
+    entry: LogEntry
+    isActive: boolean
+    onClick?: (entry: LogEntry) => void
+}) {
+    return useMemo(() => {
+        const activeClass = props.isActive ? " active" : ""
 
-        content = (
-            <div className="flex">
-                <pre className="min-w-48 pr-4">
+        let content
+        if (props.entry.type === "event") {
+            const eventType = props.entry.event.event_type
+            const summary =
+                eventType in EVENT_SUMMARY_MAP
+                    ? EVENT_SUMMARY_MAP[eventType](
+                          props.entry.event as any
+                      )
+                    : JSON.stringify(props.entry.event)
+
+            content = [
+                <pre className="event-type">
                     {props.entry.event.event_type}
-                </pre>
-                <pre>{summary}</pre>
-            </div>
-        )
-    } else {
-        content = (
-            <div className="flex">
-                <pre className="min-w-48 pr-4">ERROR</pre>
-                <pre>{props.entry.detail}</pre>
-            </div>
-        )
-    }
+                </pre>,
+                <pre>{summary}</pre>,
+            ]
+        } else {
+            content = [
+                <pre className="event-type">ERROR</pre>,
+                <pre>{props.entry.detail}</pre>,
+            ]
+        }
 
-    return <div className="pb-4 px-12">{content}</div>
+        return (
+            <div
+                onClick={(ev) => {
+                    if (!props.isActive) {
+                        props.onClick?.(props.entry)
+                    }
+                    ev.stopPropagation()
+                }}
+                className={"event-row" + activeClass}
+            >
+                {content}
+            </div>
+        )
+    }, [props.entry, props.isActive, props.entry])
+}
+
+function LogEntryDetails(props: {
+    entry: LogEntry
+    label: string
+    onClose?: () => void
+}) {
+    return (
+        <div className="p-8 border-t border-t-muted-foreground relative">
+            <button
+                onClick={() => props.onClose?.()}
+                className="size-12 rounded-full absolute top-4 right-4 hover:bg-muted cursor-pointer flex justify-center items-center"
+            >
+                <XIcon />
+            </button>
+
+            <pre className="pb-4">{props.label}</pre>
+
+            <JsonView
+                value={props.entry}
+                style={JSON_VSCODE_THEME}
+                displayDataTypes={false}
+                displayObjectSize={false}
+                highlightUpdates={false}
+                shortenTextAfterLength={Number.POSITIVE_INFINITY}
+            />
+        </div>
+    )
 }
 
 const EVENT_SUMMARY_MAP = {
@@ -147,6 +241,7 @@ const EVENT_SUMMARY_MAP = {
     RIDDLE_RESTORE: (ev) => ``,
     ROUND_END: (ev) => ``,
     ROUND_START: (ev) => `Round ${ev.current} start`,
+    SOUL_FRAG_DROP: (ev) => `Dropped ${ev.count} Soul Fragments`,
     SPARK_TRIGGER: (ev) => `Spark of Life triggered`,
     SPAWN: (ev) => `Monster ${ev.monster} spawned`,
     SPIRIT_SHIELD: (ev) =>
@@ -158,4 +253,35 @@ const EVENT_SUMMARY_MAP = {
     [K in keyof HvEventMap]: (ev: HvEventMap[K]) => string
 }
 
-function useRoundTurnCounter(log: LogWithAnalysis) {}
+const JSON_VSCODE_THEME = {
+    "--w-rjv-font-family": "monospace",
+    "--w-rjv-color": "#9cdcfe",
+    "--w-rjv-key-number": "#268bd2",
+    "--w-rjv-key-string": "#9cdcfe",
+    "--w-rjv-background-color": "",
+    "--w-rjv-line-color": "#36334280",
+    "--w-rjv-arrow-color": "#838383",
+    "--w-rjv-edit-color": "var(--w-rjv-color)",
+    "--w-rjv-info-color": "#9c9c9c7a",
+    "--w-rjv-update-color": "#9cdcfe",
+    "--w-rjv-copied-color": "#9cdcfe",
+    "--w-rjv-copied-success-color": "#28a745",
+
+    "--w-rjv-curlybraces-color": "#d4d4d4",
+    "--w-rjv-colon-color": "#d4d4d4",
+    "--w-rjv-brackets-color": "#d4d4d4",
+    "--w-rjv-ellipsis-color": "#cb4b16",
+    "--w-rjv-quotes-color": "var(--w-rjv-key-string)",
+    "--w-rjv-quotes-string-color": "var(--w-rjv-type-string-color)",
+
+    "--w-rjv-type-string-color": "#ce9178",
+    "--w-rjv-type-int-color": "#b5cea8",
+    "--w-rjv-type-float-color": "#b5cea8",
+    "--w-rjv-type-bigint-color": "#b5cea8",
+    "--w-rjv-type-boolean-color": "#569cd6",
+    "--w-rjv-type-date-color": "#b5cea8",
+    "--w-rjv-type-url-color": "#3b89cf",
+    "--w-rjv-type-null-color": "#569cd6",
+    "--w-rjv-type-nan-color": "#859900",
+    "--w-rjv-type-undefined-color": "#569cd6",
+} as any

@@ -129,7 +129,9 @@ export const PARSERS = {
             "hits",
             "crits",
             "blasts"
-        )} (?!you)${Monster()} for ${Num("value")} (?:${Word(
+        )} (?!you)${Monster()} for ${Num(
+            "value"
+        )} (?:points of )?(?:${Word(
             "damage_type"
         )} )?damage${Resist}\\.?`,
         {
@@ -409,6 +411,13 @@ export const PARSERS = {
         {
             monster: t("string"),
             item: t("string"),
+        }
+    ),
+    SOUL_FRAG_DROP: new EventParser(
+        "SOUL_FRAG_DROP",
+        `You obtained ${Num("count")} \\[Soul Fragments\\]`,
+        {
+            count: t("number"),
         }
     ),
     PROFICIENCY: new EventParser(
