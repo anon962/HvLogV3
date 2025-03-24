@@ -145,4 +145,32 @@ body,
     height: 100vh !important;
 }
 
-@import "../../pages/logViewer/logTable.css";
+@import "../../pages/logViewer/logSummaryTable.css";
+
+/* From shadcn site: https://www.shadcn-svelte.com/examples/dashboard */
+::-webkit-scrollbar {
+    width: 0.5rem;
+    height: 0.5rem;
+}
+::-webkit-scrollbar-thumb {
+    border-radius: calc(var(--radius) - 4px);
+    background-color: color-mix(
+        in oklab,
+        var(--muted-foreground) 30%,
+        transparent
+    );
+}
+::-webkit-scrollbar-track {
+    background-color: var(--muted);
+    border-radius: calc(var(--radius) - 4px);
+}
+
+* {
+    scrollbar-width: 0.5rem;
+    scrollbar-color: color-mix(
+        in oklab,
+        var(--muted-foreground) 30%,
+        transparent
+    );
+    scrollbar-track-color: var(--muted);
+}

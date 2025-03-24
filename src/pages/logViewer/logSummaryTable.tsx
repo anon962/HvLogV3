@@ -12,9 +12,8 @@ import {
 } from "@/lib/ui/shadcn/table"
 import { alphabetical, sleep } from "radash"
 import { useEffect, useMemo, useState } from "react"
-import "./logTable.css"
 
-export function LogTable() {
+export function LogSummaryTable() {
     let { logs, loading } = useLogs()
     const status = useBattleStatus()
     const now = useNow()
@@ -37,38 +36,41 @@ export function LogTable() {
     const headerSelected = selectionIdx === 0 ? " selected-prev" : ""
 
     return (
-        <div className="px-8 py-8">
-            <Table className="log-table w-auto">
-                <TableHeader>
-                    <TableRow className={"" + headerSelected}>
-                        <TableHead className="w-[100px]">
-                            Type
-                        </TableHead>
-                        <TableHead className="text-right">
-                            Turns
-                        </TableHead>
-                        <TableHead className="text-right">
-                            Duration
-                        </TableHead>
-                        <TableHead className="">Date</TableHead>
-                        <TableHead className="text-center">
-                            Status
-                        </TableHead>
-                        <TableHead className="">View</TableHead>
-                    </TableRow>
-                </TableHeader>
-
-                <TableBody>{logEls}</TableBody>
-            </Table>
-
-            {loading ? (
-                <div>Loading...</div>
-            ) : status ? (
-                <div>
-                    In battle ({status.battleType}{" "}
-                    {status.currentRound} / {status.maxRound})...
-                </div>
-            ) : null}
+        <div
+            className="flex justify-center h-full"
+            style={{ containerType: "inline-size" }}
+        >
+            <div className="log-table-container overflow-auto h-full">
+                <Table className="log-table w-auto min-h-0">
+                    <TableHeader>
+                        <TableRow className={"" + headerSelected}>
+                            <TableHead className="w-[100px]">
+                                Type
+                            </TableHead>
+                            <TableHead className="text-right">
+                                Turns
+                            </TableHead>
+                            <TableHead className="text-right">
+                                Duration
+                            </TableHead>
+                            <TableHead className="">Date</TableHead>
+                            <TableHead className="text-center">
+                                Status
+                            </TableHead>
+                            <TableHead className="">View</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>{logEls}</TableBody>
+                </Table>
+                {loading ? (
+                    <div>Loading...</div>
+                ) : status ? (
+                    <div>
+                        In battle ({status.battleType}{" "}
+                        {status.currentRound} / {status.maxRound})...
+                    </div>
+                ) : null}
+            </div>
         </div>
     )
 }

@@ -83,3 +83,9 @@
         }
     } */
 }
+
+@container (width > 50rem) {
+    .log-table-container {
+        padding: calc(var(--spacing) * 8);
+    }
+}

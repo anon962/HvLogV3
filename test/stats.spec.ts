@@ -18,7 +18,7 @@ Set.prototype.difference = function (other: Set) {
 }
 
 it("turn count should be correct", () => {
-    const raw = (longLog as string[][]).slice(0, 10)
+    const raw = longLog as string[][]
     const rawFlat = raw.flatMap((lns) => lns)
 
     const { turnIndexes: actualTurnIndexes } = raw.reduce(
