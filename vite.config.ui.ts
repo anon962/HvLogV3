@@ -17,7 +17,7 @@ export default defineConfig((config) => {
             outDir: "dist/ui",
             rollupOptions: {
                 input: {
-                    app: "./src/pages/logViewer/main.html",
+                    app: "./src/lib/ui/hvlog/main.html",
                 },
                 output: {
                     format: "iife",
