@@ -6,14 +6,19 @@ import entryHtml from "../dist/ui/src/pages/logViewer/main.html?raw"
 // @ts-ignore
 import entryJs from "../dist/ui/ui.js?raw"
 
+// @todo: test turn split
+// @todo: detail view - turns
+// @todo: detail view - graphs
+// @todo: detail view - turn usage (attacks, debuffs, heals, other)
+// @todo: export / import logs
+// @todo: config (monaco)
+// @todo: profits
+// @todo: sort
+// @todo: filter
+// @todo: prefix alert() errors with HvLog
 // @todo: compression
 // @todo: live stats
-// @todo: config (monaco)
-// @todo: turn usage (attacks, debuffs, heals, other)
-// @todo: profits
-// @todo: export / import logs
-// @todo: prefix alert() errors with HvLog
-// @todo: test turn split
+// @todo: debug flag - disable localstorage reads
 
 async function main() {
     const app = await App.ainit()

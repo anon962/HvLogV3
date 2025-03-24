@@ -99,20 +99,33 @@ export function extractNumTurns(log: CompleteLog): {
 
     const { turnIndexes } = evs.reduce(
         (acc, ev) => {
-            // Melee attacks can trigger consecutive PLAYER_ATTACK events
+            const isMeleeAttack =
+                ev.event_type === "PLAYER_ATTACK" &&
+                ev.spell.endsWith(" Strike")
+
+            // Most player actions fall under PLAYER_SKILLs like "you cast blah"
+            // Exception to this is a melee attacks, which results in multiple lines like
             //    Arcane Blow hits blah for 12345 blah damage
             //    Void Strike hits blah for 12345 blah damage
-            // Otherwise there's hopefully another event inbetween turns (namely monster attack)
-            if (ev.logIndex - acc.lastTurnIndex > 1) {
+            // So need to check if its a melee attack and only count it once
+            const shouldCount =
+                ev.event_type !== "PLAYER_ATTACK" ||
+                (isMeleeAttack &&
+                    acc.lastMeleeAttackIndex - ev.logIndex > 1)
+
+            if (shouldCount) {
                 acc.turnIndexes.push(ev.logIndex)
             }
 
-            acc.lastTurnIndex = ev.logIndex
+            if (isMeleeAttack) {
+                acc.lastMeleeAttackIndex = ev.logIndex
+            }
+
             return acc
         },
         {
             turnIndexes: [] as number[],
-            lastTurnIndex: -99,
+            lastMeleeAttackIndex: -99,
         }
     )
 
