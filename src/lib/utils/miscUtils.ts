@@ -102,7 +102,11 @@ export function findNext<
         step = 1
     }
 
-    for (let idx = start; idx <= end; idx += step) {
+    for (
+        let idx = start;
+        reverse ? idx >= end : idx <= end;
+        idx += step
+    ) {
         const x = xs[idx]
 
         if (cond(x)) {

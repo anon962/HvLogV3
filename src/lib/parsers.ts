@@ -361,11 +361,6 @@ export const PARSERS = {
         "You have escaped from the battle\\.",
         {}
     ),
-    PLAYER_DEATH: new EventParser(
-        "PLAYER_DEATH",
-        `You has been defeated\\.`,
-        {}
-    ),
     SPAWN: new EventParser(
         "SPAWN",
         `Spawned Monster ${Group("letter", "[A-Z]")}: MID=${Num(

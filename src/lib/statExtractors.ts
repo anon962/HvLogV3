@@ -127,32 +127,28 @@ export function extractCompletionType(
     // Find ROUND_END
     const endMarkers = new Set([
         "ROUND_END",
-        "PLAYER_DEATH",
+        "DEFEAT",
         "FLEE",
     ] as const)
-    const [end, _] = findNext(
-        evs,
-        (
-            x: HvEvent
-        ): x is HvEventMap[InferCollectionType<typeof endMarkers>] =>
-            endMarkers.has(x.event_type as any),
-        { reverse: true }
-    )
-    console.log("wtf", end, evs)
+
+    // prettier-ignore
+    const cond =
+        (ev: HvEvent): ev is HvEventMap[InferCollectionType<typeof endMarkers>] =>
+            endMarkers.has(ev.event_type as any)
+
+    const [end, _] = findNext(evs, cond, {
+        reverse: true,
+        breakOn: (ev) => ev.event_type === "ROUND_START",
+    })
 
     switch (end?.event_type) {
         case "ROUND_END":
             return "finish"
         case "FLEE":
             return "flee"
-        case "PLAYER_DEATH":
+        case "DEFEAT":
             return "die"
         default:
             return null
     }
 }
-
-type a = Set<"ROUND_END" | "ROUND_START">
-type b = InferCollectionType<a>
-type c = HvEventMap[b]
-type d = HvEventMap[InferCollectionType<a>]

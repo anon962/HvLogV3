@@ -5,7 +5,14 @@ import { defineConfig } from "vite"
 
 export default defineConfig((config) => {
     return {
-        plugins: [tailwindcss(), react()],
+        plugins: [
+            tailwindcss(),
+            react({
+                babel: {
+                    minified: false,
+                },
+            }),
+        ],
         build: {
             outDir: "dist/ui",
             rollupOptions: {
