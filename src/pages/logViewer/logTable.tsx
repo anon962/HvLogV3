@@ -1,5 +1,7 @@
 import { CompleteLog, LogDb, LogHash } from "@/lib/logDb"
 import { LogAnalysis, LogStats } from "@/lib/statsDb"
+import { RunIcon, Skull2Icon } from "@/lib/ui/icons/misc"
+import { Check, EyeIcon } from "@/lib/ui/icons/tailwind"
 import {
     Table,
     TableBody,
@@ -10,6 +12,7 @@ import {
 } from "@/lib/ui/shadcn/table"
 import { alphabetical, sleep } from "radash"
 import { useEffect, useMemo, useState } from "react"
+import "./logTable.css"
 
 export function LogTable() {
     let { logs, loading } = useLogs()
@@ -18,15 +21,26 @@ export function LogTable() {
 
     logs = alphabetical(logs, (l) => l.log.meta.start, "desc")
 
-    const logEls = logs.map((x) => {
-        return <LogRow now={now} {...x} />
+    const selectionIdx = 0
+
+    const logEls = logs.map((log, idx) => {
+        return (
+            <LogRow
+                now={now}
+                {...log}
+                idx={idx}
+                selectionIdx={selectionIdx}
+            />
+        )
     })
 
+    const headerSelected = selectionIdx === 0 ? " selected-prev" : ""
+
     return (
-        <div>
-            <Table className="w-auto">
+        <div className="px-8 py-8">
+            <Table className="log-table w-auto">
                 <TableHeader>
-                    <TableRow>
+                    <TableRow className={"" + headerSelected}>
                         <TableHead className="w-[100px]">
                             Type
                         </TableHead>
@@ -37,8 +51,10 @@ export function LogTable() {
                             Duration
                         </TableHead>
                         <TableHead className="">Date</TableHead>
-                        <TableHead className="">Status</TableHead>
-                        <TableHead className=""></TableHead>
+                        <TableHead className="text-center">
+                            Status
+                        </TableHead>
+                        <TableHead className="">View</TableHead>
                     </TableRow>
                 </TableHeader>
 
@@ -61,34 +77,49 @@ function LogRow(props: {
     log: CompleteLog
     analysis: LogAnalysis
     now: Date
+    idx: number
+    selectionIdx: number
 }) {
     const startDate = useDateFormatter(
         props.log.meta.start,
         props.now
     )
+
+    const isSelected = props.idx === props.selectionIdx
+    const isPrevSelected = props.idx === 1 + props.selectionIdx
+
     const duration = formatDuration(props.log)
     const typeSummary = formatBattleType(props.analysis)
     const turns = `${props.analysis.turnIndexes.length} turns`
-    const completionType = formatCompletionType(props.analysis)
+    const { status, title: statusTitle } = formatCompletionType(
+        props.analysis
+    )
+
+    // prettier-ignore
+    const selectedClass = 
+        isSelected ? " selected" :
+        isPrevSelected ? "selected-prev" :
+        ""
 
     return useMemo(
         () => (
-            <TableRow className="py-2" data-id={props.log.id}>
-                <TableCell className="px-4">{typeSummary}</TableCell>
-                <TableCell className="px-4 text-right">
-                    {turns}
-                </TableCell>
-                <TableCell className="px-4 text-right">
+            <TableRow
+                className={"py-2" + selectedClass}
+                data-id={props.log.id}
+            >
+                <TableCell className="">{typeSummary}</TableCell>
+                <TableCell className=" text-right">{turns}</TableCell>
+                <TableCell className=" text-right">
                     {duration}
                 </TableCell>
-                <TableCell
-                    className="px-4"
-                    title={props.log.meta.start}
-                >
+                <TableCell className="" title={props.log.meta.start}>
                     {startDate}
                 </TableCell>
-                <TableCell className="px-4">
-                    {completionType}
+                <TableCell className="" title={statusTitle}>
+                    {status}
+                </TableCell>
+                <TableCell className="flex justify-center">
+                    <ViewButton isSelected={isSelected} />
                 </TableCell>
             </TableRow>
         ),
@@ -96,7 +127,7 @@ function LogRow(props: {
     )
 }
 
-export function useLogs(refreshDelay = 5000) {
+function useLogs(refreshDelay = 5000) {
     const [completeLogs, setCompleteLogs] = useState<CompleteLog[]>(
         []
     )
@@ -225,7 +256,7 @@ function formatDuration(log: CompleteLog) {
         .padStart(2, "0")
     const mm = Math.trunc(seconds / 60).toString()
 
-    const mmClassName = seconds < 60 ? "text-muted-foreground" : ""
+    const mmClassName = seconds < 60 ? "mm" : ""
 
     return (
         <span>
@@ -299,16 +330,64 @@ function formatBattleType(anal: LogAnalysis) {
 }
 
 function formatCompletionType(anal: LogAnalysis) {
+    let round, title
+    if (anal.completionType !== "finish" && anal.round) {
+        round = (
+            <span>
+                {anal.round.end} / {anal.round.max}
+            </span>
+        )
+
+        if (anal.completionType === "die") {
+            title = `Died on round ${anal.round.end} / ${anal.round.max}`
+        } else if (anal.completionType === "flee") {
+            title = `Flee on round ${anal.round.end} / ${anal.round.max}`
+        }
+    }
+
+    let status
     switch (anal.completionType) {
         case "finish":
-            return "@todo checkmark"
+            status = (
+                <span className="finish flex justify-center">
+                    <Check className="flex" />
+                </span>
+            )
+            break
         case "die":
-            return "@todo tombstone"
+            status = (
+                <span className="die flex justify-center gap-1">
+                    <span className="w-5">
+                        <Skull2Icon />
+                    </span>
+
+                    {round}
+                </span>
+            )
+            break
         case "flee":
-            return "@todo run"
+            status = (
+                <span className="flee flex justify-center gap-1">
+                    <span className="w-6">
+                        <RunIcon />
+                    </span>
+
+                    {round}
+                </span>
+            )
+            break
         default:
-            return "???"
+            status = (
+                <span className="flex justify-center gap-1">
+                    <span className="">???</span>
+
+                    {round}
+                </span>
+            )
+            break
     }
+
+    return { status, title }
 }
 
 // function formatErrors(anal: LogAnalysis) {
@@ -340,4 +419,12 @@ function useNow(refreshDelay = 3000) {
     }, [])
 
     return now
+}
+
+function ViewButton(props: { isSelected: boolean }) {
+    return (
+        <span>
+            <EyeIcon className="view" />
+        </span>
+    )
 }

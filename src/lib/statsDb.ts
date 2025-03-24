@@ -68,7 +68,7 @@ export class LogStats {
         }
 
         if (opts.save ?? true) {
-            // this.data["data"][log.id] = analysis
+            this.data["data"][log.id] = analysis
             this.save()
         }
 

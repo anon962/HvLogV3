@@ -144,3 +144,5 @@ body,
 #root {
     height: 100vh !important;
 }
+
+@import "../../pages/logViewer/logTable.css";

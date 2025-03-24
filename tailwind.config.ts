@@ -7,5 +7,10 @@ module.exports = {
     variants: {
         extend: {},
     },
-    plugins: [],
+    plugins: {},
+    safelist: [
+        {
+            pattern: /.*/,
+        },
+    ],
 }
