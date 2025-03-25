@@ -1,0 +1,131 @@
+.tally-table {
+    font-size: 0.9rem;
+    line-height: 1;
+
+    h1 {
+        font-size: 1rem;
+        font-weight: bold;
+    }
+
+    .row {
+        display: grid;
+        grid-template-columns: minmax(125px, 1fr) 1fr 1fr;
+        min-width: 350px;
+    }
+
+    .cell,
+    .header,
+    .footer {
+        padding: 0.75rem 0.5rem;
+    }
+
+    .header {
+        padding-top: 1rem;
+    }
+    .footer {
+        padding-bottom: 1rem;
+    }
+    .row {
+        padding-right: 1rem;
+        padding-left: 1rem;
+    }
+
+    .row {
+        border-bottom: 1px solid var(--border);
+        border-left: 1px solid var(--border);
+        border-right: 1px solid var(--border);
+    }
+    .header {
+        border-top: 1px solid var(--border);
+    }
+
+    .header,
+    .footer {
+        font-weight: bold;
+    }
+
+    .row.selectable {
+        cursor: pointer;
+    }
+
+    .row.active {
+        background-color: color-mix(
+            in oklab,
+            var(--muted-foreground) 15%,
+            var(--card)
+        );
+    }
+
+    .row.active,
+    .row.next-active {
+        border-bottom-color: color-mix(
+            in oklab,
+            var(--foreground) 25%,
+            transparent
+        );
+    }
+
+    .row.selectable.active:hover {
+        background-color: color-mix(
+            in oklab,
+            var(--muted-foreground) 25%,
+            var(--card)
+        );
+    }
+
+    .row.selectable:hover:not(.active) {
+        background-color: color-mix(
+            in oklab,
+            var(--muted) 100%,
+            var(--card)
+        );
+    }
+
+    .row:not(.selectable):not(:first-child):not(:last-child) {
+        color: var(--muted-foreground);
+    }
+
+    .subtable {
+        display: grid;
+        grid-template-columns: max-content max-content max-content;
+
+        width: 100%;
+        grid-column: auto / span 3;
+        max-height: 20vh;
+        overflow: auto;
+        font-size: 0.8rem;
+        padding-bottom: 1rem;
+
+        border-top: 1px dashed
+            color-mix(
+                in oklab,
+                var(--muted-foreground) 50%,
+                transparent
+            );
+
+        .subheader {
+            padding-top: 0.5rem;
+            color: color-mix(
+                in oklab,
+                var(--foreground) 75%,
+                transparent
+            );
+            /* display: none; */
+        }
+
+        .subcell,
+        .subheader {
+            padding-left: 0.5rem;
+            padding-right: 2rem;
+        }
+
+        .subvalue,
+        .subcount {
+            text-align: right;
+        }
+
+        .subcell {
+            padding-top: 0.5rem;
+        }
+    }
+}

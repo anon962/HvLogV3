@@ -1,21 +1,14 @@
 import { LogAnalysis } from "@/lib/statsDb"
-import { sort, sum } from "radash"
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from "../shadcn/table"
+import { sum } from "radash"
 import { LogWithAnalysis } from "./main"
+import { TallyTable } from "./tallyTable"
 
 export function DropStats(props: { log: LogWithAnalysis }) {
     const drops = summarizeItemDrops(props.log.analysis)
     const usage = summarizeItemUsage(props.log.analysis)
 
     return (
-        <div className="drop-stats h-full overflow-auto flex flex-col gap-12">
+        <div className="drop-stats h-full overflow-auto flex flex-col gap-12 items-center">
             {IncomeSummaryTable(drops)}
             {UsageSummaryTable(props.log.analysis, usage)}
         </div>
@@ -23,96 +16,98 @@ export function DropStats(props: { log: LogWithAnalysis }) {
 }
 
 function IncomeSummaryTable(
-    drops: ReturnType<typeof summarizeItemDrops>
+    summary: ReturnType<typeof summarizeItemDrops>
 ) {
-    let rows = Object.entries(drops).map(
-        ([name, { xs, description }]) => {
-            const count = sum(xs, (x) => x.count)
-            const value = sum(xs, (x) => x.value)
-            return { name, count, value, description }
+    const totals = Object.entries(summary.data).reduce(
+        (acc, [key, xs]) => {
+            acc[key] = {
+                label: key,
+                count: sum(xs, (x) => x.count),
+                value: sum(xs, (x) => x.value),
+            }
+            return acc
+        },
+        {} as any
+    )
+
+    let rows = Object.values(summary.groups).map(
+        ({ label, title, keys }) => {
+            let count = 0
+            let value = 0
+            const subRows = []
+
+            for (const k of keys) {
+                if (!(k in totals)) {
+                    continue
+                }
+
+                count += totals[k].count
+                value += totals[k].value
+                subRows.push(totals[k])
+            }
+
+            return { label, title, count, value, subRows }
         }
     )
-    rows = sort(rows, (x) => x.value, true)
 
-    const totalValue = sum(Object.values(rows).map((x) => x.value))
-    const totalCount = sum(Object.values(rows).map((x) => x.count))
-
-    return (
-        <section className="summary-section">
-            <h1>Income</h1>
-            <Table className="summary-table w-auto border rounded-md">
-                <TableHeader>
-                    <TableRow>
-                        <TableHead className="font-bold">
-                            Category
-                        </TableHead>
-                        <TableHead className="text-right font-bold">
-                            Value
-                        </TableHead>
-                        <TableHead className="text-right font-bold">
-                            Count
-                        </TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {rows.map((x) => (
-                        <TableRow>
-                            <TableCell
-                                className=""
-                                title={x.description}
-                            >
-                                {x.name}
-                            </TableCell>
-                            <TableCell className="text-right">
-                                {formatNumber(x.value)}
-                            </TableCell>
-                            <TableCell className="text-right">
-                                {x.count >= 1000
-                                    ? formatNumber(x.count)
-                                    : x.count}
-                            </TableCell>
-                        </TableRow>
-                    ))}
-
-                    <TableRow className="border-t-2 font-bold">
-                        <TableCell>Total</TableCell>
-                        <TableCell className="text-right">
-                            {formatNumber(totalValue)}
-                        </TableCell>
-                        <TableCell className="text-right">
-                            {totalCount >= 1000
-                                ? formatNumber(totalCount)
-                                : totalCount}
-                        </TableCell>
-                    </TableRow>
-                </TableBody>
-            </Table>
-        </section>
-    )
+    return <TallyTable label="Income" rows={rows} />
 }
 
 function summarizeItemDrops(anal: LogAnalysis) {
-    const init = (description: string) => ({
-        xs: [] as Array<{
-            count: number
-            value: number
-            logIdx: number
-        }>,
-        description,
-    })
-    const cats = {
-        Artifacts: init("Precursor Artifacts"),
-        Consumables: init([...CONSUMABLES].join(", ")),
-        Credits: init("Credits"),
-        Crystals: init("Crystals"),
-        Figurines: init("Figurines"),
-        Materials: init([...MATERIALS].join(", ")),
-        Other: init(""),
-        Shards: init([...SHARDS].join(", ")),
-        Trophies: init([...TROPHIES].join(", ")),
-    } as const
+    const summary: Summary<any> = {
+        data: {},
+        groups: [
+            {
+                keys: new Set("Precursor Artifacts"),
+                label: "Artifacts",
+                title: "",
+            },
+            {
+                keys: CONSUMABLES,
+                label: "Consumables",
+                title: [...CONSUMABLES].join(", "),
+            },
+            {
+                keys: new Set(["credits", "Credits", "autosell"]),
+                label: "Credits",
+                title: "",
+            },
+            {
+                keys: MATERIALS,
+                label: "Materials",
+                title: [...MATERIALS].join(", "),
+            },
+            {
+                keys: SHARDS,
+                label: "Shards",
+                title: [...SHARDS].join(", "),
+            },
+            {
+                keys: TROPHIES,
+                label: "Trophies",
+                title: [...TROPHIES].join(", "),
+            },
+        ],
+    }
 
-    const take = (
+    const crystals = {
+        keys: new Set(),
+        label: "Crystals",
+        title: "",
+    }
+    const figurines = {
+        keys: new Set(),
+        label: "Figurines",
+        title: "",
+    }
+    const other = {
+        keys: new Set(),
+        label: "Other",
+        title: "",
+    }
+    summary.groups.push(...[crystals, figurines, other])
+
+    const mapDrops = (
         x: LogAnalysis["drops"][string],
         mult: number,
         asSingle?: boolean
@@ -133,55 +128,75 @@ function summarizeItemDrops(anal: LogAnalysis) {
             }
         })
 
-    const otherItems = new Set<string>()
-
     for (let [key, xs] of Object.entries(anal.drops)) {
         const k = key as any
         const ps = PRICES as any
 
         if (ARTIFACTS.has(k)) {
-            cats.Artifacts.xs.push(...take(xs, ps[k]))
+            summary.data[k] = mapDrops(xs, ps[k])
         } else if (CONSUMABLES.has(k)) {
-            cats.Consumables.xs.push(...take(xs, ps[k]))
+            summary.data[k] = mapDrops(xs, ps[k])
         } else if (
             k === "autosell" ||
             k === "credits" ||
             k === "Credits"
         ) {
-            console.log("here", xs)
-            cats.Credits.xs.push(...take(xs, 1, true))
+            summary.data[k] = mapDrops(xs, 1, true)
         } else if (key.startsWith("Crystal of ")) {
-            cats.Crystals.xs.push(...take(xs, PRICES["Crystal"]))
+            summary.data[k] = mapDrops(xs, PRICES["Crystal"])
+            crystals.keys.add(k)
         } else if (k.includes("Figurine")) {
-            cats.Figurines.xs.push(...take(xs, PRICES["Figurine"]))
+            summary.data[k] = mapDrops(xs, ps[k])
+            figurines.keys.add(k)
         } else if (MATERIALS.has(k)) {
-            cats.Materials.xs.push(...take(xs, ps[k]))
+            summary.data[k] = mapDrops(xs, ps[k])
         } else if (SHARDS.has(k)) {
-            cats.Shards.xs.push(...take(xs, ps[k]))
+            summary.data[k] = mapDrops(xs, ps[k])
         } else if (TROPHIES.has(k)) {
-            cats.Trophies.xs.push(...take(xs, ps[k]))
+            summary.data[k] = mapDrops(xs, ps[k])
         } else if (["experience", "proficiency"].includes(k)) {
         } else {
-            console.log(xs, k, ps[k])
-            cats.Other.xs.push(...take(xs, ps[k] ?? 0))
-            otherItems.add(k)
+            summary.data[k] = mapDrops(xs, ps[k] ?? 0)
+            other.keys.add(k)
         }
     }
 
-    cats.Other.description = [...otherItems].join(", ")
-
-    return cats
+    return summary
 }
 
 function UsageSummaryTable(
     anal: LogAnalysis,
-    usage: ReturnType<typeof summarizeItemUsage>
+    summary: ReturnType<typeof summarizeItemUsage>
 ) {
-    let rows = Object.values(usage).map(
-        ({ label, description, uses }) => {
-            const count = uses.length
-            const value = sum(uses, (x) => x.value)
-            return { label, count, value, description }
+    const totals = Object.entries(summary.data).reduce(
+        (acc, [key, xs]) => {
+            acc[key] = {
+                label: key,
+                count: sum(xs, (x) => x.count),
+                value: sum(xs, (x) => x.value),
+            }
+            return acc
+        },
+        {} as any
+    )
+
+    let rows = Object.values(summary.groups).map(
+        ({ label, title, keys }) => {
+            let count = 0
+            let value = 0
+            const subRows = []
+
+            for (const k of keys) {
+                if (!(k in totals)) {
+                    continue
+                }
+
+                count += totals[k].count
+                value += totals[k].value
+                subRows.push(totals[k])
+            }
+
+            return { label, title, count, value, subRows }
         }
     )
 
@@ -193,91 +208,56 @@ function UsageSummaryTable(
         label: "Stamina",
         count: staminaUsage,
         value: PRICES["Energy Drink"] / 20,
-        description: "",
+        title: "",
+        subRows: [],
     })
 
-    rows = sort(rows, (x) => x.value, true)
-
-    const totalValue = sum(Object.values(rows).map((x) => x.value))
-    const totalCount = sum(Object.values(rows).map((x) => x.count))
-
-    return (
-        <section className="summary-section">
-            <h1>Expenses</h1>
-            <Table className="summary-table w-auto border rounded-md">
-                <TableHeader>
-                    <TableRow>
-                        <TableHead className="font-bold">
-                            Category
-                        </TableHead>
-                        <TableHead className="text-right font-bold">
-                            Value
-                        </TableHead>
-                        <TableHead className="text-right font-bold">
-                            Count
-                        </TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {rows.map((x) => (
-                        <TableRow>
-                            <TableCell
-                                className=""
-                                title={x.description}
-                            >
-                                {x.label}
-                            </TableCell>
-                            <TableCell className="text-right">
-                                {formatNumber(x.value)}
-                            </TableCell>
-                            <TableCell className="text-right">
-                                {x.count >= 1000
-                                    ? formatNumber(x.count)
-                                    : x.count}
-                            </TableCell>
-                        </TableRow>
-                    ))}
-
-                    <TableRow className="border-t-2 font-bold">
-                        <TableCell>Total</TableCell>
-                        <TableCell className="text-right">
-                            {formatNumber(totalValue)}
-                        </TableCell>
-                        <TableCell className="text-right">
-                            {totalCount >= 1000
-                                ? formatNumber(totalCount)
-                                : totalCount}
-                        </TableCell>
-                    </TableRow>
-                </TableBody>
-            </Table>
-        </section>
-    )
+    return <TallyTable label="Expenses" rows={rows} />
 }
 
-function summarizeItemUsage(anal: LogAnalysis) {
-    const init = (label: string, description: string) => ({
-        label,
-        description,
-        uses: [] as Array<{
-            value: number
-            logIdx: number
-        }>,
-    })
-    const cats = {
-        bv: init("Gum & Vase", [...BUBBLE_VASE].join(", ")),
-        scrolls: init("Scrolls", [...SCROLLS].join(", ")),
-        health: init("Health Items", [...HEALTH_ITEMS].join(", ")),
-        mana: init("Mana Items", [...MANA_ITEMS].join(", ")),
-        spirit: init("Spirit Items", [...SPIRIT_ITEMS].join(", ")),
-        last: init("Last Elixir", "Last Elixir"),
-    } as const
+function summarizeItemUsage(anal: LogAnalysis): Summary {
+    const summary: Summary<any> = {
+        data: {},
+        groups: [
+            {
+                keys: BUBBLE_VASE,
+                label: "Gum & Vase",
+                title: [...BUBBLE_VASE].join(", "),
+            },
+            {
+                keys: SCROLLS,
+                label: "Scrolls",
+                title: [...SCROLLS].join(", "),
+            },
+            {
+                keys: HEALTH_ITEMS,
+                label: "Health Items",
+                title: [...HEALTH_ITEMS].join(", "),
+            },
+            {
+                keys: MANA_ITEMS,
+                label: "Mana Items",
+                title: [...MANA_ITEMS].join(", "),
+            },
+            {
+                keys: SPIRIT_ITEMS,
+                label: "Spirit Items",
+                title: [...SPIRIT_ITEMS].join(", "),
+            },
+            {
+                keys: new Set(["Last Elixir"]),
+                label: "Last Elixir",
+                title: "",
+            },
+        ],
+    }
 
     const mapUses = (
         logIdxs: LogAnalysis["itemUsage"][string],
         value: number
     ) =>
         logIdxs.map((logIdx) => ({
+            count: 1,
             value: value,
             logIdx,
         }))
@@ -287,39 +267,37 @@ function summarizeItemUsage(anal: LogAnalysis) {
         const ps = PRICES as any
 
         if (BUBBLE_VASE.has(k)) {
-            cats.bv.uses.push(...mapUses(logIdxs, ps[k]))
+            summary.data[k] = mapUses(logIdxs, ps[k])
         } else if (SCROLLS.has(k)) {
-            cats.scrolls.uses.push(...mapUses(logIdxs, ps[k]))
+            summary.data[k] = mapUses(logIdxs, ps[k])
         } else if (HEALTH_ITEMS.has(k)) {
-            cats.health.uses.push(...mapUses(logIdxs, ps[k]))
+            summary.data[k] = mapUses(logIdxs, ps[k])
         } else if (MANA_ITEMS.has(k)) {
-            cats.mana.uses.push(...mapUses(logIdxs, ps[k]))
+            summary.data[k] = mapUses(logIdxs, ps[k])
         } else if (SPIRIT_ITEMS.has(k)) {
-            cats.spirit.uses.push(...mapUses(logIdxs, ps[k]))
+            summary.data[k] = mapUses(logIdxs, ps[k])
         } else if (item === "Last Elixir") {
-            cats.last.uses.push(
-                ...mapUses(logIdxs, PRICES["Last Elixir"])
-            )
+            summary.data[k] = mapUses(logIdxs, PRICES["Last Elixir"])
         }
     }
 
-    return cats
+    return summary
 }
 
-function formatNumber(x: number) {
-    const digits = [...Math.trunc(x).toString()]
-        .reverse()
-        .reduce((acc, digit, idx) => {
-            if (idx % 3 === 0 && idx > 0) {
-                acc.push(",")
-            }
-
-            acc.push(digit)
-
-            return acc
-        }, [] as string[])
-
-    return digits.reverse().join("")
+interface Summary<TKey extends string = string> {
+    data: Record<
+        TKey,
+        Array<{
+            count: number
+            value: number
+            logIdx: number
+        }>
+    >
+    groups: Array<{
+        keys: Set<TKey>
+        label: string
+        title: string
+    }>
 }
 
 // thanks BattleStats

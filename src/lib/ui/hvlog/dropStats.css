@@ -1,12 +1,12 @@
 .drop-stats {
-    .summary-table {
+    .tally-table {
         th,
         td {
             padding: 0.75rem !important;
         }
     }
 
-    .summary-section {
+    .tally-section {
         h1 {
             font-weight: bold;
             font-size: 1rem;
