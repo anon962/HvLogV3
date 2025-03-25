@@ -238,3 +238,23 @@ export function extractDrops(log: CompleteLog): LogAnalysis["drops"] {
         return [name, count] as [string, number]
     }
 }
+
+export function extractItemUsage(log: CompleteLog) {
+    let usage: LogAnalysis["itemUsage"] = {}
+
+    for (const [idx, entry] of enumerate(log.entries)) {
+        if (entry.type !== "event") {
+            continue
+        }
+
+        const ev = entry.event
+        switch (ev.event_type) {
+            case "PLAYER_ITEM":
+                usage[ev.item] = usage[ev.item] ?? []
+                usage[ev.item].push(idx)
+                break
+        }
+    }
+
+    return usage
+}

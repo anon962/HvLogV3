@@ -3,6 +3,7 @@ import {
     extractBattleType,
     extractCompletionType,
     extractDrops,
+    extractItemUsage,
     extractNumTurns as extractTurnIndexes,
 } from "./statExtractors"
 
@@ -56,6 +57,8 @@ export class LogStats {
 
         const drops = extractDrops(log)
 
+        const itemUsage = extractItemUsage(log)
+
         const analysis = {
             id: log.id,
             completionType,
@@ -63,6 +66,7 @@ export class LogStats {
             round,
             turnIndexes,
             drops,
+            itemUsage,
             errors: {
                 parsing: hasParseError,
                 inconsistentBattleTypes,
@@ -141,6 +145,7 @@ export interface LogAnalysis {
             entries: Array<{ logIdx: number; count: number }>
         }
     >
+    itemUsage: Record<string, number[]>
     errors: {
         parsing: boolean
         inconsistentBattleTypes: boolean

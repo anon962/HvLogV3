@@ -23,107 +23,164 @@ export function DropStats(props: { log: LogWithAnalysis }) {
 function IncomeSummaryTable(
     drops: ReturnType<typeof summarizeItemDrops>
 ) {
-    let rows = Object.entries(drops).map(([name, items]) => {
-        const count = sum(items, (x) => x.count)
-        const value = sum(items, (x) => x.value)
-        return { name, count, value }
-    })
+    let rows = Object.entries(drops).map(
+        ([name, { xs, description }]) => {
+            const count = sum(xs, (x) => x.count)
+            const value = sum(xs, (x) => x.value)
+            return { name, count, value, description }
+        }
+    )
     rows = sort(rows, (x) => x.value, true)
 
     const totalValue = sum(Object.values(rows).map((x) => x.value))
     const totalCount = sum(Object.values(rows).map((x) => x.count))
 
     return (
-        <Table className="summary-table w-auto">
-            <TableHeader>
-                <TableRow className="font-bold">
-                    <TableHead>Category</TableHead>
-                    <TableHead className="text-right pl-4">
-                        Value
-                    </TableHead>
-                    <TableHead className="text-right pl-4">
-                        Count
-                    </TableHead>
-                </TableRow>
-            </TableHeader>
-            <TableBody>
-                {rows.map((x) => (
+        <section className="summary-section">
+            <h1>Income</h1>
+            <Table className="summary-table w-auto border rounded-md">
+                <TableHeader>
                     <TableRow>
-                        <TableCell className="pr-4">
-                            {x.name}
+                        <TableHead className="font-bold">
+                            Category
+                        </TableHead>
+                        <TableHead className="text-right font-bold">
+                            Value
+                        </TableHead>
+                        <TableHead className="text-right font-bold">
+                            Count
+                        </TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {rows.map((x) => (
+                        <TableRow>
+                            <TableCell
+                                className=""
+                                title={x.description}
+                            >
+                                {x.name}
+                            </TableCell>
+                            <TableCell className="text-right">
+                                {formatNumber(x.value)}
+                            </TableCell>
+                            <TableCell className="text-right">
+                                {formatNumber(x.count)}
+                            </TableCell>
+                        </TableRow>
+                    ))}
+
+                    <TableRow className="border-t-2 font-bold">
+                        <TableCell>Total</TableCell>
+                        <TableCell className="text-right">
+                            {formatNumber(totalValue)}
                         </TableCell>
-                        <TableCell className="text-right pl-4">
-                            {Math.trunc(x.value)}
-                        </TableCell>
-                        <TableCell className="text-right pl-4">
-                            {x.count}
+                        <TableCell className="text-right">
+                            {formatNumber(totalCount)}
                         </TableCell>
                     </TableRow>
-                ))}
-
-                <TableRow className="border-t-2 font-bold">
-                    <TableCell>Total</TableCell>
-                    <TableCell className="text-right">
-                        {Math.trunc(totalValue)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                        {totalCount}
-                    </TableCell>
-                </TableRow>
-            </TableBody>
-        </Table>
+                </TableBody>
+            </Table>
+        </section>
     )
 }
 
 function summarizeItemDrops(anal: LogAnalysis) {
-    const init = () =>
-        [] as Array<{ count: number; value: number; logIdx: number }>
+    const init = (description: string) => ({
+        xs: [] as Array<{
+            count: number
+            value: number
+            logIdx: number
+        }>,
+        description,
+    })
     const cats = {
-        Artifacts: init(),
-        Consumables: init(),
-        Credits: init(),
-        Crystals: init(),
-        Figurines: init(),
-        Materials: init(),
-        Other: init(),
-        Shards: init(),
-        Trophies: init(),
+        Artifacts: init("Precursor Artifacts"),
+        Consumables: init([...CONSUMABLES].join(", ")),
+        Credits: init("Credits"),
+        Crystals: init("Crystals"),
+        Figurines: init("Figurines"),
+        Materials: init([...MATERIALS].join(", ")),
+        Other: init(""),
+        Shards: init([...SHARDS].join(", ")),
+        Trophies: init([...TROPHIES].join(", ")),
     } as const
 
-    const take = (x: LogAnalysis["drops"][string], mult: number) =>
-        x.entries.map((entry) => ({
-            count: entry.count,
-            value: mult * entry.count,
-            logIdx: entry.logIdx,
-        }))
+    const take = (
+        x: LogAnalysis["drops"][string],
+        mult: number,
+        asSingle?: boolean
+    ) =>
+        x.entries.map((entry) => {
+            if (!asSingle) {
+                return {
+                    count: entry.count,
+                    value: mult * entry.count,
+                    logIdx: entry.logIdx,
+                }
+            } else {
+                return {
+                    count: 1,
+                    value: mult * entry.count,
+                    logIdx: entry.logIdx,
+                }
+            }
+        })
+
+    const otherItems = new Set<string>()
 
     for (let [key, xs] of Object.entries(anal.drops)) {
         const k = key as any
         const ps = PRICES as any
 
         if (ARTIFACTS.has(k)) {
-            cats.Artifacts.push(...take(xs, ps[k]))
+            cats.Artifacts.xs.push(...take(xs, ps[k]))
         } else if (CONSUMABLES.has(k)) {
-            cats.Consumables.push(...take(xs, ps[k]))
-        } else if (k === "autosell" || k === "credits") {
-            cats.Credits.push(...take(xs, 1))
+            cats.Consumables.xs.push(...take(xs, ps[k]))
+        } else if (
+            k === "autosell" ||
+            k === "credits" ||
+            k === "Credits"
+        ) {
+            console.log("here", xs)
+            cats.Credits.xs.push(...take(xs, 1, true))
         } else if (key.startsWith("Crystal of ")) {
-            cats.Crystals.push(...take(xs, PRICES["Crystal"]))
+            cats.Crystals.xs.push(...take(xs, PRICES["Crystal"]))
         } else if (k.includes("Figurine")) {
-            cats.Figurines.push(...take(xs, PRICES["Figurine"]))
+            cats.Figurines.xs.push(...take(xs, PRICES["Figurine"]))
         } else if (MATERIALS.has(k)) {
-            cats.Materials.push(...take(xs, ps[k]))
+            cats.Materials.xs.push(...take(xs, ps[k]))
         } else if (SHARDS.has(k)) {
-            cats.Shards.push(...take(xs, ps[k]))
+            cats.Shards.xs.push(...take(xs, ps[k]))
         } else if (TROPHIES.has(k)) {
-            cats.Trophies.push(...take(xs, ps[k]))
+            cats.Trophies.xs.push(...take(xs, ps[k]))
         } else if (["experience", "proficiency"].includes(k)) {
         } else {
-            cats.Other.push(...take(xs, ps[k] ?? 0))
+            console.log(xs, k, ps[k])
+            cats.Other.xs.push(...take(xs, ps[k] ?? 0))
+            otherItems.add(k)
         }
     }
 
+    cats.Other.description = [...otherItems].join(", ")
+
     return cats
+}
+
+function formatNumber(x: number) {
+    const digits = [...Math.trunc(x).toString()]
+        .reverse()
+        .reduce((acc, digit, idx) => {
+            if (idx % 3 === 0 && idx > 0) {
+                acc.push(",")
+            }
+
+            acc.push(digit)
+
+            return acc
+        }, [] as string[])
+
+    return digits.reverse().join("")
 }
 
 // thanks BattleStats
