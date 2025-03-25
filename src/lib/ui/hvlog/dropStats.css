@@ -1,16 +1,24 @@
 .drop-stats {
-    .tally-table {
-        th,
-        td {
-            padding: 0.75rem !important;
-        }
+    .income .footer.value {
+        color: var(--color-green-300);
+    }
+    .expenses .footer.value {
+        color: var(--color-red-300);
     }
 
-    .tally-section {
-        h1 {
-            font-weight: bold;
-            font-size: 1rem;
-            padding-bottom: 0.5rem;
-        }
+    container-type: inline-size;
+}
+
+.income-expense {
+    display: flex;
+    flex-flow: column;
+    align-items: center;
+    gap: 2rem;
+}
+@container (width > 50rem) {
+    .income-expense {
+        flex-flow: row;
+        justify-content: center;
+        align-items: start;
     }
 }

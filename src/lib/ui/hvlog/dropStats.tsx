@@ -1,16 +1,64 @@
 import { LogAnalysis } from "@/lib/statsDb"
-import { sum } from "radash"
+import { max, range, sum } from "radash"
 import { LogWithAnalysis } from "./main"
-import { TallyTable } from "./tallyTable"
+import { formatNumber, TallyTable } from "./tallyTable"
 
 export function DropStats(props: { log: LogWithAnalysis }) {
     const drops = summarizeItemDrops(props.log.analysis)
     const usage = summarizeItemUsage(props.log.analysis)
 
+    const totalIncome = sum(
+        Object.values(drops.data).flatMap((xs) => xs),
+        (x) => x.value
+    )
+    const totalExpenses = sum(
+        Object.values(usage.data).flatMap((xs) => xs),
+        (x) => x.value
+    )
+
+    const net = totalIncome - totalExpenses
+    const netClass = net > 0 ? "text-green-300" : "text-red-300"
+    const netStr = (net > 0 ? "+" : "-") + formatNumber(net) + "c"
+
+    const incomeStr = "+" + formatNumber(totalIncome) + "c"
+    const expenseStr = "-" + formatNumber(totalExpenses) + "c"
+    const maxLength = max([
+        netStr.length,
+        incomeStr.length,
+        expenseStr.length,
+    ])
+
+    const divider =
+        [...range(maxLength - 1)].map(() => "=").join("") +
+        "==========="
+
     return (
-        <div className="drop-stats h-full overflow-auto flex flex-col gap-12 items-center">
-            {IncomeSummaryTable(drops)}
-            {UsageSummaryTable(props.log.analysis, usage)}
+        <div className="drop-stats h-full overflow-auto flex flex-col">
+            <pre
+                className="w-max px-2 grid gap-x-4 text-right"
+                style={{
+                    gridTemplateColumns: "max-content max-content",
+                }}
+            >
+                <span className="">Income:</span>
+                <span className="text-green-300">{incomeStr}</span>
+
+                <span className="">Expenses:</span>
+                <span className="text-red-300">{expenseStr}</span>
+
+                {/* <span></span> */}
+                <span className="col-span-2">{divider}</span>
+
+                <span className="">Net:</span>
+                <span className={netClass}>{netStr}</span>
+            </pre>
+
+            <hr className="my-12" />
+
+            <div className="income-expense">
+                {IncomeSummaryTable(drops)}
+                {UsageSummaryTable(props.log.analysis, usage)}
+            </div>
         </div>
     )
 }
@@ -50,7 +98,13 @@ function IncomeSummaryTable(
         }
     )
 
-    return <TallyTable label="Income" rows={rows} />
+    return (
+        <TallyTable
+            label="Income"
+            rows={rows}
+            sectionClass="income"
+        />
+    )
 }
 
 function summarizeItemDrops(anal: LogAnalysis) {
@@ -212,7 +266,13 @@ function UsageSummaryTable(
         subRows: [],
     })
 
-    return <TallyTable label="Expenses" rows={rows} />
+    return (
+        <TallyTable
+            label="Expenses"
+            rows={rows}
+            sectionClass="expenses"
+        />
+    )
 }
 
 function summarizeItemUsage(anal: LogAnalysis): Summary {

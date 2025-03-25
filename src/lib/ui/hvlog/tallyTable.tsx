@@ -24,7 +24,7 @@ export function TallyTable({
     }, rows)
 
     const sectionClasses = `tally-table w-max ${sectionClass ?? ""}`
-    const titleClasses = `pb-2 ${
+    const titleClasses = `pb-4 ${
         titleClass?.length ? titleClass : ""
     }`
     const titleRowClasses = `row ${
@@ -169,7 +169,7 @@ export interface TallyTableSubRow {
     value: number
 }
 
-function formatNumber(x: number) {
+export function formatNumber(x: number) {
     const digits = [...Math.trunc(x).toString()]
         .reverse()
         .reduce((acc, digit, idx) => {
