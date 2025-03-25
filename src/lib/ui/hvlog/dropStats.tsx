@@ -12,10 +12,12 @@ import { LogWithAnalysis } from "./main"
 
 export function DropStats(props: { log: LogWithAnalysis }) {
     const drops = summarizeItemDrops(props.log.analysis)
+    const usage = summarizeItemUsage(props.log.analysis)
 
     return (
-        <div className="drop-stats h-full overflow-auto">
+        <div className="drop-stats h-full overflow-auto flex flex-col gap-12">
             {IncomeSummaryTable(drops)}
+            {UsageSummaryTable(props.log.analysis, usage)}
         </div>
     )
 }
@@ -65,7 +67,9 @@ function IncomeSummaryTable(
                                 {formatNumber(x.value)}
                             </TableCell>
                             <TableCell className="text-right">
-                                {formatNumber(x.count)}
+                                {x.count >= 1000
+                                    ? formatNumber(x.count)
+                                    : x.count}
                             </TableCell>
                         </TableRow>
                     ))}
@@ -76,7 +80,9 @@ function IncomeSummaryTable(
                             {formatNumber(totalValue)}
                         </TableCell>
                         <TableCell className="text-right">
-                            {formatNumber(totalCount)}
+                            {totalCount >= 1000
+                                ? formatNumber(totalCount)
+                                : totalCount}
                         </TableCell>
                     </TableRow>
                 </TableBody>
@@ -167,6 +173,139 @@ function summarizeItemDrops(anal: LogAnalysis) {
     return cats
 }
 
+function UsageSummaryTable(
+    anal: LogAnalysis,
+    usage: ReturnType<typeof summarizeItemUsage>
+) {
+    let rows = Object.values(usage).map(
+        ({ label, description, uses }) => {
+            const count = uses.length
+            const value = sum(uses, (x) => x.value)
+            return { label, count, value, description }
+        }
+    )
+
+    let staminaUsage = (anal.round?.end ?? 1) / 50
+    if (anal.battleType?.name === "Grindfest") {
+        staminaUsage += 1
+    }
+    rows.push({
+        label: "Stamina",
+        count: staminaUsage,
+        value: PRICES["Energy Drink"] / 20,
+        description: "",
+    })
+
+    rows = sort(rows, (x) => x.value, true)
+
+    const totalValue = sum(Object.values(rows).map((x) => x.value))
+    const totalCount = sum(Object.values(rows).map((x) => x.count))
+
+    return (
+        <section className="summary-section">
+            <h1>Expenses</h1>
+            <Table className="summary-table w-auto border rounded-md">
+                <TableHeader>
+                    <TableRow>
+                        <TableHead className="font-bold">
+                            Category
+                        </TableHead>
+                        <TableHead className="text-right font-bold">
+                            Value
+                        </TableHead>
+                        <TableHead className="text-right font-bold">
+                            Count
+                        </TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {rows.map((x) => (
+                        <TableRow>
+                            <TableCell
+                                className=""
+                                title={x.description}
+                            >
+                                {x.label}
+                            </TableCell>
+                            <TableCell className="text-right">
+                                {formatNumber(x.value)}
+                            </TableCell>
+                            <TableCell className="text-right">
+                                {x.count >= 1000
+                                    ? formatNumber(x.count)
+                                    : x.count}
+                            </TableCell>
+                        </TableRow>
+                    ))}
+
+                    <TableRow className="border-t-2 font-bold">
+                        <TableCell>Total</TableCell>
+                        <TableCell className="text-right">
+                            {formatNumber(totalValue)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                            {totalCount >= 1000
+                                ? formatNumber(totalCount)
+                                : totalCount}
+                        </TableCell>
+                    </TableRow>
+                </TableBody>
+            </Table>
+        </section>
+    )
+}
+
+function summarizeItemUsage(anal: LogAnalysis) {
+    const init = (label: string, description: string) => ({
+        label,
+        description,
+        uses: [] as Array<{
+            value: number
+            logIdx: number
+        }>,
+    })
+    const cats = {
+        bv: init("Gum & Vase", [...BUBBLE_VASE].join(", ")),
+        scrolls: init("Scrolls", [...SCROLLS].join(", ")),
+        health: init("Health Items", [...HEALTH_ITEMS].join(", ")),
+        mana: init("Mana Items", [...MANA_ITEMS].join(", ")),
+        spirit: init("Spirit Items", [...SPIRIT_ITEMS].join(", ")),
+        last: init("Last Elixir", "Last Elixir"),
+    } as const
+
+    const mapUses = (
+        logIdxs: LogAnalysis["itemUsage"][string],
+        value: number
+    ) =>
+        logIdxs.map((logIdx) => ({
+            value: value,
+            logIdx,
+        }))
+
+    for (let [item, logIdxs] of Object.entries(anal.itemUsage)) {
+        const k = item as any
+        const ps = PRICES as any
+
+        if (BUBBLE_VASE.has(k)) {
+            cats.bv.uses.push(...mapUses(logIdxs, ps[k]))
+        } else if (SCROLLS.has(k)) {
+            cats.scrolls.uses.push(...mapUses(logIdxs, ps[k]))
+        } else if (HEALTH_ITEMS.has(k)) {
+            cats.health.uses.push(...mapUses(logIdxs, ps[k]))
+        } else if (MANA_ITEMS.has(k)) {
+            cats.mana.uses.push(...mapUses(logIdxs, ps[k]))
+        } else if (SPIRIT_ITEMS.has(k)) {
+            cats.spirit.uses.push(...mapUses(logIdxs, ps[k]))
+        } else if (item === "Last Elixir") {
+            cats.last.uses.push(
+                ...mapUses(logIdxs, PRICES["Last Elixir"])
+            )
+        }
+    }
+
+    return cats
+}
+
 function formatNumber(x: number) {
     const digits = [...Math.trunc(x).toString()]
         .reverse()
@@ -194,6 +333,7 @@ const PRICES = {
     "Aether Shard": 2300,
     "Featherweight Shard": 75,
     "Voidseeker Shard": 75,
+    "Energy Drink": 117_000,
 
     //Trophies
     "ManBearPig Tail": 2100,
@@ -219,17 +359,18 @@ const PRICES = {
     "Spirit Draught": 15,
     "Spirit Potion": 90,
     "Spirit Elixir": 900,
+    "Last Elixir": 900,
 
     "Bubble-Gum": 15000,
     "Flower Vase": 15000,
 
     //Infusions/Scrolls
-    "Infusion of Flames": 0, // 140,
-    "Infusion of Frost": 0, // 140,
-    "Infusion of Lightning": 0, // 140,
-    "Infusion of Storms": 0, // 265,
-    "Infusion of Darkness": 0, // 160,
-    "Infusion of Divinity": 0, // 3000,
+    "Infusion of Flames": 140,
+    "Infusion of Frost": 140,
+    "Infusion of Lightning": 140,
+    "Infusion of Storms": 265,
+    "Infusion of Darkness": 160,
+    "Infusion of Divinity": 3000,
     "Scroll of Life": 400,
     "Scroll of Absorption": 20,
     "Scroll of Shadows": 200,
@@ -239,10 +380,10 @@ const PRICES = {
     "Scroll of the Avatar": 1300,
 
     //Food
-    "Monster Chow": 0, //3,
-    "Monster Edibles": 0, //5,
-    "Monster Cuisine": 0, //6,
-    "Happy Pills": 0, //550,
+    "Monster Chow": 3,
+    "Monster Edibles": 5,
+    "Monster Cuisine": 6,
+    "Happy Pills": 550,
 
     //Materials
     "Scrap Metal": 89,
@@ -310,21 +451,30 @@ const MATERIALS = new Set<keyof typeof PRICES>([
     "Low-Grade Wood",
 ])
 
-const CONSUMABLES = new Set<keyof typeof PRICES>([
+const HEALTH_ITEMS = new Set<keyof typeof PRICES>([
     "Health Draught",
     "Health Potion",
     "Health Elixir",
+])
+
+const MANA_ITEMS = new Set<keyof typeof PRICES>([
     "Mana Draught",
     "Mana Potion",
     "Mana Elixir",
+])
+
+const SPIRIT_ITEMS = new Set<keyof typeof PRICES>([
     "Spirit Draught",
     "Spirit Potion",
     "Spirit Elixir",
+])
 
+const BUBBLE_VASE = new Set<keyof typeof PRICES>([
     "Bubble-Gum",
     "Flower Vase",
+])
 
-    //Infusions/Scrolls
+const SCROLLS = new Set<keyof typeof PRICES>([
     "Infusion of Flames",
     "Infusion of Frost",
     "Infusion of Lightning",
@@ -338,8 +488,15 @@ const CONSUMABLES = new Set<keyof typeof PRICES>([
     "Scroll of Protection",
     "Scroll of the Gods",
     "Scroll of the Avatar",
+])
 
-    //Food
+const CONSUMABLES = new Set<keyof typeof PRICES>([
+    ...HEALTH_ITEMS,
+    ...MANA_ITEMS,
+    ...SPIRIT_ITEMS,
+    ...BUBBLE_VASE,
+    ...SCROLLS,
+
     "Monster Chow",
     "Monster Edibles",
     "Monster Cuisine",
