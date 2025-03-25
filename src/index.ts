@@ -4,7 +4,6 @@ import entryHtml from "../dist/ui/src/lib/ui/hvlog/main.html?raw"
 import entryJs from "../dist/ui/ui.js?raw"
 
 import { App } from "./lib/app/app"
-import { registerClearCache } from "./lib/app/registerClearCache"
 import { registerViewLogs } from "./lib/app/registerViewLogs"
 
 // @todo: detail view - graphs
@@ -25,7 +24,9 @@ async function main() {
     window.HV_LOG = app
 
     registerViewLogs(app)
-    registerClearCache(app)
+
+    // @todo: Doesnt work in ui view
+    // registerClearCache(app)
 
     switch (window.location.pathname) {
         case "/hvlog/logs":

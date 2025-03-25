@@ -8,7 +8,6 @@ export function registerClearCache(app: App) {
     GM_registerMenuCommand(
         "Clear cache",
         () => {
-            console.log("wtf")
             unsafeWindow.localStorage.removeItem("hvlog_stats")
             unsafeWindow.location.href = window.location.href
         },

@@ -8,7 +8,7 @@ const APP_VERSION = 1
 const DEFAULT_CONFIG = () =>
     ({
         version: APP_VERSION,
-        enableLiveStats: false,
+        prices: {},
     } satisfies AppConfig)
 
 export class App {
@@ -23,10 +23,7 @@ export class App {
 
         const db = await LogDb.ainit()
 
-        const logger = await BattleLogger.ainit(
-            db,
-            config.enableLiveStats
-        )
+        const logger = await BattleLogger.ainit(db, false)
 
         const app = new App(config, db, logger)
         app.dumpConfig()
@@ -78,5 +75,5 @@ export class App {
 
 interface AppConfig {
     version: number
-    enableLiveStats: boolean
+    prices: Record<string, number>
 }
