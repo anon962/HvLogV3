@@ -193,7 +193,8 @@ export class IncomeChart {
                         x: "x",
                         y: total,
                         dx: 1,
-                        stroke: "red",
+                        stroke: "var(--foreground)",
+                        strokeWidth: 2,
                     })
                 ),
                 Plot.tip(
@@ -205,6 +206,7 @@ export class IncomeChart {
                         title: "description",
                         frameAnchor: "top",
                         pointerSize: 0,
+                        strokeWidth: 2,
                     })
                 ),
             ],

@@ -75,9 +75,10 @@
             .flee {
                 color: var(--color-slate-300);
             }
-            .mm {
-                color: var(--color-muted-foreground);
-            }
+        }
+
+        .mm {
+            color: var(--color-muted-foreground);
         }
 
         &:not(:hover) .view {

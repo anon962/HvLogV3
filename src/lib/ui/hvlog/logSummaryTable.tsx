@@ -120,8 +120,8 @@ function LogRow(props: {
                 onClick={() => props.onClick?.(props.log)}
             >
                 <TableCell className="">{typeSummary}</TableCell>
-                <TableCell className=" text-right">{turns}</TableCell>
-                <TableCell className=" text-right">
+                <TableCell className="text-right">{turns}</TableCell>
+                <TableCell className="text-right">
                     {duration}
                 </TableCell>
                 <TableCell className="" title={props.log.meta.start}>

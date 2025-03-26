@@ -17,11 +17,15 @@
             width: 100%;
 
             [aria-label="tip"] {
-                color: var(--color-background);
+                fill: color-mix(
+                    in oklab,
+                    var(--muted-foreground) 25%,
+                    var(--card)
+                );
 
                 text {
                     font-family: monospace;
-                    color: var(--color-foreground);
+                    color: var(--foreground);
                 }
             }
         }
