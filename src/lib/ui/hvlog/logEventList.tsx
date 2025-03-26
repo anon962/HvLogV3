@@ -20,7 +20,7 @@ export function LogEventList(props: { log: LogWithAnalysis }) {
 
     useEffect(() => {
         setActiveIdx({ log: -1, turn: -1, round: -1 })
-    }, [props.log])
+    }, [props.log.log.id])
 
     return (
         <div className="log-event-list flex flex-col h-full">
@@ -131,7 +131,7 @@ export function LogEventList(props: { log: LogWithAnalysis }) {
                 })}
             </div>
 
-            {activeIdx.log > -1 && (
+            {props.log.log.entries[activeIdx.log] && (
                 <LogEntryDetails
                     onClose={() =>
                         setActiveIdx({ log: -1, turn: -1, round: -1 })

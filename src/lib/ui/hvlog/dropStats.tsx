@@ -28,7 +28,7 @@ export function DropStats(props: { log: LogWithAnalysis }) {
 
             <hr className="my-12" />
 
-            {DropChart(props.log.log, drops)}
+            {DropChart(props.log.log, drops, usage)}
         </div>
     )
 }
@@ -364,8 +364,12 @@ function summarizeItemUsage(anal: LogAnalysis): EventSummary {
     return summary
 }
 
-function DropChart(log: CompleteLog, summary: EventSummary) {
-    const chart = new IncomeChart(log, summary)
+function DropChart(
+    log: CompleteLog,
+    dropSummary: EventSummary,
+    usageSummary: EventSummary
+) {
+    const chart = new IncomeChart(log, dropSummary, usageSummary)
     const el = chart.render()
 
     const container = useRef<HTMLDivElement>(null)
@@ -402,10 +406,10 @@ export interface EventSummary<TKey extends string = string> {
 
 // thanks BattleStats
 // https://forums.e-hentai.org/index.php?showtopic=243497
-const PRICES = {
+export const PRICES = {
     //Special
-    Crystal: 20500 / 12000,
-    "Precursor Artifact": 20000,
+    Crystal: 17500 / 12000,
+    "Precursor Artifact": 5500,
     Figurine: 16000,
     "Amnesia Shard": 8800,
     "Aether Shard": 2300,
@@ -425,7 +429,7 @@ const PRICES = {
     "Black T-Shirt": 12800,
     Sapling: 9500,
     "Unicorn Horn": 13600,
-    "Noodly Appendage": 43000,
+    "Noodly Appendage": 50_000,
 
     //Draughts/Potions/Elixirs
     "Health Draught": 1,
@@ -439,8 +443,8 @@ const PRICES = {
     "Spirit Elixir": 900,
     "Last Elixir": 900,
 
-    "Bubble-Gum": 15000,
-    "Flower Vase": 15000,
+    "Bubble-Gum": 5000,
+    "Flower Vase": 5000,
 
     //Infusions/Scrolls
     "Infusion of Flames": 140,
@@ -461,7 +465,7 @@ const PRICES = {
     "Monster Chow": 3,
     "Monster Edibles": 5,
     "Monster Cuisine": 6,
-    "Happy Pills": 550,
+    "Happy Pills": 900,
 
     //Materials
     "Scrap Metal": 89,
