@@ -1,7 +1,8 @@
 import { IncomeChart } from "@/lib/charts/incomeChart"
 import { CompleteLog } from "@/lib/logDb"
+import { filterEvents } from "@/lib/statExtractors"
 import { LogAnalysis } from "@/lib/statsDb"
-import { max, range, sum } from "radash"
+import { alphabetical, max, range, sum } from "radash"
 import { useEffect, useRef } from "react"
 import { LogWithAnalysis } from "./main"
 import { formatNumber, TallyTable } from "./tallyTable"
@@ -17,7 +18,10 @@ export function DropStats(props: { log: LogWithAnalysis }) {
 
     return (
         <div className="drop-stats h-full overflow-auto flex flex-col">
-            {CalculationPreview(drops, usage, staminaUsage)}
+            <div className="overview">
+                {CalculationPreview(drops, usage, staminaUsage)}
+                {EquipSummary(props.log.log)}
+            </div>
 
             <hr className="my-12" />
 
@@ -380,11 +384,33 @@ function DropChart(
         return () => el.remove()
     }, [el, container.current])
 
+    return <div ref={container} className="w-full flex"></div>
+}
+
+function EquipSummary(log: CompleteLog) {
+    const evs = alphabetical(
+        filterEvents(log, ["DROP"]).filter((ev) =>
+            GOOD_EQUIPS.some((patt) => ev.item.match(patt))
+        ),
+        (ev) => ev.item
+    )
+
+    const els = evs.map((ev) => (
+        <li className="list-disc">{ev.item}</li>
+    ))
+
     return (
-        <div
-            ref={container}
-            className="w-full flex justify-center"
-        ></div>
+        <div className="equips">
+            <h1 className="font-bold">Notable Equips:</h1>
+
+            <ul className="pl-6 font-mono">
+                {els.length ? (
+                    els
+                ) : (
+                    <li className="list-disc">(none)</li>
+                )}
+            </ul>
+        </div>
     )
 }
 
@@ -593,3 +619,13 @@ const SHARDS = new Set<keyof typeof PRICES>([
 ])
 
 const ARTIFACTS = new Set<keyof typeof PRICES>(["Precursor Artifact"])
+
+const GOOD_EQUIPS = [
+    /Peerless/,
+    /Legendary/,
+    /Magnificent/,
+    // /Exquisite/,
+    // /Superior/,
+    // /Fine/,
+    // /Crude/,
+]

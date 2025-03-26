@@ -5,7 +5,7 @@ import { LogAnalysis } from "./statsDb"
 import { enumerate, findNext } from "./utils/miscUtils"
 import { InferCollectionType } from "./utils/typeUtils"
 
-function filterEvents<TEvent extends keyof HvEventMap>(
+export function filterEvents<TEvent extends keyof HvEventMap>(
     log: CompleteLog,
     eventTypes: TEvent[] | null
 ): Array<HvEventMap[TEvent] & { logIndex: number }> {

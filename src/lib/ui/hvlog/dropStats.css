@@ -37,7 +37,19 @@
 @container (width > 50rem) {
     .income-expense {
         flex-flow: row;
-        justify-content: center;
+        /* justify-content: center; */
         align-items: start;
+    }
+}
+
+.overview {
+    display: grid;
+    flex-flow: column;
+    gap: 2rem;
+}
+@container (width > 40rem) {
+    .overview {
+        display: grid;
+        grid-template-columns: minmax(17rem, 1fr) 2fr;
     }
 }
