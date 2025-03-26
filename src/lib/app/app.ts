@@ -31,6 +31,10 @@ export class App {
         return app
     }
 
+    public async runLogger() {
+        await this.logger.attach()
+    }
+
     private static loadConfig(): AppConfig {
         // Load string
         const raw = localStorage.getItem(STORAGE_KEY)

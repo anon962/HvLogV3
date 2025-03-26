@@ -33,6 +33,7 @@ export class DataSeries<T = any> {
         let result = pts
 
         for (const tfm of this.transforms) {
+            // console.log("before", tfm, result)
             switch (tfm.type) {
                 case "average":
                     result = this.transformAverage(result, tfm)
@@ -46,17 +47,40 @@ export class DataSeries<T = any> {
                 case "binByWidth":
                     result = this.transformBin(result, {
                         type: "bin",
-                        keyFn: (pt) => Math.trunc(pt.x / tfm.width),
+                        keyFn: (pt) =>
+                            tfm.width
+                                ? Math.trunc(pt.x / tfm.width)
+                                : pt.x,
                         aggFn: (key, pts) => ({
-                            x: key * tfm.width,
+                            x: tfm.width ? key * tfm.width : key,
                             y:
                                 sum(yVals(pts)) /
                                 (tfm.divideByWidth ? tfm.width : 1),
                         }),
                     })
                     break
+                case "sort":
+                    result = sort(result, ({ x }) => x)
+                    break
+                case "accumulate":
+                    result = result.reduce(
+                        ({ last, acc }, pt) => {
+                            last.x = pt.x
+                            last.y += pt.y
+                            acc.push({ ...last })
+                            return { last, acc }
+                        },
+                        {
+                            last: { x: 0, y: 0 },
+                            acc: [] as Point2[],
+                        }
+                    ).acc
+                    break
                 case "map":
                     result = result.map((pt) => tfm.fn(pt))
+                    break
+                case "fill":
+                    result = this.transformFill(result, tfm)
                     break
             }
         }
@@ -157,6 +181,38 @@ export class DataSeries<T = any> {
 
         return update
     }
+
+    private transformFill(pts: Point2[], tfm: FillTransform) {
+        if (!pts.length) {
+            return pts
+        }
+
+        const step = tfm.step ?? 1
+
+        pts = sort(pts, (pt) => pt.x)
+
+        let curr = tfm.start ?? { ...pts[0] }
+        let update: Point2[] = []
+
+        for (const pt of pts) {
+            while (curr.x <= pt.x) {
+                if (pt.x - curr.x > step) {
+                    curr.x += step
+                    update.push({ ...curr })
+                } else {
+                    curr.y = pt.y
+                    break
+                }
+            }
+        }
+
+        while (tfm.stop !== undefined && curr.x < tfm.stop) {
+            curr.x += step
+            update.push({ ...curr })
+        }
+
+        return update
+    }
 }
 
 type Point2 = {
@@ -170,6 +226,9 @@ type Transform =
     | BinTransform
     | BinByWidthTransform
     | MapTransform
+    | SortTransform
+    | AccumulateTransform
+    | FillTransform
 
 interface AverageTransform {
     type: "average"
@@ -202,10 +261,25 @@ interface MapTransform {
     fn: (pt: Point2) => Point2
 }
 
+interface SortTransform {
+    type: "sort"
+}
+
+interface AccumulateTransform {
+    type: "accumulate"
+}
+
+interface FillTransform {
+    type: "fill"
+    step?: number
+    start?: Point2
+    stop?: number
+}
+
 function xVals(pts: Point2[]): number[] {
     return pts.map((pt) => pt.x)
 }
 
 function yVals(pts: Point2[]): number[] {
-    return pts.map((pt) => pt.x)
+    return pts.map((pt) => pt.y)
 }

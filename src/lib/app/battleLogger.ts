@@ -14,12 +14,11 @@ export class BattleLogger {
         const stats = new ChartManager(enableStats)
 
         const logger = new BattleLogger(db, stats)
-        await logger.attach()
 
         return logger
     }
 
-    private async attach(): Promise<void> {
+    public async attach(): Promise<void> {
         if (!!document.querySelector("#riddlemaster")) {
             return
         } else if (!!document.querySelector("#textlog")) {

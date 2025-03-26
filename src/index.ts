@@ -24,13 +24,14 @@ async function main() {
     window.HV_LOG = app
 
     registerViewLogs(app)
-
     // @todo: Doesnt work in ui view
     // registerClearCache(app)
 
     switch (window.location.pathname) {
         case "/hvlog/logs":
             return await routeLogViewer(app)
+        default:
+            await app.runLogger()
     }
 }
 

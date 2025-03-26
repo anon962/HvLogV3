@@ -1,5 +1,8 @@
+import { IncomeChart } from "@/lib/charts/incomeChart"
+import { CompleteLog } from "@/lib/logDb"
 import { LogAnalysis } from "@/lib/statsDb"
 import { max, range, sum } from "radash"
+import { useEffect, useRef } from "react"
 import { LogWithAnalysis } from "./main"
 import { formatNumber, TallyTable } from "./tallyTable"
 
@@ -7,12 +10,34 @@ export function DropStats(props: { log: LogWithAnalysis }) {
     const drops = summarizeItemDrops(props.log.analysis)
     const usage = summarizeItemUsage(props.log.analysis)
 
+    return (
+        <div className="drop-stats h-full overflow-auto flex flex-col">
+            {CalculationPreview(drops, usage)}
+
+            <hr className="my-12" />
+
+            <div className="income-expense">
+                {IncomeSummaryTable(drops)}
+                {UsageSummaryTable(props.log.analysis, usage)}
+            </div>
+
+            <hr className="my-12" />
+
+            {DropChart(props.log.log, drops)}
+        </div>
+    )
+}
+
+function CalculationPreview(
+    dropSummary: EventSummary,
+    usageSummary: EventSummary
+) {
     const totalIncome = sum(
-        Object.values(drops.data).flatMap((xs) => xs),
+        Object.values(dropSummary.data).flatMap((xs) => xs),
         (x) => x.value
     )
     const totalExpenses = sum(
-        Object.values(usage.data).flatMap((xs) => xs),
+        Object.values(usageSummary.data).flatMap((xs) => xs),
         (x) => x.value
     )
 
@@ -33,33 +58,24 @@ export function DropStats(props: { log: LogWithAnalysis }) {
         "==========="
 
     return (
-        <div className="drop-stats h-full overflow-auto flex flex-col">
-            <pre
-                className="w-max px-2 grid gap-x-4 text-right"
-                style={{
-                    gridTemplateColumns: "max-content max-content",
-                }}
-            >
-                <span className="">Income:</span>
-                <span className="text-green-300">{incomeStr}</span>
+        <pre
+            className="w-max px-2 grid gap-x-4 text-right"
+            style={{
+                gridTemplateColumns: "max-content max-content",
+            }}
+        >
+            <span className="">Income:</span>
+            <span className="text-green-300">{incomeStr}</span>
 
-                <span className="">Expenses:</span>
-                <span className="text-red-300">{expenseStr}</span>
+            <span className="">Expenses:</span>
+            <span className="text-red-300">{expenseStr}</span>
 
-                {/* <span></span> */}
-                <span className="col-span-2">{divider}</span>
+            {/* <span></span> */}
+            <span className="col-span-2">{divider}</span>
 
-                <span className="">Net:</span>
-                <span className={netClass}>{netStr}</span>
-            </pre>
-
-            <hr className="my-12" />
-
-            <div className="income-expense">
-                {IncomeSummaryTable(drops)}
-                {UsageSummaryTable(props.log.analysis, usage)}
-            </div>
-        </div>
+            <span className="">Net:</span>
+            <span className={netClass}>{netStr}</span>
+        </pre>
     )
 }
 
@@ -108,7 +124,7 @@ function IncomeSummaryTable(
 }
 
 function summarizeItemDrops(anal: LogAnalysis) {
-    const summary: Summary<any> = {
+    const summary: EventSummary<any> = {
         data: {},
         groups: [
             {
@@ -261,7 +277,7 @@ function UsageSummaryTable(
     rows.push({
         label: "Stamina",
         count: staminaUsage,
-        value: PRICES["Energy Drink"] / 20,
+        value: PRICES["Energy Drink"] / 10,
         title: "",
         subRows: [],
     })
@@ -275,8 +291,8 @@ function UsageSummaryTable(
     )
 }
 
-function summarizeItemUsage(anal: LogAnalysis): Summary {
-    const summary: Summary<any> = {
+function summarizeItemUsage(anal: LogAnalysis): EventSummary {
+    const summary: EventSummary<any> = {
         data: {},
         groups: [
             {
@@ -344,7 +360,27 @@ function summarizeItemUsage(anal: LogAnalysis): Summary {
     return summary
 }
 
-interface Summary<TKey extends string = string> {
+function DropChart(log: CompleteLog, summary: EventSummary) {
+    const chart = new IncomeChart(log, summary)
+    const el = chart.render()
+
+    const container = useRef<HTMLDivElement>(null)
+
+    useEffect(() => {
+        el.remove()
+        container?.current?.appendChild(el)
+        return () => el.remove()
+    }, [el, container.current])
+
+    return (
+        <div
+            ref={container}
+            className="w-full flex justify-center"
+        ></div>
+    )
+}
+
+export interface EventSummary<TKey extends string = string> {
     data: Record<
         TKey,
         Array<{

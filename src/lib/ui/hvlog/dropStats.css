@@ -7,6 +7,24 @@
     }
 
     container-type: inline-size;
+
+    figure {
+        width: 100%;
+        max-width: 60rem !important;
+
+        svg {
+            width: 100%;
+
+            [aria-label="tip"] {
+                color: var(--color-background);
+
+                text {
+                    font-family: monospace;
+                    color: var(--color-foreground);
+                }
+            }
+        }
+    }
 }
 
 .income-expense {
