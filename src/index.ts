@@ -16,6 +16,7 @@ import { registerViewLogs } from "./lib/app/registerViewLogs"
 // @todo: compression
 // @todo: live stats
 // @todo: debug flag - disable localstorage reads
+// @todo: debug console
 
 async function main() {
     const app = await App.ainit()

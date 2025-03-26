@@ -6,6 +6,7 @@ import { formatNumber } from "@/lib/utils/miscUtils"
 import { alphabetical, max, range, sum } from "radash"
 import { useEffect, useRef } from "react"
 import { PRICES } from "../constants"
+import { EventSummary } from "./eventSummary"
 import { LogWithAnalysis } from "./main"
 import { TallyTable } from "./tallyTable"
 
@@ -109,7 +110,7 @@ function IncomeSummaryTable(
     )
 
     let rows = Object.values(summary.groups).map(
-        ({ label, title, keys }) => {
+        ({ label, keys }) => {
             let count = 0
             let value = 0
             const subRows = []
@@ -124,7 +125,7 @@ function IncomeSummaryTable(
                 subRows.push(totals[k])
             }
 
-            return { label, title, count, value, subRows }
+            return { label, count, value, subRows }
         }
     )
 
@@ -138,56 +139,47 @@ function IncomeSummaryTable(
 }
 
 function summarizeItemDrops(anal: LogAnalysis) {
-    const summary: DropEventSummary<any> = {
+    const summary: DropEventSummary = {
         data: {},
         groups: [
             {
                 keys: new Set(["Precursor Artifact"]),
                 label: "Artifacts",
-                title: "",
             },
             {
                 keys: CONSUMABLES,
                 label: "Consumables",
-                title: [...CONSUMABLES].join(", "),
             },
             {
                 keys: new Set(["credits", "Credits", "autosell"]),
                 label: "Credits",
-                title: "",
             },
             {
                 keys: MATERIALS,
                 label: "Materials",
-                title: [...MATERIALS].join(", "),
             },
             {
                 keys: SHARDS,
                 label: "Shards",
-                title: [...SHARDS].join(", "),
             },
             {
                 keys: TROPHIES,
                 label: "Trophies",
-                title: [...TROPHIES].join(", "),
             },
         ],
     }
 
     const crystals = {
-        keys: new Set(),
+        keys: new Set<string>(),
         label: "Crystals",
-        title: "",
     }
     const figurines = {
-        keys: new Set(),
+        keys: new Set<string>(),
         label: "Figurines",
-        title: "",
     }
     const other = {
-        keys: new Set(),
+        keys: new Set<string>(),
         label: "Other",
-        title: "",
     }
     summary.groups.push(...[crystals, figurines, other])
 
@@ -265,7 +257,7 @@ function UsageSummaryTable(
     )
 
     let rows = Object.values(summary.groups).map(
-        ({ label, title, keys }) => {
+        ({ label, keys }) => {
             let count = 0
             let value = 0
             const subRows = []
@@ -280,7 +272,7 @@ function UsageSummaryTable(
                 subRows.push(totals[k])
             }
 
-            return { label, title, count, value, subRows }
+            return { label, count, value, subRows }
         }
     )
 
@@ -288,7 +280,6 @@ function UsageSummaryTable(
         label: "Stamina",
         count: staminaUsage,
         value: (staminaUsage * PRICES["Energy Drink"]) / 10,
-        title: "",
         subRows: [],
     })
 
@@ -302,38 +293,32 @@ function UsageSummaryTable(
 }
 
 function summarizeItemUsage(anal: LogAnalysis): DropEventSummary {
-    const summary: DropEventSummary<any> = {
+    const summary: DropEventSummary = {
         data: {},
         groups: [
             {
                 keys: BUBBLE_VASE,
                 label: "Gum & Vase",
-                title: [...BUBBLE_VASE].join(", "),
             },
             {
                 keys: SCROLLS,
                 label: "Scrolls",
-                title: [...SCROLLS].join(", "),
             },
             {
                 keys: HEALTH_ITEMS,
                 label: "Health Items",
-                title: [...HEALTH_ITEMS].join(", "),
             },
             {
                 keys: MANA_ITEMS,
                 label: "Mana Items",
-                title: [...MANA_ITEMS].join(", "),
             },
             {
                 keys: SPIRIT_ITEMS,
                 label: "Spirit Items",
-                title: [...SPIRIT_ITEMS].join(", "),
             },
             {
                 keys: new Set(["Last Elixir"]),
                 label: "Last Elixir",
-                title: "",
             },
         ],
     }
@@ -416,21 +401,10 @@ function EquipSummary(log: CompleteLog) {
     )
 }
 
-export interface DropEventSummary<TKey extends string = string> {
-    data: Record<
-        TKey,
-        Array<{
-            count: number
-            value: number
-            logIdx: number
-        }>
-    >
-    groups: Array<{
-        keys: Set<TKey>
-        label: string
-        title: string
-    }>
-}
+export type DropEventSummary = EventSummary<{
+    count: number
+    value: number
+}>
 
 type PriceKey = keyof typeof PRICES
 

@@ -124,9 +124,7 @@ function Row({
             onClick={() => (hasSubtable ? onClick() : "")}
             className={rowClass}
         >
-            <span className="category cell" title={row.title}>
-                {row.label}
-            </span>
+            <span className="category cell">{row.label}</span>
             <span className="value cell text-right">
                 {formatNumber(row.value)}
             </span>
@@ -181,7 +179,6 @@ export interface TallyTableRowProps {
 
 export interface TallyTableRow {
     label: string
-    title: string
     count: number
     value: number
     subRows?: TallyTableSubRow[]
