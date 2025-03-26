@@ -1,4 +1,4 @@
-import { range, sleep } from "radash"
+import { range, sleep, zip } from "radash"
 import { InferGuardType, Or } from "./typeUtils"
 
 export function split<T, TPass extends T = T, TFail extends T = T>(
@@ -78,7 +78,9 @@ export function uuidWithFallback() {
 
 export function findNext<
     TItem,
-    TCond extends (x: TItem) => boolean = (x: TItem) => boolean
+    TCond extends (x: TItem, idx: number) => boolean = (
+        x: TItem
+    ) => boolean
 >(
     xs: TItem[],
     cond: TCond,
@@ -109,7 +111,7 @@ export function findNext<
     ) {
         const x = xs[idx]
 
-        if (cond(x)) {
+        if (cond(x, idx)) {
             return [x as any, idx]
         } else if (opts?.breakOn?.(x)) {
             return [null, null]
@@ -121,4 +123,42 @@ export function findNext<
 
 export function enumerate<T>(xs: T[]): Array<[number, T]> {
     return xs.map((x, idx) => [idx, x])
+}
+
+export interface SortByCriteria<TItem = any> {
+    fn: (x: TItem) => number | string
+    reverse?: boolean
+}
+export function sortBy<TItem = any>(
+    xs: TItem[],
+    criteria: SortByCriteria<TItem>[]
+): TItem[] {
+    const mapped = xs.map((x) => ({
+        x,
+        value: criteria.map((crit) => crit.fn(x)),
+    }))
+
+    const sorted = mapped.sort((a, b) => {
+        for (const [aa, bb, crit] of zip(
+            a.value,
+            b.value,
+            criteria
+        )) {
+            // prettier-ignore
+            const diff =
+                aa < bb ? -1 :
+                aa > bb ? 1 :
+                0
+            if (diff === 0) {
+                continue
+            }
+
+            const mult = crit.reverse ? -1 : 1
+            return diff * mult
+        }
+
+        return 0
+    })
+
+    return sorted.map((x) => x.x)
 }

@@ -11,7 +11,7 @@ import {
 } from "radash"
 import { CompleteLog, LogEntry } from "../logDb"
 import { HvEventMap } from "../parsers"
-import { TAILWIND_COLORS, TAILWIND_SHADES } from "../ui/colors"
+import { TAILWIND_COLORS, TAILWIND_SHADES } from "../ui/constants"
 import { EventSummary, PRICES } from "../ui/hvlog/dropStats"
 import { formatNumber } from "../ui/hvlog/tallyTable"
 import { findNext } from "../utils/miscUtils"

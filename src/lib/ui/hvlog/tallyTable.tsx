@@ -1,3 +1,4 @@
+import { sortBy } from "@/lib/utils/miscUtils"
 import { sort, sum } from "radash"
 import { useEffect, useState } from "react"
 
@@ -32,9 +33,30 @@ export function TallyTable({
     }`
     const layoutClasses = `w-auto rounded-md ${layoutClass ?? ""}`
 
-    rows = sort(rows, (x) => x.value * 1_000_000 + x.count, true)
+    rows = sortBy(rows, [
+        { fn: (r) => r.value },
+        { fn: (r) => r.count },
+        { fn: (r) => r.label, reverse: true },
+    ]).reverse()
+
     const totalValue = sum(Object.values(rows).map((r) => r.value))
     const totalCount = sum(Object.values(rows).map((r) => r.count))
+
+    const rowEls = rows.map((row, idx) => {
+        const rowClass = `${
+            idx === rows.length - 1 ? "before-total" : ""
+        }`
+
+        return (
+            <Row
+                className={rowClass}
+                onClick={() => toggleActive(idx)}
+                row={row}
+                isActive={active.has(idx)}
+                isNextActive={active.has(idx + 1)}
+            />
+        )
+    })
 
     return (
         <section className={sectionClasses}>
@@ -51,14 +73,7 @@ export function TallyTable({
                     </span>
                 </div>
 
-                {rows.map((row, idx) => (
-                    <Row
-                        onClick={() => toggleActive(idx)}
-                        row={row}
-                        isActive={active.has(idx)}
-                        isNextActive={active.has(idx + 1)}
-                    />
-                ))}
+                {rowEls}
 
                 <div className="row">
                     <span className="category footer">Total</span>
@@ -81,11 +96,13 @@ function Row({
     row,
     isActive,
     isNextActive,
+    className,
 }: TallyTableRowProps) {
     const hasSubtable = !!row.subRows?.length
 
     const rowClass = [
         "row",
+        className ? className : "",
         isActive ? "active" : "",
         isNextActive ? "next-active" : "",
         row.count > 0 ? "selectable" : "",
@@ -93,7 +110,13 @@ function Row({
 
     let subTable
     if (isActive && hasSubtable) {
-        subTable = <SubTable rows={row.subRows!} />
+        const subRows = sortBy(row.subRows!, [
+            { fn: (r) => r.value },
+            { fn: (r) => r.count },
+            { fn: (r) => r.label, reverse: true },
+        ]).reverse()
+
+        subTable = <SubTable rows={subRows} />
     }
 
     return (
@@ -153,6 +176,7 @@ export interface TallyTableRowProps {
     row: TallyTableRow
     isActive: boolean
     isNextActive: boolean
+    className?: string
 }
 
 export interface TallyTableRow {

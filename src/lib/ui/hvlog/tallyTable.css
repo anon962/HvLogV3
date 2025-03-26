@@ -39,6 +39,11 @@
         border-top: 1px solid var(--border);
     }
 
+    .row:first-child,
+    .row.before-total {
+        border-bottom-width: 3px;
+    }
+
     .header,
     .footer {
         font-weight: bold;
