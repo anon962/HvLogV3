@@ -8,7 +8,7 @@ import { useEffect, useRef } from "react"
 import { PRICES } from "../constants"
 import { EventSummary } from "./eventSummary"
 import { LogWithAnalysis } from "./main"
-import { TallyTable } from "./tallyTable"
+import { TallyTable, TallyTableRow } from "./tallyTable"
 
 export function DropStats(props: { log: LogWithAnalysis }) {
     const drops = summarizeItemDrops(props.log.analysis)
@@ -97,42 +97,36 @@ function CalculationPreview(
 function IncomeSummaryTable(
     summary: ReturnType<typeof summarizeItemDrops>
 ) {
-    const totals = Object.entries(summary.data).reduce(
-        (acc, [key, xs]) => {
-            acc[key] = {
-                label: key,
-                count: sum(xs, (x) => x.count),
-                value: sum(xs, (x) => x.value),
-            }
+    const rows = Object.values(summary.data).reduce((acc, xs) => {
+        const count = sum(xs, (x) => x.count)
+        const value = sum(xs, (x) => x.value)
+
+        const group = summary.groups.find((grp) => grp.has(xs[0].key))
+        if (!group) {
             return acc
-        },
-        {} as any
-    )
-
-    let rows = Object.values(summary.groups).map(
-        ({ label, keys }) => {
-            let count = 0
-            let value = 0
-            const subRows = []
-
-            for (const k of keys) {
-                if (!(k in totals)) {
-                    continue
-                }
-
-                count += totals[k].count
-                value += totals[k].value
-                subRows.push(totals[k])
-            }
-
-            return { label, count, value, subRows }
         }
-    )
+
+        acc[group.label] = acc[group.label] ?? {
+            label: group.label,
+            count: 0,
+            value: 0,
+            subRows: [],
+        }
+        acc[group.label].count += count
+        acc[group.label].value += value
+        acc[group.label].subRows!.push({
+            label: xs[0].key,
+            count,
+            value,
+        })
+
+        return acc
+    }, {} as Record<string, TallyTableRow>)
 
     return (
         <TallyTable
             label="Income"
-            rows={rows}
+            rows={Object.values(rows)}
             sectionClass="income"
         />
     )
@@ -142,48 +136,27 @@ function summarizeItemDrops(anal: LogAnalysis) {
     const summary: DropEventSummary = {
         data: {},
         groups: [
-            {
-                keys: new Set(["Precursor Artifact"]),
-                label: "Artifacts",
-            },
-            {
-                keys: CONSUMABLES,
-                label: "Consumables",
-            },
-            {
-                keys: new Set(["credits", "Credits", "autosell"]),
-                label: "Credits",
-            },
-            {
-                keys: MATERIALS,
-                label: "Materials",
-            },
-            {
-                keys: SHARDS,
-                label: "Shards",
-            },
-            {
-                keys: TROPHIES,
-                label: "Trophies",
-            },
+            newDropEventGroup(
+                "Artifacts",
+                new Set(["Precursor Artifact"])
+            ),
+            newDropEventGroup("Consumables", CONSUMABLES),
+            newDropEventGroup(
+                "Credits",
+                new Set(["credits", "Credits", "autosell"])
+            ),
+            newDropEventGroup("Materials", MATERIALS),
+            newDropEventGroup("Shards", SHARDS),
+            newDropEventGroup("Trophies", TROPHIES),
         ],
     }
 
-    const crystals = {
-        keys: new Set<string>(),
-        label: "Crystals",
-    }
-    const figurines = {
-        keys: new Set<string>(),
-        label: "Figurines",
-    }
-    const other = {
-        keys: new Set<string>(),
-        label: "Other",
-    }
-    summary.groups.push(...[crystals, figurines, other])
+    const crystalKeys = new Set<string>()
+    const figurineKeys = new Set<string>()
+    const otherKeys = new Set<string>()
 
     const mapDrops = (
+        key: string,
         x: LogAnalysis["drops"][string],
         mult: number,
         asSingle?: boolean
@@ -191,12 +164,14 @@ function summarizeItemDrops(anal: LogAnalysis) {
         x.entries.map((entry) => {
             if (!asSingle) {
                 return {
+                    key,
                     count: entry.count,
                     value: mult * entry.count,
                     logIdx: entry.logIdx,
                 }
             } else {
                 return {
+                    key,
                     count: 1,
                     value: mult * entry.count,
                     logIdx: entry.logIdx,
@@ -209,33 +184,37 @@ function summarizeItemDrops(anal: LogAnalysis) {
         const ps = PRICES as any
 
         if (ARTIFACTS.has(k)) {
-            summary.data[k] = mapDrops(xs, ps[k])
+            summary.data[k] = mapDrops(k, xs, ps[k])
         } else if (CONSUMABLES.has(k)) {
-            summary.data[k] = mapDrops(xs, ps[k])
+            summary.data[k] = mapDrops(k, xs, ps[k])
         } else if (
             k === "autosell" ||
             k === "credits" ||
             k === "Credits"
         ) {
-            summary.data[k] = mapDrops(xs, 1, true)
+            summary.data[k] = mapDrops(k, xs, 1, true)
         } else if (key.startsWith("Crystal of ")) {
-            summary.data[k] = mapDrops(xs, PRICES["Crystal"])
-            crystals.keys.add(k)
+            summary.data[k] = mapDrops(k, xs, PRICES["Crystal"])
+            crystalKeys.add(k)
         } else if (k.includes("Figurine")) {
-            summary.data[k] = mapDrops(xs, PRICES["Figurine"])
-            figurines.keys.add(k)
+            summary.data[k] = mapDrops(k, xs, PRICES["Figurine"])
+            figurineKeys.add(k)
         } else if (MATERIALS.has(k)) {
-            summary.data[k] = mapDrops(xs, ps[k])
+            summary.data[k] = mapDrops(k, xs, ps[k])
         } else if (SHARDS.has(k)) {
-            summary.data[k] = mapDrops(xs, ps[k])
+            summary.data[k] = mapDrops(k, xs, ps[k])
         } else if (TROPHIES.has(k)) {
-            summary.data[k] = mapDrops(xs, ps[k])
+            summary.data[k] = mapDrops(k, xs, ps[k])
         } else if (["experience", "proficiency"].includes(k)) {
         } else {
-            summary.data[k] = mapDrops(xs, ps[k] ?? 0)
-            other.keys.add(k)
+            summary.data[k] = mapDrops(k, xs, ps[k] ?? 0)
+            otherKeys.add(k)
         }
     }
+
+    summary.groups.push(newDropEventGroup("Crystals", crystalKeys))
+    summary.groups.push(newDropEventGroup("Figurines", figurineKeys))
+    summary.groups.push(newDropEventGroup("Other", otherKeys))
 
     return summary
 }
@@ -244,49 +223,43 @@ function UsageSummaryTable(
     summary: ReturnType<typeof summarizeItemUsage>,
     staminaUsage: number
 ) {
-    const totals = Object.entries(summary.data).reduce(
-        (acc, [key, xs]) => {
-            acc[key] = {
-                label: key,
-                count: sum(xs, (x) => x.count),
-                value: sum(xs, (x) => x.value),
-            }
+    const rows = Object.values(summary.data).reduce((acc, xs) => {
+        const count = sum(xs, (x) => x.count)
+        const value = sum(xs, (x) => x.value)
+
+        const group = summary.groups.find((grp) => grp.has(xs[0].key))
+        if (!group) {
             return acc
-        },
-        {} as any
-    )
-
-    let rows = Object.values(summary.groups).map(
-        ({ label, keys }) => {
-            let count = 0
-            let value = 0
-            const subRows = []
-
-            for (const k of keys) {
-                if (!(k in totals)) {
-                    continue
-                }
-
-                count += totals[k].count
-                value += totals[k].value
-                subRows.push(totals[k])
-            }
-
-            return { label, count, value, subRows }
         }
-    )
 
-    rows.push({
+        acc[group.label] = acc[group.label] ?? {
+            label: group.label,
+            count: 0,
+            value: 0,
+            subRows: [],
+        }
+        acc[group.label].count += count
+        acc[group.label].value += value
+        acc[group.label].subRows!.push({
+            label: xs[0].key,
+            count,
+            value,
+        })
+
+        return acc
+    }, {} as Record<string, TallyTableRow>)
+
+    rows["stamina"] = {
         label: "Stamina",
         count: staminaUsage,
         value: (staminaUsage * PRICES["Energy Drink"]) / 10,
         subRows: [],
-    })
+    }
 
     return (
         <TallyTable
             label="Expenses"
-            rows={rows}
+            rows={Object.values(rows)}
             sectionClass="expenses"
         />
     )
@@ -296,38 +269,25 @@ function summarizeItemUsage(anal: LogAnalysis): DropEventSummary {
     const summary: DropEventSummary = {
         data: {},
         groups: [
-            {
-                keys: BUBBLE_VASE,
-                label: "Gum & Vase",
-            },
-            {
-                keys: SCROLLS,
-                label: "Scrolls",
-            },
-            {
-                keys: HEALTH_ITEMS,
-                label: "Health Items",
-            },
-            {
-                keys: MANA_ITEMS,
-                label: "Mana Items",
-            },
-            {
-                keys: SPIRIT_ITEMS,
-                label: "Spirit Items",
-            },
-            {
-                keys: new Set(["Last Elixir"]),
-                label: "Last Elixir",
-            },
+            newDropEventGroup("Gum & Vase", BUBBLE_VASE),
+            newDropEventGroup("Scrolls", SCROLLS),
+            newDropEventGroup("Health Items", HEALTH_ITEMS),
+            newDropEventGroup("Mana Items", MANA_ITEMS),
+            newDropEventGroup("Spirit Items", SPIRIT_ITEMS),
+            newDropEventGroup(
+                "Last Elixir",
+                new Set(["Last Elixir"])
+            ),
         ],
     }
 
     const mapUses = (
+        key: string,
         logIdxs: LogAnalysis["itemUsage"][string],
         value: number
     ) =>
         logIdxs.map((logIdx) => ({
+            key,
             count: 1,
             value: value,
             logIdx,
@@ -338,17 +298,21 @@ function summarizeItemUsage(anal: LogAnalysis): DropEventSummary {
         const ps = PRICES as any
 
         if (BUBBLE_VASE.has(k)) {
-            summary.data[k] = mapUses(logIdxs, ps[k])
+            summary.data[k] = mapUses(k, logIdxs, ps[k])
         } else if (SCROLLS.has(k)) {
-            summary.data[k] = mapUses(logIdxs, ps[k])
+            summary.data[k] = mapUses(k, logIdxs, ps[k])
         } else if (HEALTH_ITEMS.has(k)) {
-            summary.data[k] = mapUses(logIdxs, ps[k])
+            summary.data[k] = mapUses(k, logIdxs, ps[k])
         } else if (MANA_ITEMS.has(k)) {
-            summary.data[k] = mapUses(logIdxs, ps[k])
+            summary.data[k] = mapUses(k, logIdxs, ps[k])
         } else if (SPIRIT_ITEMS.has(k)) {
-            summary.data[k] = mapUses(logIdxs, ps[k])
+            summary.data[k] = mapUses(k, logIdxs, ps[k])
         } else if (item === "Last Elixir") {
-            summary.data[k] = mapUses(logIdxs, PRICES["Last Elixir"])
+            summary.data[k] = mapUses(
+                k,
+                logIdxs,
+                PRICES["Last Elixir"]
+            )
         }
     }
 
@@ -401,10 +365,21 @@ function EquipSummary(log: CompleteLog) {
     )
 }
 
-export type DropEventSummary = EventSummary<{
-    count: number
-    value: number
-}>
+function newDropEventGroup<T extends string>(
+    label: string,
+    keys: Set<T>
+): DropEventSummary["groups"][number] {
+    return { label, has: (key) => keys.has(key as any) }
+}
+
+export type DropEventSummary = EventSummary<
+    string,
+    {
+        count: number
+        value: number
+    },
+    (key: string) => boolean
+>
 
 type PriceKey = keyof typeof PRICES
 

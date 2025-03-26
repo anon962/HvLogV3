@@ -6,7 +6,8 @@ import entryJs from "../dist/ui/ui.js?raw"
 import { App } from "./lib/app/app"
 import { registerViewLogs } from "./lib/app/registerViewLogs"
 
-// @todo: detail view - turn usage (attacks, debuffs, heals, other)
+// @todo: combat - turn usage (attacks, debuffs, heals, other)
+// @todo: combat - resist rate
 // @todo: menu - export / import logs
 // @todo: menu - clear localstorage
 // @todo: menu - config (monaco)

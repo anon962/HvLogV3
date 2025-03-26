@@ -1,16 +1,19 @@
 export interface EventSummary<
-    TExtra extends Record<string, any> = Record<string, never>
+    TKey extends string,
+    TExtra extends Record<string, any> = Record<string, never>,
+    TMember extends (...args: any[]) => boolean = any
 > {
-    data: Record<
-        string,
-        Array<
-            {
-                logIdx: number
-            } & TExtra
-        >
-    >
+    data: Record<string, Array<EventSummaryData<TKey, TExtra>>>
     groups: Array<{
-        keys: Set<string>
         label: string
+        has: TMember
     }>
+}
+
+export type EventSummaryData<
+    TKey extends string,
+    TExtra extends Record<string, any> = Record<string, never>
+> = TExtra & {
+    key: TKey
+    logIdx: number
 }

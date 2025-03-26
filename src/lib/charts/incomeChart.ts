@@ -49,7 +49,7 @@ export class IncomeChart {
             dropSummary.data
         )) {
             for (const group of dropSummary.groups) {
-                if (group.keys.has(key)) {
+                if (group.has(key)) {
                     if (group.label === "Other") {
                         break
                     }
