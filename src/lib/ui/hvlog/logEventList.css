@@ -69,4 +69,12 @@
             display: none !important;
         }
     }
+
+    .json-view {
+        background-color: color-mix(
+            in oklab,
+            var(--muted-foreground) 15%,
+            var(--card)
+        ) !important;
+    }
 }

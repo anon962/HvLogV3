@@ -6,7 +6,6 @@ import entryJs from "../dist/ui/ui.js?raw"
 import { App } from "./lib/app/app"
 import { registerViewLogs } from "./lib/app/registerViewLogs"
 
-// @todo: detail view - graphs
 // @todo: detail view - turn usage (attacks, debuffs, heals, other)
 // @todo: menu - export / import logs
 // @todo: menu - clear localstorage
@@ -14,7 +13,6 @@ import { registerViewLogs } from "./lib/app/registerViewLogs"
 // @todo: profits
 // @todo: sort
 // @todo: filter
-// @todo: prefix alert() errors with HvLog
 // @todo: compression
 // @todo: live stats
 // @todo: debug flag - disable localstorage reads

@@ -40,6 +40,13 @@ function CalculationPreview(
         Object.values(usageSummary.data).flatMap((xs) => xs),
         (x) => x.value
     )
+    console.log(
+        "wtf",
+        totalIncome,
+        totalExpenses,
+        dropSummary,
+        usageSummary
+    )
 
     const net = totalIncome - totalExpenses
     const netClass = net > 0 ? "text-green-300" : "text-red-300"
@@ -128,7 +135,7 @@ function summarizeItemDrops(anal: LogAnalysis) {
         data: {},
         groups: [
             {
-                keys: new Set("Precursor Artifacts"),
+                keys: new Set(["Precursor Artifact"]),
                 label: "Artifacts",
                 title: "",
             },
@@ -216,7 +223,7 @@ function summarizeItemDrops(anal: LogAnalysis) {
             summary.data[k] = mapDrops(xs, PRICES["Crystal"])
             crystals.keys.add(k)
         } else if (k.includes("Figurine")) {
-            summary.data[k] = mapDrops(xs, ps[k])
+            summary.data[k] = mapDrops(xs, PRICES["Figurine"])
             figurines.keys.add(k)
         } else if (MATERIALS.has(k)) {
             summary.data[k] = mapDrops(xs, ps[k])

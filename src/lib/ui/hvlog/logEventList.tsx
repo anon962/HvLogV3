@@ -197,7 +197,7 @@ function LogEntryDetails(props: {
     onClose?: () => void
 }) {
     return (
-        <div className="p-8 border-t border-t-muted-foreground relative">
+        <div className="json-view p-8 border-t border-t-muted-foreground relative">
             <button
                 onClick={() => props.onClose?.()}
                 className="size-12 rounded-full absolute top-4 right-4 hover:bg-muted cursor-pointer flex justify-center items-center"

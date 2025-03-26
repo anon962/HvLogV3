@@ -152,23 +152,17 @@ export class IncomeChart {
                     "white",
                 ],
             },
+            marginLeft: 50,
+            marginRight: 0,
             marks: [
                 Plot.ruleY([0]),
-                // Plot.lineY(points, {
-                //     x: "x",
-                //     y: "y",
-                //     z: "label",
-                //     stroke: "label",
-                //     // fill: "label",
-                //     // title: "label",
-                // }),
                 Plot.areaY(points, {
                     x: "x",
                     y: "y",
-                    // z: "label",
                     fill: "label",
                     title: "label",
                     interval: 1,
+                    fillOpacity: 0.85,
                 }),
                 Plot.ruleX(
                     percs,

@@ -11,6 +11,7 @@
     figure {
         width: 100%;
         max-width: 60rem !important;
+        padding-right: 1rem;
 
         svg {
             width: 100%;

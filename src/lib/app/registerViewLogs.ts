@@ -14,7 +14,7 @@ export function registerViewLogs(app: App) {
             )
             if (!w) {
                 alert(
-                    "Unable to open new tab. Please enable pop-ups for this site."
+                    "Unable to open new tab for HvLog. Please enable pop-ups for this site."
                 )
                 return
             }
