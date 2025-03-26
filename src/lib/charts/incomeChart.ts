@@ -11,6 +11,7 @@ import {
 } from "radash"
 import { CompleteLog, LogEntry } from "../logDb"
 import { HvEventMap } from "../parsers"
+import { TAILWIND_COLORS, TAILWIND_SHADES } from "../ui/colors"
 import { EventSummary, PRICES } from "../ui/hvlog/dropStats"
 import { formatNumber } from "../ui/hvlog/tallyTable"
 import { findNext } from "../utils/miscUtils"
@@ -157,6 +158,11 @@ export class IncomeChart {
             this.expenses.mappedPoints
         )
 
+        const total = sum(
+            Object.values(this.series),
+            (s) => last(s.mappedPoints)?.y ?? 0
+        )
+
         const plotEl = Plot.plot({
             x: {
                 label: "Round",
@@ -166,21 +172,6 @@ export class IncomeChart {
                 label: "Credits",
                 grid: true,
             },
-            color: {
-                legend: true,
-                range: [
-                    "red",
-                    "blue",
-                    "yellow",
-                    "purple",
-                    "green",
-                    "orange",
-                    "cyan",
-                    "white",
-                ],
-            },
-            marginLeft: 50,
-            marginRight: 0,
             marks: [
                 Plot.ruleY([0]),
                 Plot.areaY(incomePoints, {
@@ -200,7 +191,7 @@ export class IncomeChart {
                     percs,
                     Plot.pointerX({
                         x: "x",
-                        y: "total",
+                        y: total,
                         dx: 1,
                         stroke: "red",
                     })
@@ -209,12 +200,33 @@ export class IncomeChart {
                     percs,
                     Plot.pointerX({
                         x: "x",
-                        y: "total",
+                        y: total,
                         dx: 1,
                         title: "description",
+                        frameAnchor: "top",
+                        pointerSize: 0,
                     })
                 ),
             ],
+            color: {
+                legend: true,
+                range: [
+                    "red",
+                    ...TAILWIND_COLORS.slice(1)
+                        .map(
+                            (row) => row.colors[TAILWIND_SHADES[600]]
+                        )
+                        .filter((_, idx) => idx % 3 === 2),
+                    ...TAILWIND_COLORS.slice(1)
+                        .map(
+                            (row) => row.colors[TAILWIND_SHADES[400]]
+                        )
+                        .filter((_, idx) => idx % 3 === 2),
+                ],
+            },
+            marginLeft: 50,
+            marginRight: 0,
+            labelArrow: false,
         })
 
         return plotEl
