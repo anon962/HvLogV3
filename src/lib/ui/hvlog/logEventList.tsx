@@ -102,7 +102,7 @@ export function LogEventList(props: { log: LogWithAnalysis }) {
                                     ev.stopPropagation()
                                 }}
                                 className={
-                                    "round-label sticky py-4 pr-4 mb-4 top-0 flex justify-end bg-card font-bold border-b" +
+                                    "round-label sticky py-4 pr-4 mb-4 top-0 flex justify-end bg-card font-bold border-b rounded-t-md" +
                                     activeClass
                                 }
                             >

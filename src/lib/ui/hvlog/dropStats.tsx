@@ -10,15 +10,20 @@ export function DropStats(props: { log: LogWithAnalysis }) {
     const drops = summarizeItemDrops(props.log.analysis)
     const usage = summarizeItemUsage(props.log.analysis)
 
+    let staminaUsage = (props.log.analysis.round?.end ?? 1) / 50
+    if (props.log.analysis.battleType?.name === "Grindfest") {
+        staminaUsage += 1
+    }
+
     return (
         <div className="drop-stats h-full overflow-auto flex flex-col">
-            {CalculationPreview(drops, usage)}
+            {CalculationPreview(drops, usage, staminaUsage)}
 
             <hr className="my-12" />
 
             <div className="income-expense">
                 {IncomeSummaryTable(drops)}
-                {UsageSummaryTable(props.log.analysis, usage)}
+                {UsageSummaryTable(usage, staminaUsage)}
             </div>
 
             <hr className="my-12" />
@@ -30,23 +35,19 @@ export function DropStats(props: { log: LogWithAnalysis }) {
 
 function CalculationPreview(
     dropSummary: EventSummary,
-    usageSummary: EventSummary
+    usageSummary: EventSummary,
+    staminaUsage: number
 ) {
     const totalIncome = sum(
         Object.values(dropSummary.data).flatMap((xs) => xs),
         (x) => x.value
     )
-    const totalExpenses = sum(
-        Object.values(usageSummary.data).flatMap((xs) => xs),
-        (x) => x.value
-    )
-    console.log(
-        "wtf",
-        totalIncome,
-        totalExpenses,
-        dropSummary,
-        usageSummary
-    )
+    let totalExpenses =
+        sum(
+            Object.values(usageSummary.data).flatMap((xs) => xs),
+            (x) => x.value
+        ) +
+        (staminaUsage * PRICES["Energy Drink"]) / 10
 
     const net = totalIncome - totalExpenses
     const netClass = net > 0 ? "text-green-300" : "text-red-300"
@@ -242,8 +243,8 @@ function summarizeItemDrops(anal: LogAnalysis) {
 }
 
 function UsageSummaryTable(
-    anal: LogAnalysis,
-    summary: ReturnType<typeof summarizeItemUsage>
+    summary: ReturnType<typeof summarizeItemUsage>,
+    staminaUsage: number
 ) {
     const totals = Object.entries(summary.data).reduce(
         (acc, [key, xs]) => {
@@ -277,14 +278,10 @@ function UsageSummaryTable(
         }
     )
 
-    let staminaUsage = (anal.round?.end ?? 1) / 50
-    if (anal.battleType?.name === "Grindfest") {
-        staminaUsage += 1
-    }
     rows.push({
         label: "Stamina",
         count: staminaUsage,
-        value: PRICES["Energy Drink"] / 10,
+        value: (staminaUsage * PRICES["Energy Drink"]) / 10,
         title: "",
         subRows: [],
     })
