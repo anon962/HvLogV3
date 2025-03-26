@@ -390,3 +390,94 @@ export const EQUIP_PREFIXES = [
     "Superior",
     "Crude",
 ] as const
+
+// thanks BattleStats
+// https://forums.e-hentai.org/index.php?showtopic=243497
+export const PRICES = {
+    //Special
+    Crystal: 17500 / 12000,
+    "Precursor Artifact": 5500,
+    Figurine: 16000,
+    "Amnesia Shard": 8800,
+    "Aether Shard": 2300,
+    "Featherweight Shard": 75,
+    "Voidseeker Shard": 75,
+    "Energy Drink": 117000,
+
+    //Trophies
+    "ManBearPig Tail": 2100,
+    "Holy Hand Grenade of Antioch": 2100,
+    "Mithra's Flower": 2100,
+    "Dalek Voicebox": 2100,
+    "Lock of Blue Hair": 2100,
+    "Bunny-Girl Costume": 4000,
+    "Hinamatsuri Doll": 4000,
+    "Broken Glasses": 4000,
+    "Black T-Shirt": 12800,
+    Sapling: 9500,
+    "Unicorn Horn": 13600,
+    "Noodly Appendage": 50000,
+
+    //Draughts/Potions/Elixirs
+    "Health Draught": 1,
+    "Health Potion": 30,
+    "Health Elixir": 350,
+    "Mana Draught": 4,
+    "Mana Potion": 90,
+    "Mana Elixir": 500,
+    "Spirit Draught": 15,
+    "Spirit Potion": 90,
+    "Spirit Elixir": 900,
+    "Last Elixir": 900,
+
+    "Bubble-Gum": 5000,
+    "Flower Vase": 5000,
+
+    //Infusions/Scrolls
+    "Infusion of Flames": 140,
+    "Infusion of Frost": 140,
+    "Infusion of Lightning": 140,
+    "Infusion of Storms": 265,
+    "Infusion of Darkness": 160,
+    "Infusion of Divinity": 3000,
+    "Scroll of Life": 400,
+    "Scroll of Absorption": 20,
+    "Scroll of Shadows": 200,
+    "Scroll of Swiftness": 200,
+    "Scroll of Protection": 500,
+    "Scroll of the Gods": 580,
+    "Scroll of the Avatar": 1300,
+
+    //Food
+    "Monster Chow": 3,
+    "Monster Edibles": 5,
+    "Monster Cuisine": 6,
+    "Happy Pills": 900,
+
+    //Materials
+    "Scrap Metal": 89,
+    "Scrap Leather": 89,
+    "Scrap Cloth": 89,
+    "Scrap Wood": 89,
+    "Energy Cell": 180,
+
+    "High-Grade Metals": 300,
+    "High-Grade Leather": 100,
+    "High-Grade Cloth": 13000,
+    "High-Grade Wood": 3000,
+
+    "Mid-Grade Metals": 100,
+    "Mid-Grade Leather": 50,
+    "Mid-Grade Cloth": 400,
+    "Mid-Grade Wood": 200,
+
+    "Low-Grade Metals": 10,
+    "Low-Grade Leather": 10,
+    "Low-Grade Cloth": 10,
+    "Low-Grade Wood": 10,
+
+    //Tokens
+    Blood: 0,
+    Chaos: 0,
+    Soul: 0,
+}

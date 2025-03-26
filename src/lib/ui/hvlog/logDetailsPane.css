@@ -1,10 +1,18 @@
-.details-pane {
-    [data-slot="card"] {
-        margin-bottom: 0;
-    }
+.details-pane-root {
+    .details-pane {
+        [data-slot="card"] {
+            margin-bottom: 0;
+        }
 
-    [role="tabpanel"] {
-        padding-bottom: 4rem;
+        [role="tabpanel"] {
+            padding-bottom: 4rem;
+        }
+
+        [data-slot="tabs-trigger"] {
+            font-weight: bold;
+            padding-top: 0.25rem;
+            padding-bottom: 0.25rem;
+        }
     }
 }
 

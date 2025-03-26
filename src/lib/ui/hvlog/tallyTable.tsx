@@ -1,4 +1,4 @@
-import { sortBy } from "@/lib/utils/miscUtils"
+import { formatNumber, sortBy } from "@/lib/utils/miscUtils"
 import { sort, sum } from "radash"
 import { useEffect, useState } from "react"
 
@@ -191,20 +191,4 @@ export interface TallyTableSubRow {
     label: string
     count: number
     value: number
-}
-
-export function formatNumber(x: number) {
-    const digits = [...Math.trunc(x).toString()]
-        .reverse()
-        .reduce((acc, digit, idx) => {
-            if (idx % 3 === 0 && idx > 0) {
-                acc.push(",")
-            }
-
-            acc.push(digit)
-
-            return acc
-        }, [] as string[])
-
-    return digits.reverse().join("")
 }

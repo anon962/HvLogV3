@@ -11,10 +11,13 @@ import {
 } from "radash"
 import { CompleteLog, LogEntry } from "../logDb"
 import { HvEventMap } from "../parsers"
-import { TAILWIND_COLORS, TAILWIND_SHADES } from "../ui/constants"
-import { EventSummary, PRICES } from "../ui/hvlog/dropStats"
-import { formatNumber } from "../ui/hvlog/tallyTable"
-import { findNext } from "../utils/miscUtils"
+import {
+    PRICES,
+    TAILWIND_COLORS,
+    TAILWIND_SHADES,
+} from "../ui/constants"
+import { DropEventSummary } from "../ui/hvlog/dropStats"
+import { findNext, formatNumber } from "../utils/miscUtils"
 import { DataSeries } from "./dataSeries"
 
 type Series = DataSeries<{
@@ -31,8 +34,8 @@ export class IncomeChart {
 
     constructor(
         public log: CompleteLog,
-        public dropSummary: EventSummary,
-        public usageSummary: EventSummary
+        public dropSummary: DropEventSummary,
+        public usageSummary: DropEventSummary
     ) {
         let toPush: Record<
             string,
@@ -124,7 +127,7 @@ export class IncomeChart {
         }
 
         function summaryToPoint(
-            entry: EventSummary["data"][string][number],
+            entry: DropEventSummary["data"][string][number],
             log: CompleteLog
         ) {
             const [ev] = findNext(log.entries, isRoundStart, {
@@ -258,19 +261,25 @@ export class IncomeChart {
             const net = total - costs
 
             const keys = alphabetical(Object.keys(relative), (x) => x)
-            const descLines = keys.map(
-                (k) => `${k}: ${Math.trunc(relative[k] * 100)}%`
-            )
-            const padLength = max(descLines, (s) => s.length)?.length
-            const description = [
+
+            let descriptionLines = [
                 `Round ${x}`,
                 "",
                 `Income: ${formatNumber(total).padStart(7)}`,
                 `Costs: ${formatNumber(costs).padStart(7)}`,
-                `Net: ${formatNumber(net).padStart(7)}`,
+                `Net: ${formatNumber(net).padStart(8)}`,
                 "",
-                ...descLines,
+                ...keys.map(
+                    (k) =>
+                        `${k}: ${Math.trunc(relative[k] * 100)
+                            .toString()
+                            .padStart(2)}%`
+                ),
             ]
+            const padLength = max(
+                descriptionLines.map((ln) => ln.length)
+            )
+            const description = descriptionLines
                 .map((ln) => ln.padStart(padLength ?? 1))
                 .join("\n")
 

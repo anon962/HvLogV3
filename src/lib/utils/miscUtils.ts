@@ -162,3 +162,25 @@ export function sortBy<TItem = any>(
 
     return sorted.map((x) => x.x)
 }
+
+export function formatNumber(x: number, sign?: boolean) {
+    const digits = [...Math.trunc(x).toString()]
+        .reverse()
+        .reduce((acc, digit, idx) => {
+            if (idx % 3 === 0 && idx > 0) {
+                acc.push(",")
+            }
+
+            acc.push(digit)
+
+            return acc
+        }, [] as string[])
+
+    let asStr = digits.reverse().join("")
+
+    if (sign !== undefined) {
+        asStr = (x < 0 ? "-" : "+") + asStr
+    }
+
+    return asStr
+}

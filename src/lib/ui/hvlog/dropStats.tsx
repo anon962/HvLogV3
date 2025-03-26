@@ -2,10 +2,12 @@ import { IncomeChart } from "@/lib/charts/incomeChart"
 import { CompleteLog } from "@/lib/logDb"
 import { filterEvents } from "@/lib/statExtractors"
 import { LogAnalysis } from "@/lib/statsDb"
+import { formatNumber } from "@/lib/utils/miscUtils"
 import { alphabetical, max, range, sum } from "radash"
 import { useEffect, useRef } from "react"
+import { PRICES } from "../constants"
 import { LogWithAnalysis } from "./main"
-import { formatNumber, TallyTable } from "./tallyTable"
+import { TallyTable } from "./tallyTable"
 
 export function DropStats(props: { log: LogWithAnalysis }) {
     const drops = summarizeItemDrops(props.log.analysis)
@@ -38,8 +40,8 @@ export function DropStats(props: { log: LogWithAnalysis }) {
 }
 
 function CalculationPreview(
-    dropSummary: EventSummary,
-    usageSummary: EventSummary,
+    dropSummary: DropEventSummary,
+    usageSummary: DropEventSummary,
     staminaUsage: number
 ) {
     const totalIncome = sum(
@@ -136,7 +138,7 @@ function IncomeSummaryTable(
 }
 
 function summarizeItemDrops(anal: LogAnalysis) {
-    const summary: EventSummary<any> = {
+    const summary: DropEventSummary<any> = {
         data: {},
         groups: [
             {
@@ -299,8 +301,8 @@ function UsageSummaryTable(
     )
 }
 
-function summarizeItemUsage(anal: LogAnalysis): EventSummary {
-    const summary: EventSummary<any> = {
+function summarizeItemUsage(anal: LogAnalysis): DropEventSummary {
+    const summary: DropEventSummary<any> = {
         data: {},
         groups: [
             {
@@ -370,8 +372,8 @@ function summarizeItemUsage(anal: LogAnalysis): EventSummary {
 
 function DropChart(
     log: CompleteLog,
-    dropSummary: EventSummary,
-    usageSummary: EventSummary
+    dropSummary: DropEventSummary,
+    usageSummary: DropEventSummary
 ) {
     const chart = new IncomeChart(log, dropSummary, usageSummary)
     const el = chart.render()
@@ -414,7 +416,7 @@ function EquipSummary(log: CompleteLog) {
     )
 }
 
-export interface EventSummary<TKey extends string = string> {
+export interface DropEventSummary<TKey extends string = string> {
     data: Record<
         TKey,
         Array<{
@@ -430,98 +432,9 @@ export interface EventSummary<TKey extends string = string> {
     }>
 }
 
-// thanks BattleStats
-// https://forums.e-hentai.org/index.php?showtopic=243497
-export const PRICES = {
-    //Special
-    Crystal: 17500 / 12000,
-    "Precursor Artifact": 5500,
-    Figurine: 16000,
-    "Amnesia Shard": 8800,
-    "Aether Shard": 2300,
-    "Featherweight Shard": 75,
-    "Voidseeker Shard": 75,
-    "Energy Drink": 117_000,
+type PriceKey = keyof typeof PRICES
 
-    //Trophies
-    "ManBearPig Tail": 2100,
-    "Holy Hand Grenade of Antioch": 2100,
-    "Mithra's Flower": 2100,
-    "Dalek Voicebox": 2100,
-    "Lock of Blue Hair": 2100,
-    "Bunny-Girl Costume": 4000,
-    "Hinamatsuri Doll": 4000,
-    "Broken Glasses": 4000,
-    "Black T-Shirt": 12800,
-    Sapling: 9500,
-    "Unicorn Horn": 13600,
-    "Noodly Appendage": 50_000,
-
-    //Draughts/Potions/Elixirs
-    "Health Draught": 1,
-    "Health Potion": 30,
-    "Health Elixir": 350,
-    "Mana Draught": 4,
-    "Mana Potion": 90,
-    "Mana Elixir": 500,
-    "Spirit Draught": 15,
-    "Spirit Potion": 90,
-    "Spirit Elixir": 900,
-    "Last Elixir": 900,
-
-    "Bubble-Gum": 5000,
-    "Flower Vase": 5000,
-
-    //Infusions/Scrolls
-    "Infusion of Flames": 140,
-    "Infusion of Frost": 140,
-    "Infusion of Lightning": 140,
-    "Infusion of Storms": 265,
-    "Infusion of Darkness": 160,
-    "Infusion of Divinity": 3000,
-    "Scroll of Life": 400,
-    "Scroll of Absorption": 20,
-    "Scroll of Shadows": 200,
-    "Scroll of Swiftness": 200,
-    "Scroll of Protection": 500,
-    "Scroll of the Gods": 580,
-    "Scroll of the Avatar": 1300,
-
-    //Food
-    "Monster Chow": 3,
-    "Monster Edibles": 5,
-    "Monster Cuisine": 6,
-    "Happy Pills": 900,
-
-    //Materials
-    "Scrap Metal": 89,
-    "Scrap Leather": 89,
-    "Scrap Cloth": 89,
-    "Scrap Wood": 89,
-    "Energy Cell": 180,
-
-    "High-Grade Metals": 300,
-    "High-Grade Leather": 100,
-    "High-Grade Cloth": 13000,
-    "High-Grade Wood": 3000,
-
-    "Mid-Grade Metals": 100,
-    "Mid-Grade Leather": 50,
-    "Mid-Grade Cloth": 400,
-    "Mid-Grade Wood": 200,
-
-    "Low-Grade Metals": 10,
-    "Low-Grade Leather": 10,
-    "Low-Grade Cloth": 10,
-    "Low-Grade Wood": 10,
-
-    //Tokens
-    Blood: 0,
-    Chaos: 0,
-    Soul: 0,
-}
-
-const TROPHIES = new Set<keyof typeof PRICES>([
+const TROPHIES = new Set<PriceKey>([
     "ManBearPig Tail",
     "Holy Hand Grenade of Antioch",
     "Mithra's Flower",
@@ -536,7 +449,7 @@ const TROPHIES = new Set<keyof typeof PRICES>([
     "Noodly Appendage",
 ])
 
-const MATERIALS = new Set<keyof typeof PRICES>([
+const MATERIALS = new Set<PriceKey>([
     "Scrap Metal",
     "Scrap Leather",
     "Scrap Cloth",
@@ -559,30 +472,27 @@ const MATERIALS = new Set<keyof typeof PRICES>([
     "Low-Grade Wood",
 ])
 
-const HEALTH_ITEMS = new Set<keyof typeof PRICES>([
+const HEALTH_ITEMS = new Set<PriceKey>([
     "Health Draught",
     "Health Potion",
     "Health Elixir",
 ])
 
-const MANA_ITEMS = new Set<keyof typeof PRICES>([
+const MANA_ITEMS = new Set<PriceKey>([
     "Mana Draught",
     "Mana Potion",
     "Mana Elixir",
 ])
 
-const SPIRIT_ITEMS = new Set<keyof typeof PRICES>([
+const SPIRIT_ITEMS = new Set<PriceKey>([
     "Spirit Draught",
     "Spirit Potion",
     "Spirit Elixir",
 ])
 
-const BUBBLE_VASE = new Set<keyof typeof PRICES>([
-    "Bubble-Gum",
-    "Flower Vase",
-])
+const BUBBLE_VASE = new Set<PriceKey>(["Bubble-Gum", "Flower Vase"])
 
-const SCROLLS = new Set<keyof typeof PRICES>([
+const SCROLLS = new Set<PriceKey>([
     "Infusion of Flames",
     "Infusion of Frost",
     "Infusion of Lightning",
@@ -598,7 +508,7 @@ const SCROLLS = new Set<keyof typeof PRICES>([
     "Scroll of the Avatar",
 ])
 
-const CONSUMABLES = new Set<keyof typeof PRICES>([
+const CONSUMABLES = new Set<PriceKey>([
     ...HEALTH_ITEMS,
     ...MANA_ITEMS,
     ...SPIRIT_ITEMS,
@@ -611,14 +521,14 @@ const CONSUMABLES = new Set<keyof typeof PRICES>([
     "Happy Pills",
 ])
 
-const SHARDS = new Set<keyof typeof PRICES>([
+const SHARDS = new Set<PriceKey>([
     "Amnesia Shard",
     "Aether Shard",
     "Featherweight Shard",
     "Voidseeker Shard",
 ])
 
-const ARTIFACTS = new Set<keyof typeof PRICES>(["Precursor Artifact"])
+const ARTIFACTS = new Set<PriceKey>(["Precursor Artifact"])
 
 const GOOD_EQUIPS = [
     /Peerless/,

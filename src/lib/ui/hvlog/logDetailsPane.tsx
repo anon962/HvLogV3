@@ -5,6 +5,7 @@ import {
     TabsList,
     TabsTrigger,
 } from "../shadcn/tabs"
+import { CombatStats } from "./combatStats"
 import { DropStats } from "./dropStats"
 import { LogEventList } from "./logEventList"
 import { LogWithAnalysis } from "./main"
@@ -23,13 +24,21 @@ export function LogDetailsPane(props: {
                 defaultValue="stats"
                 className="details-pane h-full w-full"
             >
-                <TabsList className="grid grid-cols-2 w-full mb-2">
+                <TabsList className="grid grid-cols-3 w-full mb-2">
                     <TabsTrigger
                         value="stats"
                         className="font-bold py-1"
                     >
                         Drops
                     </TabsTrigger>
+
+                    <TabsTrigger
+                        value="combat"
+                        className="font-bold py-1"
+                    >
+                        Combat
+                    </TabsTrigger>
+
                     <TabsTrigger
                         value="events"
                         className="font-bold py-1"
@@ -43,6 +52,23 @@ export function LogDetailsPane(props: {
                         <CardContent className="h-full p-8">
                             {props.selectedLog ? (
                                 <DropStats log={props.selectedLog} />
+                            ) : (
+                                ""
+                            )}
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
+                <TabsContent
+                    value="combat"
+                    className="h-full min-h-0"
+                >
+                    <Card className="min-h-0 h-full py-0">
+                        <CardContent className="p-0 min-h-0">
+                            {props.selectedLog ? (
+                                <CombatStats
+                                    log={props.selectedLog}
+                                />
                             ) : (
                                 ""
                             )}
