@@ -1,6 +1,5 @@
 import { LogEntry } from "@/lib/logDb"
 import { HvEventMap } from "@/lib/parsers"
-import { findNext } from "@/lib/utils/miscUtils"
 import JsonView from "@uiw/react-json-view"
 import { JSX, useEffect, useMemo, useState } from "react"
 import { XIcon } from "../icons/tailwind"
@@ -9,18 +8,18 @@ import { LogWithAnalysis } from "./main"
 export function LogEventList(props: { log: LogWithAnalysis }) {
     // @todo: This index tracking is spaghetti. Need to group the log events by round / turn before trying to render it
 
+    const { log, analysis } = props.log
+    const indexMap = analysis.indexMap
+
     const [activeIdx, setActiveIdx] = useState({
         log: -1,
         turn: -1,
         round: -1,
     })
 
-    let turnIdx = -1
-    let roundIdx = 1
-
     useEffect(() => {
         setActiveIdx({ log: -1, turn: -1, round: -1 })
-    }, [props.log.log.id])
+    }, [log.id])
 
     return (
         <div className="log-event-list flex flex-col h-full">
@@ -30,15 +29,15 @@ export function LogEventList(props: { log: LogWithAnalysis }) {
                 }
                 className="flex flex-col h-full overflow-auto"
             >
-                {props.log.log.entries.flatMap((entry, logIdx) => {
+                {log.entries.flatMap((entry, logIdx) => {
                     const els: JSX.Element[] = []
 
-                    const isNewTurn =
-                        logIdx ===
-                        props.log.analysis.turnIndexes[turnIdx + 1]
-                    if (isNewTurn) {
-                        turnIdx += 1
+                    const turnIdx = indexMap.l2t(logIdx)
+                    const roundIdx = indexMap.l2r(logIdx)
 
+                    const isNewTurn =
+                        logIdx === indexMap.t2l(turnIdx + 1)
+                    if (isNewTurn) {
                         els.push(
                             <div className="turn-start flex gap-2 px-6 pb-4 items-center">
                                 <span className="">
@@ -53,37 +52,15 @@ export function LogEventList(props: { log: LogWithAnalysis }) {
                         entry.type === "event" &&
                         entry.event.event_type === "ROUND_START"
                     ) {
-                        roundIdx = entry.event.current ?? 1
-
-                        const [__, nextRoundStartLogIdx] = findNext(
-                            props.log.log.entries,
-                            (entry) =>
-                                entry.type === "event" &&
-                                entry.event.event_type ===
-                                    "ROUND_START",
-                            {
-                                start: logIdx + 1,
-                            }
-                        )
-
-                        let [_, nextRoundStartTurnIdx] = findNext(
-                            props.log.analysis.turnIndexes,
-                            (nextLogIndex) =>
-                                nextLogIndex >
-                                (nextRoundStartLogIdx ??
-                                    Number.POSITIVE_INFINITY),
-                            { start: turnIdx }
-                        )
+                        const nextRoundStartTurn =
+                            indexMap.r2t(roundIdx + 1) ??
+                            indexMap.turnIndexes.length
 
                         let label = `Round ${
                             entry.event.current ?? 1
                         }`
-                        label += `, Turns ${turnIdx + 2}`
-                        label += ` - ${
-                            nextRoundStartTurnIdx
-                                ? nextRoundStartTurnIdx
-                                : props.log.analysis.turnIndexes
-                                      .length
+                        label += `, Turns ${turnIdx + 2} - ${
+                            nextRoundStartTurn - 1
                         }`
 
                         const activeClass =
@@ -131,12 +108,12 @@ export function LogEventList(props: { log: LogWithAnalysis }) {
                 })}
             </div>
 
-            {props.log.log.entries[activeIdx.log] && (
+            {log.entries[activeIdx.log] && (
                 <LogEntryDetails
                     onClose={() =>
                         setActiveIdx({ log: -1, turn: -1, round: -1 })
                     }
-                    entry={props.log.log.entries[activeIdx.log]}
+                    entry={log.entries[activeIdx.log]}
                     label={`Round ${activeIdx.round}, Turn ${activeIdx.turn}`}
                 />
             )}

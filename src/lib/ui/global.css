@@ -176,6 +176,6 @@ body,
 @import "./hvlog/logSummaryTable.css";
 @import "./hvlog/logEventList.css";
 @import "./hvlog/logDetailsPane.css";
-@import "./hvlog/dropStats.css";
+@import "./hvlog/drop/dropStats.css";
 @import "./hvlog/tallyTable.css";
-@import "./hvlog/combatStats.css";
+@import "./hvlog/combat/combatStats.css";

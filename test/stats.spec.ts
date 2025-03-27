@@ -1,6 +1,6 @@
 import { LogEntry } from "@/lib/logDb"
 import { parseLine } from "@/lib/parsers"
-import { extractNumTurns } from "@/lib/statExtractors"
+import { extractTurnIndexes } from "@/lib/statExtractors"
 import { expect, it } from "vitest"
 import longLog from "./logs/full.json"
 
@@ -43,7 +43,7 @@ it("turn count should be correct", () => {
                 : { type: "event", event }
         })
 
-    const { turnIndexes } = extractNumTurns({
+    const turnIndexes = extractTurnIndexes({
         id: "",
         meta: { lastUpdate: "", start: "" },
         entries,

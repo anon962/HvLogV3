@@ -4,8 +4,10 @@ import {
     extractCompletionType,
     extractDrops,
     extractItemUsage,
-    extractNumTurns as extractTurnIndexes,
+    extractRoundIndexes,
+    extractTurnIndexes,
 } from "./statExtractors"
+import { IndexMap } from "./ui/hvlog/indexMap"
 
 const STORAGE_KEY = "hvlog_stats"
 const VERSION = 1
@@ -15,20 +17,32 @@ const VERSION = 1
  * This is mainly for the summaries in LogTable. Most of the real stats are stored by the ChartManager.
  */
 export class LogStats {
-    data: LogStatsStorage
+    data: StatsStorage
 
     constructor() {
         this.data = this.load()
     }
 
-    public get(id: string): LogAnalysis | null {
-        return this.data.data[id] ?? null
-    }
-
-    public analyze(
+    public get(
         log: CompleteLog,
         opts: { save?: boolean } = {}
     ): LogAnalysis {
+        const raw = this.data.data[log.id] ?? this.analyze(log, opts)
+
+        return {
+            ...raw,
+            indexMap: new IndexMap(
+                raw.turnIndexes,
+                raw.roundIndexes,
+                log.entries.length
+            ),
+        }
+    }
+
+    private analyze(
+        log: CompleteLog,
+        opts: { save?: boolean } = {}
+    ): RawStats {
         const {
             battleType,
             round,
@@ -39,7 +53,8 @@ export class LogStats {
 
         const missingStart = !!round && round.end !== startCount
 
-        const { turnIndexes } = extractTurnIndexes(log)
+        const turnIndexes = extractTurnIndexes(log)
+        const roundIndexes = extractRoundIndexes(log)
 
         const hasParseError = log.entries.some(
             (entry) => entry.type === "error"
@@ -65,6 +80,7 @@ export class LogStats {
             battleType,
             round,
             turnIndexes,
+            roundIndexes,
             drops,
             itemUsage,
             errors: {
@@ -89,7 +105,7 @@ export class LogStats {
             return DEFAULT_STORAGE()
         }
 
-        let parsed: LogStatsStorage
+        let parsed: StatsStorage
         try {
             parsed = JSON.parse(raw)
         } catch (e) {
@@ -121,7 +137,14 @@ export class LogStats {
 
 type LogId = string
 
-export interface LogAnalysis {
+export type LogAnalysis = Omit<
+    RawStats,
+    "turnIndexes" | "roundIndexes"
+> & {
+    indexMap: IndexMap
+}
+
+interface RawStats {
     id: LogId
     completionType: "finish" | "flee" | "die" | null
     battleType:
@@ -138,6 +161,7 @@ export interface LogAnalysis {
         max: number
     } | null
     turnIndexes: number[]
+    roundIndexes: Record<number, number>
     drops: Record<
         string,
         {
@@ -158,11 +182,9 @@ const DEFAULT_STORAGE = () =>
     ({
         version: VERSION,
         data: {},
-    } satisfies LogStatsStorage)
+    } satisfies StatsStorage)
 
-interface LogStatsStorage {
+interface StatsStorage {
     version: number
-    data: Record<LogId, LogAnalysis>
+    data: Record<LogId, RawStats>
 }
-
-export function scanNumTurns(log: CompleteLog) {}

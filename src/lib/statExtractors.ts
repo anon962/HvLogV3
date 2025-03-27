@@ -88,9 +88,7 @@ export function extractBattleType(log: CompleteLog): {
     return result
 }
 
-export function extractNumTurns(log: CompleteLog): {
-    turnIndexes: number[]
-} {
+export function extractTurnIndexes(log: CompleteLog): number[] {
     const evs = filterEvents(log, [
         "PLAYER_ATTACK",
         "PLAYER_SKILL",
@@ -129,7 +127,14 @@ export function extractNumTurns(log: CompleteLog): {
         }
     )
 
-    return { turnIndexes }
+    return turnIndexes
+}
+
+export function extractRoundIndexes(log: CompleteLog) {
+    return filterEvents(log, ["ROUND_START"]).reduce((acc, ev) => {
+        acc[ev.current ?? 1] = ev.logIndex
+        return acc
+    }, {} as Record<number, number>)
 }
 
 export function extractCompletionType(

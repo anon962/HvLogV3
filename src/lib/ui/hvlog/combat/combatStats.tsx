@@ -12,8 +12,8 @@ export function CombatStats({ log }: { log: LogWithAnalysis }) {
     return <></>
 }
 
-function summarizeCombat(log: LogWithAnalysis): CastSummary {
-    const data: CastSummary["data"] = {}
+function summarizeCombat(log: LogWithAnalysis): CombatSummary {
+    const data: CombatSummary["data"] = {}
 
     const offenseKeys = new Set<string>()
     const debuffKeys = new Set<string>()
@@ -37,7 +37,7 @@ function summarizeCombat(log: LogWithAnalysis): CastSummary {
                 effects: HvEvent[][]
             }
 
-            const effectSummary: CastSummaryData["offense"] = []
+            const effectSummary: CombatSummaryData["offense"] = []
 
             for (const grp of effects) {
                 const attack = grp.find(
@@ -84,7 +84,7 @@ function summarizeCombat(log: LogWithAnalysis): CastSummary {
                 effects: HvEvent[][]
             }
 
-            const effectSummary: CastSummaryData["debuff"] = []
+            const effectSummary: CombatSummaryData["debuff"] = []
 
             for (const grp of effects) {
                 const resist = grp.find(
@@ -312,12 +312,12 @@ const CAST_GRAMMAR = {
 
 //
 
-export type CastSummary = EventSummary<
-    CastSummaryData,
-    (d: CastSummaryData) => boolean
+export type CombatSummary = EventSummary<
+    CombatSummaryData,
+    (d: CombatSummaryData) => boolean
 >
 
-type CastSummaryData = EventSummaryData<{
+type CombatSummaryData = EventSummaryData<{
     offense?: Array<{
         value: number
         resist: number

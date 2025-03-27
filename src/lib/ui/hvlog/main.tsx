@@ -78,24 +78,14 @@ export type LogWithAnalysis = {
 }
 
 function useLogs(refreshDelay = 5000) {
-    const [completeLogs, setCompleteLogs] = useState<CompleteLog[]>(
-        []
-    )
+    const [logs, setLogs] = useState<LogWithAnalysis[]>([])
     const [loading, setLoading] = useState(true)
 
-    const stats = new LogStats()
-    const logs = useMemo(
-        () =>
-            completeLogs.map((log) => ({
-                log,
-                analysis: stats.get(log.id) ?? stats.analyze(log),
-            })),
-        [completeLogs]
-    )
-
     useEffect(() => {
-        const result: CompleteLog[] = []
+        const result: LogWithAnalysis[] = []
         const seen = new Set<string>()
+
+        const stats = new LogStats()
 
         async function load() {
             const db = await LogDb.ainit()
@@ -104,12 +94,14 @@ function useLogs(refreshDelay = 5000) {
             for await (const log of iter) {
                 if (seen.has(log.id)) {
                     continue
-                } else {
-                    seen.add(log.id)
                 }
 
-                result.push(log)
-                setCompleteLogs([...result])
+                seen.add(log.id)
+
+                const analysis = stats.get(log)
+
+                result.push({ log, analysis })
+                setLogs([...result])
             }
 
             setLoading(false)
