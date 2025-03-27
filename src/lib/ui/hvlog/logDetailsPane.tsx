@@ -5,8 +5,8 @@ import {
     TabsList,
     TabsTrigger,
 } from "../shadcn/tabs"
-import { CombatStats } from "./combatStats"
-import { DropStats } from "./dropStats"
+import { CombatStats } from "./combat/combatStats"
+import { DropStats } from "./drop/dropStats"
 import { LogEventList } from "./logEventList"
 import { LogWithAnalysis } from "./main"
 

@@ -1,10 +1,9 @@
 import { EventGrammar, takeEvents } from "@/lib/eventGrammar"
 import { LogEntry } from "@/lib/logDb"
 import { HvEvent, HvEventMap } from "@/lib/parsers"
-import { filterEvents } from "@/lib/statExtractors"
 import { setDefault } from "@/lib/utils/miscUtils"
-import { EventSummary, EventSummaryData } from "./eventSummary"
-import { LogWithAnalysis } from "./main"
+import { EventSummary, EventSummaryData } from "../eventSummary"
+import { LogWithAnalysis } from "../main"
 
 export function CombatStats({ log }: { log: LogWithAnalysis }) {
     const combat = summarizeCombat(log)
@@ -28,6 +27,7 @@ function summarizeCombat(log: LogWithAnalysis): CastSummary {
         if (entry.type !== "event") {
             continue
         }
+        const ev = entry.event
 
         // Offense
         const offenseData = takeEntries(xs, idx, "cast", "offense")
@@ -173,20 +173,18 @@ function summarizeCombat(log: LogWithAnalysis): CastSummary {
             idx += effects.length
             continue
         }
-    }
 
-    // Draughts / Regen / Riddlemaster
-    const passiveHealEvents = filterEvents(log.log, [
-        "EFFECT_RESTORE",
-        "RIDDLE_RESTORE",
-    ])
-    const healTypes = new Set(["health", "magic", "spirit"] as const)
-    for (const ev of passiveHealEvents) {
+        // Draughts / Regen / Riddlemaster
+        const healTypes = new Set([
+            "health",
+            "magic",
+            "spirit",
+        ] as const)
         if (ev.event_type === "EFFECT_RESTORE") {
             if (healTypes.has(ev.type as any)) {
                 setDefault(data, ev.effect, []).push({
                     key: ev.effect,
-                    logIdx: ev.logIndex,
+                    logIdx: idx,
                     effectHeals: {
                         health: 0,
                         magic: 0,
@@ -199,10 +197,10 @@ function summarizeCombat(log: LogWithAnalysis): CastSummary {
             } else {
                 console.error("Unknown heal type", ev)
             }
-        } else {
+        } else if (ev.event_type === "RIDDLE_RESTORE") {
             setDefault(data, "RIDDLE_RESTORE", []).push({
                 key: "RIDDLE_RESTORE",
-                logIdx: ev.logIndex,
+                logIdx: idx,
                 effectHeals: {
                     health: ev.hp,
                     magic: ev.mp,
@@ -212,16 +210,15 @@ function summarizeCombat(log: LogWithAnalysis): CastSummary {
 
             passiveHealKeys.add("RIDDLE_RESTORE")
         }
-    }
 
-    // Spark of Life
-    const sparkEvents = filterEvents(log.log, ["SPARK_TRIGGER"])
-    for (const ev of sparkEvents) {
-        setDefault(data, "SPARK_TRIGGER", []).push({
-            key: "SPARK_TRIGGER",
-            logIdx: ev.logIndex,
-            spark: true,
-        })
+        // Spark of Life
+        if (ev.event_type === "SPARK_TRIGGER") {
+            setDefault(data, "SPARK_TRIGGER", []).push({
+                key: "SPARK_TRIGGER",
+                logIdx: idx,
+                spark: true,
+            })
+        }
     }
 
     return {

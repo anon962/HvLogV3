@@ -1,14 +1,14 @@
-import { IncomeChart } from "@/lib/charts/incomeChart"
 import { CompleteLog } from "@/lib/logDb"
 import { filterEvents } from "@/lib/statExtractors"
 import { LogAnalysis } from "@/lib/statsDb"
 import { formatNumber } from "@/lib/utils/miscUtils"
 import { alphabetical, max, range, sum } from "radash"
 import { useEffect, useRef } from "react"
-import { PRICES } from "../constants"
-import { EventSummary } from "./eventSummary"
-import { LogWithAnalysis } from "./main"
-import { TallyTable, TallyTableRow } from "./tallyTable"
+import { PRICES } from "../../constants"
+import { EventSummary } from "../eventSummary"
+import { LogWithAnalysis } from "../main"
+import { TallyTable, TallyTableRow } from "../tallyTable"
+import { IncomeChart } from "./incomeChart"
 
 export function DropStats(props: { log: LogWithAnalysis }) {
     const drops = summarizeItemDrops(props.log.analysis)
