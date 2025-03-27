@@ -7,11 +7,14 @@ import { App } from "./lib/app/app"
 import { registerViewLogs } from "./lib/app/registerViewLogs"
 
 // @todo: combat - turn usage (attacks, debuffs, heals, other)
-// @todo: combat - resist rate
+// @todo: combat - resist distribution
+// @todo: combat - heal breakdown (hp mp sp)
+// @todo: combat - heal breakdown (active, passive)
+// @todo: combat - SoL triggers
+// @todo: turnIdx to logIdx2turnIdx, logIdx2roundIdx map
 // @todo: menu - export / import logs
 // @todo: menu - clear localstorage
 // @todo: menu - config (monaco)
-// @todo: profits
 // @todo: sort
 // @todo: filter
 // @todo: compression

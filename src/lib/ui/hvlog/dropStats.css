@@ -5,6 +5,12 @@
     .expenses .footer.value {
         color: var(--color-red-300);
     }
+    .income .row.selectable .value {
+        color: var(--color-green-100);
+    }
+    .expenses .row.selectable .value {
+        color: var(--color-red-100);
+    }
 
     container-type: inline-size;
 

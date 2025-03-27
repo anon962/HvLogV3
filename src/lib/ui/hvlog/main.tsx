@@ -57,7 +57,14 @@ function LogViewer() {
                     <ResizableHandle withHandle />
 
                     <ResizablePanel className="flex justify-center">
-                        <LogDetailsPane selectedLog={selectedLog} />
+                        {useMemo(
+                            () => (
+                                <LogDetailsPane
+                                    selectedLog={selectedLog}
+                                />
+                            ),
+                            [selectedLog]
+                        )}
                     </ResizablePanel>
                 </ResizablePanelGroup>
             </AppContext.Provider>

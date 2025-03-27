@@ -184,3 +184,57 @@ export function formatNumber(x: number, sign?: boolean) {
 
     return asStr
 }
+
+export function takeWhile<
+    TItem,
+    TCond extends (x: TItem, idx: number) => boolean = (
+        x: TItem
+    ) => boolean
+>(
+    xs: TItem[],
+    cond: TCond,
+    opts: {
+        reverse?: boolean
+        start?: number
+        end?: number
+    } = {}
+): Array<Or<InferGuardType<TCond>, TItem>> {
+    const reverse = opts.reverse ?? false
+
+    let start, end, step
+    if (reverse) {
+        start = opts.start ?? xs.length - 1
+        end = opts.end ?? 0
+        step = -1
+    } else {
+        start = opts.start ?? 0
+        end = opts.end ?? xs.length - 1
+        step = 1
+    }
+
+    const items: any[] = []
+
+    for (
+        let idx = start;
+        reverse ? idx >= end : idx <= end;
+        idx += step
+    ) {
+        const x = xs[idx]
+
+        if (cond(x, idx)) {
+            items.push(x)
+        } else {
+            break
+        }
+    }
+
+    return items
+}
+
+export function setDefault<
+    TKey extends string | number | symbol,
+    TRecord extends Record<TKey, any>
+>(record: TRecord, key: TKey, value: TRecord[TKey]): TRecord[TKey] {
+    record[key] = record[key] ?? value
+    return record[key]
+}

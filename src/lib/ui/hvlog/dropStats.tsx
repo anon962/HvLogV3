@@ -58,7 +58,7 @@ function CalculationPreview(
 
     const net = totalIncome - totalExpenses
     const netClass = net > 0 ? "text-green-300" : "text-red-300"
-    const netStr = (net > 0 ? "+" : "-") + formatNumber(net) + "c"
+    const netStr = (net > 0 ? "+" : "") + formatNumber(net) + "c"
 
     const incomeStr = "+" + formatNumber(totalIncome) + "c"
     const expenseStr = "-" + formatNumber(totalExpenses) + "c"
@@ -97,6 +97,18 @@ function CalculationPreview(
 function IncomeSummaryTable(
     summary: ReturnType<typeof summarizeItemDrops>
 ) {
+    const acc = Object.fromEntries(
+        summary.groups.map((grp) => [
+            grp.label,
+            {
+                label: grp.label,
+                count: 0,
+                value: 0,
+                subRows: [] as TallyTableRow[],
+            },
+        ])
+    )
+
     const rows = Object.values(summary.data).reduce((acc, xs) => {
         const count = sum(xs, (x) => x.count)
         const value = sum(xs, (x) => x.value)
@@ -106,12 +118,6 @@ function IncomeSummaryTable(
             return acc
         }
 
-        acc[group.label] = acc[group.label] ?? {
-            label: group.label,
-            count: 0,
-            value: 0,
-            subRows: [],
-        }
         acc[group.label].count += count
         acc[group.label].value += value
         acc[group.label].subRows!.push({
@@ -121,7 +127,7 @@ function IncomeSummaryTable(
         })
 
         return acc
-    }, {} as Record<string, TallyTableRow>)
+    }, acc)
 
     return (
         <TallyTable
@@ -223,6 +229,18 @@ function UsageSummaryTable(
     summary: ReturnType<typeof summarizeItemUsage>,
     staminaUsage: number
 ) {
+    const acc = Object.fromEntries(
+        summary.groups.map((grp) => [
+            grp.label,
+            {
+                label: grp.label,
+                count: 0,
+                value: 0,
+                subRows: [] as TallyTableRow[],
+            },
+        ])
+    )
+
     const rows = Object.values(summary.data).reduce((acc, xs) => {
         const count = sum(xs, (x) => x.count)
         const value = sum(xs, (x) => x.value)
@@ -232,12 +250,6 @@ function UsageSummaryTable(
             return acc
         }
 
-        acc[group.label] = acc[group.label] ?? {
-            label: group.label,
-            count: 0,
-            value: 0,
-            subRows: [],
-        }
         acc[group.label].count += count
         acc[group.label].value += value
         acc[group.label].subRows!.push({
@@ -247,7 +259,7 @@ function UsageSummaryTable(
         })
 
         return acc
-    }, {} as Record<string, TallyTableRow>)
+    }, acc)
 
     rows["stamina"] = {
         label: "Stamina",
@@ -373,12 +385,12 @@ function newDropEventGroup<T extends string>(
 }
 
 export type DropEventSummary = EventSummary<
-    string,
     {
         count: number
         value: number
     },
-    (key: string) => boolean
+    (key: string) => boolean,
+    string
 >
 
 type PriceKey = keyof typeof PRICES
