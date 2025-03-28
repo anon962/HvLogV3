@@ -1,15 +1,16 @@
-import { LogEntry } from "@/lib/logDb"
+import { CompleteLog, LogEntry } from "@/lib/logDb"
 import { HvEventMap } from "@/lib/parsers"
 import JsonView from "@uiw/react-json-view"
 import { JSX, useEffect, useMemo, useState } from "react"
 import { XIcon } from "../icons/tailwind"
-import { LogWithAnalysis } from "./main"
+import { useLog } from "../logContext"
 
-export function LogEventList(props: { log: LogWithAnalysis }) {
-    // @todo: This index tracking is spaghetti. Need to group the log events by round / turn before trying to render it
+export function LogEventList(props: { log: CompleteLog }) {
+    const log = props.log
 
-    const { log, analysis } = props.log
-    const indexMap = analysis.indexMap
+    const { indexMap } = useLog(props.log, {
+        indexMap: true,
+    })
 
     const [activeIdx, setActiveIdx] = useState({
         log: -1,
@@ -19,7 +20,7 @@ export function LogEventList(props: { log: LogWithAnalysis }) {
 
     useEffect(() => {
         setActiveIdx({ log: -1, turn: -1, round: -1 })
-    }, [log.id])
+    }, [props.log.id])
 
     return (
         <div className="log-event-list flex flex-col h-full">

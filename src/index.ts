@@ -6,12 +6,13 @@ import entryJs from "../dist/ui/ui.js?raw"
 import { App } from "./lib/app/app"
 import { registerViewLogs } from "./lib/app/registerViewLogs"
 
-// @todo: combat - turn usage (attacks, debuffs, heals, other)
-// @todo: combat - resist distribution
+// @tood: combat - usage table
+// @todo: combat - usage chart (attacks, debuffs, heals, other)
+// @todo: combat - resist distribution (debuffs, other)
+// @todo: combat - melee strikes
 // @todo: combat - heal breakdown (hp mp sp)
 // @todo: combat - heal breakdown (active, passive)
 // @todo: combat - SoL triggers
-// @todo: turnIdx to logIdx2turnIdx, logIdx2roundIdx map
 // @todo: menu - export / import logs
 // @todo: menu - clear localstorage
 // @todo: menu - config (monaco)
@@ -21,6 +22,7 @@ import { registerViewLogs } from "./lib/app/registerViewLogs"
 // @todo: live stats
 // @todo: debug flag - disable localstorage reads
 // @todo: debug console
+// @todo: self-hosted ui
 
 async function main() {
     const app = await App.ainit()

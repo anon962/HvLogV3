@@ -1,4 +1,4 @@
-import { CompleteLog } from "./logDb"
+import { CompleteLog, LogId } from "./logDb"
 import {
     extractBattleType,
     extractCompletionType,
@@ -7,16 +7,14 @@ import {
     extractRoundIndexes,
     extractTurnIndexes,
 } from "./statExtractors"
-import { IndexMap } from "./ui/hvlog/indexMap"
 
 const STORAGE_KEY = "hvlog_stats"
 const VERSION = 1
 
 /**
- * Cache for miscellaneous log stats that are at least slightly expensive to calculate
- * This is mainly for the summaries in LogTable. Most of the real stats are stored by the ChartManager.
+ * Cache for miscellaneous log stats that are at least slightly expensive to calculate.
  */
-export class LogStats {
+export class SummaryDb {
     data: StatsStorage
 
     constructor() {
@@ -26,23 +24,14 @@ export class LogStats {
     public get(
         log: CompleteLog,
         opts: { save?: boolean } = {}
-    ): LogAnalysis {
-        const raw = this.data.data[log.id] ?? this.analyze(log, opts)
-
-        return {
-            ...raw,
-            indexMap: new IndexMap(
-                raw.turnIndexes,
-                raw.roundIndexes,
-                log.entries.length
-            ),
-        }
+    ): LogSummary {
+        return this.data.data[log.id] ?? this.analyze(log, opts)
     }
 
     private analyze(
         log: CompleteLog,
         opts: { save?: boolean } = {}
-    ): RawStats {
+    ): LogSummary {
         const {
             battleType,
             round,
@@ -135,16 +124,7 @@ export class LogStats {
     }
 }
 
-type LogId = string
-
-export type LogAnalysis = Omit<
-    RawStats,
-    "turnIndexes" | "roundIndexes"
-> & {
-    indexMap: IndexMap
-}
-
-interface RawStats {
+export interface LogSummary {
     id: LogId
     completionType: "finish" | "flee" | "die" | null
     battleType:
@@ -186,5 +166,5 @@ const DEFAULT_STORAGE = () =>
 
 interface StatsStorage {
     version: number
-    data: Record<LogId, RawStats>
+    data: Record<LogId, LogSummary>
 }

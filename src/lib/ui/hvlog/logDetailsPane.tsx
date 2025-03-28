@@ -1,3 +1,4 @@
+import { CompleteLog } from "@/lib/logDb"
 import { Card, CardContent } from "../shadcn/card"
 import {
     Tabs,
@@ -8,11 +9,8 @@ import {
 import { CombatStats } from "./combat/combatStats"
 import { DropStats } from "./drop/dropStats"
 import { LogEventList } from "./logEventList"
-import { LogWithAnalysis } from "./main"
 
-export function LogDetailsPane(props: {
-    selectedLog?: LogWithAnalysis
-}) {
+export function LogDetailsPane(props: { log?: CompleteLog }) {
     return (
         <div
             className="details-pane-root w-full h-full"
@@ -50,8 +48,8 @@ export function LogDetailsPane(props: {
                 <TabsContent value="stats" className="h-full min-h-0">
                     <Card className="min-h-full py-0 h-full">
                         <CardContent className="h-full p-8">
-                            {props.selectedLog ? (
-                                <DropStats log={props.selectedLog} />
+                            {props.log ? (
+                                <DropStats log={props.log} />
                             ) : (
                                 ""
                             )}
@@ -65,10 +63,8 @@ export function LogDetailsPane(props: {
                 >
                     <Card className="min-h-0 h-full py-0">
                         <CardContent className="p-0 min-h-0">
-                            {props.selectedLog ? (
-                                <CombatStats
-                                    log={props.selectedLog}
-                                />
+                            {props.log ? (
+                                <CombatStats log={props.log} />
                             ) : (
                                 ""
                             )}
@@ -82,10 +78,8 @@ export function LogDetailsPane(props: {
                 >
                     <Card className="min-h-0 h-full py-0">
                         <CardContent className="p-0 min-h-0">
-                            {props.selectedLog ? (
-                                <LogEventList
-                                    log={props.selectedLog}
-                                />
+                            {props.log ? (
+                                <LogEventList log={props.log} />
                             ) : (
                                 ""
                             )}

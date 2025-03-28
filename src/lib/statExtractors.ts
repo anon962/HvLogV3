@@ -1,7 +1,7 @@
 import { last } from "radash"
 import { CompleteLog } from "./logDb"
 import { HvEvent, HvEventMap } from "./parsers"
-import { LogAnalysis } from "./statsDb"
+import { LogSummary } from "./summaryDb"
 import { enumerate, findNext } from "./utils/miscUtils"
 import { InferCollectionType } from "./utils/typeUtils"
 
@@ -26,8 +26,8 @@ export function filterEvents<TEvent extends keyof HvEventMap>(
 }
 
 export function extractBattleType(log: CompleteLog): {
-    battleType: LogAnalysis["battleType"] | null
-    round: LogAnalysis["round"] | null
+    battleType: LogSummary["battleType"] | null
+    round: LogSummary["round"] | null
     inconsistentBattleTypes: boolean
     startCount: number
     endCount: number
@@ -139,7 +139,7 @@ export function extractRoundIndexes(log: CompleteLog) {
 
 export function extractCompletionType(
     log: CompleteLog
-): LogAnalysis["completionType"] {
+): LogSummary["completionType"] {
     const evs = filterEvents(log, null)
 
     // Find ROUND_END
@@ -171,8 +171,8 @@ export function extractCompletionType(
     }
 }
 
-export function extractDrops(log: CompleteLog): LogAnalysis["drops"] {
-    const drops: LogAnalysis["drops"] = {}
+export function extractDrops(log: CompleteLog): LogSummary["drops"] {
+    const drops: LogSummary["drops"] = {}
 
     const add = (k: string, count: number, logIdx: number) => {
         drops[k] = drops[k] ?? { name: k, entries: [] }
@@ -245,7 +245,7 @@ export function extractDrops(log: CompleteLog): LogAnalysis["drops"] {
 }
 
 export function extractItemUsage(log: CompleteLog) {
-    let usage: LogAnalysis["itemUsage"] = {}
+    let usage: LogSummary["itemUsage"] = {}
 
     for (const [idx, entry] of enumerate(log.entries)) {
         if (entry.type !== "event") {

@@ -1,20 +1,13 @@
-import { CompleteLog, LogDb } from "@/lib/logDb"
-import { LogAnalysis, LogStats } from "@/lib/statsDb"
 import "@/lib/ui/global.css"
 import {
     ResizableHandle,
     ResizablePanel,
     ResizablePanelGroup,
 } from "@/lib/ui/shadcn/resizable"
-import { alphabetical, sleep } from "radash"
-import {
-    createContext,
-    StrictMode,
-    useEffect,
-    useMemo,
-    useState,
-} from "react"
+import { alphabetical } from "radash"
+import { createContext, StrictMode, useMemo } from "react"
 import { createRoot } from "react-dom/client"
+import { createLogContext, LogContext } from "../logContext"
 import { useLocalJsonState } from "./hooks"
 import { LogDetailsPane } from "./logDetailsPane"
 import { LogSummaryTable } from "./logSummaryTable"
@@ -23,98 +16,60 @@ export const AppContext = createContext(window.HV_LOG)
 
 function main() {
     createRoot(document.getElementById("root")!).render(
-        <LogViewer></LogViewer>
+        <HvLog></HvLog>
     )
 }
 
-function LogViewer() {
-    const [activeLog, setActiveLog] = useLocalJsonState(
+function HvLog() {
+    const [selectedLogId, setSelectedLog] = useLocalJsonState(
         "",
-        "hvlog_active_log"
+        "hvlog_selected_log"
     )
 
-    let { logs, loading } = useLogs()
-    logs = alphabetical(logs, (l) => l.log.meta.start, "desc")
+    const ctx = createLogContext()
+    const { logs, logsLoading } = ctx
 
-    const selectedLog = logs.find(({ log }) => log.id === activeLog)
+    const logsSorted = alphabetical(logs, (l) => l.meta.start, "desc")
+    const selectionIdx = logsSorted.findIndex(
+        (l) => l.id === selectedLogId
+    )
 
     return (
         <StrictMode>
             <AppContext.Provider value={window.HV_LOG}>
-                <ResizablePanelGroup
-                    direction="horizontal"
-                    autoSaveId="hvlog_detail_split"
-                >
-                    <ResizablePanel className="overflow-auto!">
-                        <LogSummaryTable
-                            onClick={(log) => setActiveLog(log.id)}
-                            activeLog={activeLog}
-                            logs={logs}
-                            loading={loading}
-                        />
-                    </ResizablePanel>
+                <LogContext.Provider value={ctx}>
+                    <ResizablePanelGroup
+                        direction="horizontal"
+                        autoSaveId="hvlog_detail_split"
+                    >
+                        <ResizablePanel className="overflow-auto!">
+                            <LogSummaryTable
+                                onClick={(log) =>
+                                    setSelectedLog(log.id)
+                                }
+                                selectionIdx={selectionIdx}
+                                logs={logsSorted}
+                                loading={logsLoading}
+                            />
+                        </ResizablePanel>
 
-                    <ResizableHandle withHandle />
+                        <ResizableHandle withHandle />
 
-                    <ResizablePanel className="flex justify-center">
-                        {useMemo(
-                            () => (
-                                <LogDetailsPane
-                                    selectedLog={selectedLog}
-                                />
-                            ),
-                            [selectedLog]
-                        )}
-                    </ResizablePanel>
-                </ResizablePanelGroup>
+                        <ResizablePanel className="flex justify-center">
+                            {useMemo(
+                                () => (
+                                    <LogDetailsPane
+                                        log={logsSorted[selectionIdx]}
+                                    />
+                                ),
+                                [selectionIdx]
+                            )}
+                        </ResizablePanel>
+                    </ResizablePanelGroup>
+                </LogContext.Provider>
             </AppContext.Provider>
         </StrictMode>
     )
-}
-
-export type LogWithAnalysis = {
-    log: CompleteLog
-    analysis: LogAnalysis
-}
-
-function useLogs(refreshDelay = 5000) {
-    const [logs, setLogs] = useState<LogWithAnalysis[]>([])
-    const [loading, setLoading] = useState(true)
-
-    useEffect(() => {
-        const result: LogWithAnalysis[] = []
-        const seen = new Set<string>()
-
-        const stats = new LogStats()
-
-        async function load() {
-            const db = await LogDb.ainit()
-            const iter = db.iterArchive()
-
-            for await (const log of iter) {
-                if (seen.has(log.id)) {
-                    continue
-                }
-
-                seen.add(log.id)
-
-                const analysis = stats.get(log)
-
-                result.push({ log, analysis })
-                setLogs([...result])
-            }
-
-            setLoading(false)
-            await sleep(refreshDelay)
-            load()
-        }
-
-        load()
-
-        return () => {}
-    }, [])
-
-    return { logs, loading }
 }
 
 main()

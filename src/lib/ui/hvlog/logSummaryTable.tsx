@@ -1,5 +1,4 @@
 import { CompleteLog, LogDb, LogHash } from "@/lib/logDb"
-import { LogAnalysis } from "@/lib/statsDb"
 import { RunIcon, Skull2Icon } from "@/lib/ui/icons/misc"
 import { Check, EyeIcon } from "@/lib/ui/icons/tailwind"
 import {
@@ -12,36 +11,33 @@ import {
 } from "@/lib/ui/shadcn/table"
 import { sleep } from "radash"
 import { useEffect, useMemo, useState } from "react"
-import { LogWithAnalysis } from "./main"
+import { useLog, useLogContext } from "../logContext"
 
 export function LogSummaryTable(props: {
     onClick?: (log: CompleteLog) => void
 
-    activeLog: string
-    logs: LogWithAnalysis[]
+    selectionIdx: number
+    logs: CompleteLog[]
     loading: boolean
 }) {
     const status = useBattleStatus()
     const now = useNow()
 
-    let selectionIdx = props.logs.findIndex(
-        ({ log }) => log.id === props.activeLog
-    )
-    selectionIdx = selectionIdx > -1 ? selectionIdx : 0
-
     const logEls = props.logs.map((log, idx) => {
         return (
             <LogRow
+                log={log}
                 now={now}
                 {...log}
                 idx={idx}
-                selectionIdx={selectionIdx}
+                selectionIdx={props.selectionIdx}
                 onClick={props.onClick}
             />
         )
     })
 
-    const headerSelected = selectionIdx === 0 ? " selected-next" : ""
+    const headerSelected =
+        props.selectionIdx === 0 ? " selected-next" : ""
 
     return (
         <div
@@ -85,12 +81,15 @@ export function LogSummaryTable(props: {
 
 function LogRow(props: {
     log: CompleteLog
-    analysis: LogAnalysis
     now: Date
     idx: number
     selectionIdx: number
     onClick?: (log: CompleteLog) => void
 }) {
+    const { indexMap } = useLog(props.log, {
+        indexMap: true,
+    })
+
     const startDate = useDateFormatter(
         props.log.meta.start,
         props.now
@@ -100,12 +99,10 @@ function LogRow(props: {
     const isNextSelected = props.idx === props.selectionIdx - 1
 
     const duration = formatDuration(props.log)
-    const typeSummary = formatBattleType(props.analysis)
-    const turns = `${
-        props.analysis.indexMap.turnIndexes.length - 1
-    } turns`
+    const typeSummary = formatBattleType(props.log)
+    const turns = `${indexMap.turnIndexes.length - 1} turns`
     const { status, title: statusTitle } = formatCompletionType(
-        props.analysis
+        props.log
     )
 
     // prettier-ignore
@@ -137,13 +134,7 @@ function LogRow(props: {
                 </TableCell> */}
             </TableRow>
         ),
-        [
-            props.log,
-            props.analysis,
-            startDate,
-            props.idx,
-            props.selectionIdx,
-        ]
+        [props.log, startDate, props.idx, props.selectionIdx]
     )
 }
 
@@ -267,10 +258,13 @@ const arenaAliases = {
     112: "RoB - TTT",
 } as Record<number, string>
 
-function formatBattleType(anal: LogAnalysis) {
+function formatBattleType(log: CompleteLog) {
+    const { getSummary } = useLogContext()
+    const summary = getSummary(log)
+
     let className, label
 
-    switch (anal.battleType?.name) {
+    switch (summary.battleType?.name) {
         case "Grindfest":
             className = "gf"
             label = "Grindfest"
@@ -281,28 +275,28 @@ function formatBattleType(anal: LogAnalysis) {
             break
         case "Item World":
             className = "iw"
-            if (anal.round) {
-                label = `Item World - ${anal.round.max}r`
+            if (summary.round) {
+                label = `Item World - ${summary.round.max}r`
             } else {
                 label = `Item World`
             }
             break
         case "Arena":
-            className = anal.battleType.id >= 100 ? "rob" : "arena"
+            className = summary.battleType.id >= 100 ? "rob" : "arena"
 
-            if (arenaAliases[anal.battleType.id]) {
-                label = arenaAliases[anal.battleType.id]
-            } else if (anal.round?.max === 1) {
+            if (arenaAliases[summary.battleType.id]) {
+                label = arenaAliases[summary.battleType.id]
+            } else if (summary.round?.max === 1) {
                 console.error(
-                    `No alias for RoB #${anal.battleType.id}`,
-                    anal
+                    `No alias for RoB #${summary.battleType.id}`,
+                    summary
                 )
-                label = `RoB #${anal.battleType.id}`
-            } else if (anal.round) {
-                label = `Arena - ${anal.round.max}r`
+                label = `RoB #${summary.battleType.id}`
+            } else if (summary.round) {
+                label = `Arena - ${summary.round.max}r`
             } else {
                 console.error(
-                    `No round date for arena #${anal.battleType.id}`
+                    `No round date for arena #${summary.battleType.id}`
                 )
                 label = `Arena`
             }
@@ -317,24 +311,27 @@ function formatBattleType(anal: LogAnalysis) {
     return <span className={className}>{label}</span>
 }
 
-function formatCompletionType(anal: LogAnalysis) {
+function formatCompletionType(log: CompleteLog) {
+    const { getSummary } = useLogContext()
+    const summary = getSummary(log)
+
     let round, title
-    if (anal.completionType !== "finish" && anal.round) {
+    if (summary.completionType !== "finish" && summary.round) {
         round = (
             <span>
-                {anal.round.end} / {anal.round.max}
+                {summary.round.end} / {summary.round.max}
             </span>
         )
 
-        if (anal.completionType === "die") {
-            title = `Died on round ${anal.round.end} / ${anal.round.max}`
-        } else if (anal.completionType === "flee") {
-            title = `Flee on round ${anal.round.end} / ${anal.round.max}`
+        if (summary.completionType === "die") {
+            title = `Died on round ${summary.round.end} / ${summary.round.max}`
+        } else if (summary.completionType === "flee") {
+            title = `Flee on round ${summary.round.end} / ${summary.round.max}`
         }
     }
 
     let status
-    switch (anal.completionType) {
+    switch (summary.completionType) {
         case "finish":
             status = (
                 <span className="finish flex justify-center">

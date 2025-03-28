@@ -1,21 +1,23 @@
 import { CompleteLog } from "@/lib/logDb"
 import { filterEvents } from "@/lib/statExtractors"
-import { LogAnalysis } from "@/lib/statsDb"
+import { LogSummary } from "@/lib/summaryDb"
 import { formatNumber } from "@/lib/utils/miscUtils"
 import { alphabetical, max, range, sum } from "radash"
 import { useEffect, useRef } from "react"
 import { PRICES } from "../../constants"
+import { useLog } from "../../logContext"
 import { EventSummary } from "../eventSummary"
-import { LogWithAnalysis } from "../main"
 import { TallyTable, TallyTableRow } from "../tallyTable"
 import { IncomeChart } from "./incomeChart"
 
-export function DropStats(props: { log: LogWithAnalysis }) {
-    const drops = summarizeItemDrops(props.log.analysis)
-    const usage = summarizeItemUsage(props.log.analysis)
+export function DropStats(props: { log: CompleteLog }) {
+    const { summary } = useLog(props.log, { summary: true })
 
-    let staminaUsage = (props.log.analysis.round?.end ?? 1) / 50
-    if (props.log.analysis.battleType?.name === "Grindfest") {
+    const drops = summarizeItemDrops(summary)
+    const usage = summarizeItemUsage(summary)
+
+    let staminaUsage = (summary.round?.end ?? 1) / 50
+    if (summary.battleType?.name === "Grindfest") {
         staminaUsage += 1
     }
 
@@ -23,7 +25,7 @@ export function DropStats(props: { log: LogWithAnalysis }) {
         <div className="drop-stats h-full overflow-auto flex flex-col">
             <div className="overview">
                 {CalculationPreview(drops, usage, staminaUsage)}
-                {EquipSummary(props.log.log)}
+                {EquipSummary(props.log)}
             </div>
 
             <hr className="my-12" />
@@ -35,7 +37,7 @@ export function DropStats(props: { log: LogWithAnalysis }) {
 
             <hr className="my-12" />
 
-            {DropChart(props.log.log, drops, usage)}
+            {DropChart(props.log, drops, usage)}
         </div>
     )
 }
@@ -138,7 +140,7 @@ function IncomeSummaryTable(
     )
 }
 
-function summarizeItemDrops(anal: LogAnalysis) {
+function summarizeItemDrops(anal: LogSummary) {
     const summary: DropEventSummary = {
         data: {},
         groups: [
@@ -163,7 +165,7 @@ function summarizeItemDrops(anal: LogAnalysis) {
 
     const mapDrops = (
         key: string,
-        x: LogAnalysis["drops"][string],
+        x: LogSummary["drops"][string],
         mult: number,
         asSingle?: boolean
     ) =>
@@ -277,7 +279,7 @@ function UsageSummaryTable(
     )
 }
 
-function summarizeItemUsage(anal: LogAnalysis): DropEventSummary {
+function summarizeItemUsage(anal: LogSummary): DropEventSummary {
     const summary: DropEventSummary = {
         data: {},
         groups: [
@@ -295,7 +297,7 @@ function summarizeItemUsage(anal: LogAnalysis): DropEventSummary {
 
     const mapUses = (
         key: string,
-        logIdxs: LogAnalysis["itemUsage"][string],
+        logIdxs: LogSummary["itemUsage"][string],
         value: number
     ) =>
         logIdxs.map((logIdx) => ({

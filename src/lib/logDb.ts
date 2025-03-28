@@ -242,7 +242,7 @@ export class LogDb {
 
 export interface LogDbSchema extends idb.DBSchema {
     complete: {
-        key: string
+        key: LogId
         value: CompleteLog
     }
     live: {
@@ -259,6 +259,7 @@ export interface LogDbSchema extends idb.DBSchema {
     }
 }
 
+export type LogId = string
 type ISODate = string
 
 export interface LogMeta {
@@ -273,7 +274,7 @@ export interface LogHash {
 }
 
 export interface CompleteLog {
-    id: string
+    id: LogId
     meta: LogMeta
     entries: LogEntry[]
 }

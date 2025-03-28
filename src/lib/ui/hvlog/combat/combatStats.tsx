@@ -1,18 +1,17 @@
 import { EventGrammar, takeEvents } from "@/lib/eventGrammar"
-import { LogEntry } from "@/lib/logDb"
+import { CompleteLog, LogEntry } from "@/lib/logDb"
 import { HvEvent, HvEventMap } from "@/lib/parsers"
 import { setDefault } from "@/lib/utils/miscUtils"
 import { EventSummary, EventSummaryData } from "../eventSummary"
-import { LogWithAnalysis } from "../main"
 
-export function CombatStats({ log }: { log: LogWithAnalysis }) {
+export function CombatStats({ log }: { log: CompleteLog }) {
     const combat = summarizeCombat(log)
     console.log(combat)
 
     return <></>
 }
 
-function summarizeCombat(log: LogWithAnalysis): CombatSummary {
+function summarizeCombat(log: CompleteLog): CombatSummary {
     const data: CombatSummary["data"] = {}
 
     const offenseKeys = new Set<string>()
@@ -21,9 +20,9 @@ function summarizeCombat(log: LogWithAnalysis): CombatSummary {
     const buffKeys = new Set<string>()
     const passiveHealKeys = new Set<string>()
 
-    const xs = log.log.entries
+    const xs = log.entries
     for (let idx = 0; idx < xs.length; idx++) {
-        const entry = log.log.entries[idx]
+        const entry = log.entries[idx]
         if (entry.type !== "event") {
             continue
         }
