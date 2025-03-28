@@ -19,17 +19,16 @@ export class IndexMap {
         let lastLogIdx = 0
         let lastTurnIdx = 0
         for (const [turnIdx, logIdx] of enumerate(this.turnIndexes)) {
+            this.turnToLog.set(lastTurnIdx, lastLogIdx)
             for (let l = lastLogIdx; l < logIdx; l++) {
                 this.logToTurn.set(l, lastTurnIdx)
-                this.turnToLog.set(lastTurnIdx, l)
             }
 
-            lastTurnIdx = turnIdx
+            lastTurnIdx = turnIdx + 1
             lastLogIdx = logIdx
         }
 
         for (let l = lastLogIdx; l < this.logSize; l++) {
-            this.logToTurn.set(l, lastTurnIdx)
             this.turnToLog.set(lastTurnIdx, l)
         }
     }
@@ -49,7 +48,6 @@ export class IndexMap {
                 lastRoundIdx = roundIdx
             } else {
                 this.logToRound.set(l, lastRoundIdx)
-                this.roundToLog.set(lastRoundIdx, l)
             }
         }
     }

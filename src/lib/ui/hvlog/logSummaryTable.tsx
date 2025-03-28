@@ -114,6 +114,7 @@ function LogRow(props: {
     return useMemo(
         () => (
             <TableRow
+                key={props.log.id}
                 className={"py-2" + selectedClass}
                 data-id={props.log.id}
                 onClick={() => props.onClick?.(props.log)}
