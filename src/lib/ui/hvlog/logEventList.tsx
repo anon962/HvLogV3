@@ -2,20 +2,26 @@ import { CompleteLog, LogEntry } from "@/lib/logDb"
 import { HvEventMap } from "@/lib/parsers"
 import { enumerate } from "@/lib/utils/miscUtils"
 import JsonView from "@uiw/react-json-view"
-import { sleep } from "radash"
-import { JSX, useEffect, useMemo, useRef, useState } from "react"
+import { range, sleep } from "radash"
+import {
+    ReactElement,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+} from "react"
 import { XIcon } from "../icons/tailwind"
 import { useLog } from "../logContext"
+import { IndexMap } from "./indexMap"
 
 export function LogEventList(props: { log: CompleteLog }) {
-    const { rows, loading, activeIdx, setActiveIdx } = useRowsAsync(
-        props.log
-    )
+    const { rows, loading, indexMap, activeIdx, setActiveIdx } =
+        useRowsAsync(props.log)
 
     const scrollRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
-        setActiveIdx({ log: -1, turn: -1, round: -1 })
+        setActiveIdx(-1)
         scrollRef.current?.scrollTo({ top: 0 })
     }, [props.log.id])
 
@@ -23,21 +29,19 @@ export function LogEventList(props: { log: CompleteLog }) {
         <div className="log-event-list flex flex-col h-full">
             <div
                 ref={scrollRef}
-                onClick={() =>
-                    setActiveIdx({ log: -1, turn: -1, round: -1 })
-                }
+                onClick={() => setActiveIdx(-1)}
                 className="flex flex-col h-full overflow-auto"
             >
                 {rows}
             </div>
 
-            {props.log.entries[activeIdx.log] && (
+            {props.log.entries[activeIdx] && (
                 <LogEntryDetails
-                    onClose={() =>
-                        setActiveIdx({ log: -1, turn: -1, round: -1 })
-                    }
-                    entry={props.log.entries[activeIdx.log]}
-                    label={`Round ${activeIdx.round}, Turn ${activeIdx.turn}`}
+                    onClose={() => setActiveIdx(-1)}
+                    entry={props.log.entries[activeIdx]}
+                    label={`Round ${indexMap.l2r(
+                        activeIdx
+                    )}, Turn ${indexMap.l2t(activeIdx)}`}
                 />
             )}
         </div>
@@ -45,99 +49,84 @@ export function LogEventList(props: { log: CompleteLog }) {
 }
 
 function useRowsAsync(log: CompleteLog) {
-    const [rows, setRows] = useState([] as JSX.Element[])
+    const [current, setCurrent] = useState({
+        id: "",
+        rows: [] as ReactElement[],
+        activeLogIdx: -1,
+    })
+
+    const [target, setTarget] = useState({
+        activeLogIdx: -1,
+    })
+
     const [loading, setLoading] = useState(true)
 
     const { indexMap } = useLog(log, { indexMap: true })
 
-    const [activeIdx, setActiveIdx] = useState({
-        log: -1,
-        turn: -1,
-        round: -1,
-    })
-
     useEffect(() => {
         let cancelled = false
 
+        const updateTargets = new Set<number>()
+
+        if (current.id !== log.id) {
+            setCurrent({
+                id: log.id,
+                rows: [],
+                activeLogIdx: -1,
+            })
+
+            range(0, log.entries.length - 1).forEach((idx) =>
+                updateTargets.add(idx)
+            )
+        }
+
+        if (current.activeLogIdx !== target.activeLogIdx) {
+            updateTargets.add(current.activeLogIdx)
+            updateTargets.add(target.activeLogIdx)
+
+            setCurrent({
+                ...current,
+                activeLogIdx: target.activeLogIdx,
+            })
+        }
+
         async function load() {
-            let toPush = [] as JSX.Element[]
+            let toUpdate = [] as Array<{
+                idx: number
+                el: ReactElement
+            }>
 
-            setLoading(true)
-            setRows((rows) => [])
-
-            console.log(log.entries, indexMap)
             for (const [logIdx, entry] of enumerate(log.entries)) {
-                const els: JSX.Element[] = []
+                const needsPush = logIdx > current.rows.length
+                const needsUpdate = updateTargets.has(logIdx)
 
-                const turnIdx = indexMap.l2t(logIdx)
-                const roundIdx = indexMap.l2r(logIdx)
-
-                const isNewTurn = logIdx === indexMap.t2l(turnIdx)
-                if (isNewTurn && logIdx > 0) {
-                    els.push(
-                        <div className="turn-start flex gap-2 px-6 pb-4 items-center">
-                            <span className="">{turnIdx + 1}</span>
-                            <hr className=""></hr>
-                        </div>
-                    )
+                if (!needsPush && !needsUpdate) {
+                    continue
                 }
 
-                if (
-                    entry.type === "event" &&
-                    entry.event.event_type === "ROUND_START"
-                ) {
-                    const nextRoundStartTurn =
-                        indexMap.r2t(roundIdx + 1) ??
-                        indexMap.turnIndexes.length
+                toUpdate.push({
+                    idx: logIdx,
+                    el: EventRowContainer(
+                        logIdx,
+                        entry,
+                        indexMap,
+                        target.activeLogIdx,
+                        () =>
+                            setTarget((target) => ({
+                                ...target,
+                                activeLogIdx: logIdx,
+                            })),
+                        log.id
+                    ),
+                })
 
-                    let label = `Round ${entry.event.current ?? 1}`
-                    label += `, Turns ${turnIdx} - ${nextRoundStartTurn}`
-
-                    const activeClass =
-                        activeIdx.log === logIdx ? " active" : ""
-
-                    const activeData = {
-                        log: logIdx,
-                        turn: turnIdx,
-                        round: roundIdx,
+                if (toUpdate.length > 3_000 && !cancelled) {
+                    const rows = [...current.rows]
+                    for (const { idx, el } of toUpdate) {
+                        rows[idx] = el
                     }
-
-                    els.push(
-                        <div
-                            onClick={(ev) => {
-                                setActiveIdx(activeData)
-                                ev.stopPropagation()
-                            }}
-                            className={
-                                "round-label sticky py-4 pr-4 mb-4 top-0 flex justify-end bg-card font-bold border-b rounded-t-md" +
-                                activeClass
-                            }
-                        >
-                            {label}
-                        </div>
-                    )
-                } else {
-                    const activeData = {
-                        log: logIdx,
-                        turn: turnIdx,
-                        round: roundIdx,
-                    }
-
-                    els.push(
-                        <EventRow
-                            key={logIdx.toString() + log.id}
-                            onClick={() => setActiveIdx(activeData)}
-                            entry={entry}
-                            isActive={activeIdx.log === logIdx}
-                        />
-                    )
-                }
-
-                toPush.push(...els)
-                if (toPush.length > 3_000 && !cancelled) {
-                    const update = toPush
-                    toPush = []
-                    setRows((rows) => [...rows, ...update])
+                    setCurrent((current) => ({ ...current, rows }))
+                    toUpdate = []
 
                     await sleep(10)
                     if (cancelled) {
@@ -146,8 +135,12 @@ function useRowsAsync(log: CompleteLog) {
                 }
             }
 
-            if (toPush.length) {
-                setRows((rows) => [...rows, ...toPush])
+            if (toUpdate.length) {
+                const rows = [...current.rows]
+                for (const { idx, el } of toUpdate) {
+                    rows[idx] = el
+                }
+                setCurrent((current) => ({ ...current, rows }))
             }
 
             setLoading(false)
@@ -156,12 +149,84 @@ function useRowsAsync(log: CompleteLog) {
         load()
 
         return () => {
-            console.log("clear effect")
             cancelled = true
         }
-    }, [log.id])
+    }, [target.activeLogIdx, log.id])
 
-    return { rows, loading, activeIdx, setActiveIdx }
+    return {
+        rows: current.rows,
+        indexMap,
+        loading,
+        activeIdx: current.activeLogIdx,
+        setActiveIdx: (logIdx: number) =>
+            setTarget((target) => ({
+                ...target,
+                activeLogIdx: logIdx,
+            })),
+    }
+}
+
+function EventRowContainer(
+    logIdx: number,
+    entry: LogEntry,
+    indexMap: IndexMap,
+    activeLogIdx: number,
+    setActiveLogIdx: (logIdx: number) => void,
+    logId: string
+) {
+    const els: ReactElement[] = []
+
+    const turnIdx = indexMap.l2t(logIdx)
+    const roundIdx = indexMap.l2r(logIdx)
+
+    const isNewTurn = logIdx === indexMap.t2l(turnIdx)
+    if (isNewTurn && logIdx > 0) {
+        els.push(
+            <div className="turn-start flex gap-2 px-6 pb-4 items-center">
+                <span className="">{turnIdx + 1}</span>
+                <hr className=""></hr>
+            </div>
+        )
+    }
+
+    if (
+        entry.type === "event" &&
+        entry.event.event_type === "ROUND_START"
+    ) {
+        const nextRoundStartTurn =
+            indexMap.r2t(roundIdx + 1) ?? indexMap.turnIndexes.length
+
+        let label = `Round ${entry.event.current ?? 1}`
+        label += `, Turns ${turnIdx} - ${nextRoundStartTurn}`
+
+        const activeClass = activeLogIdx === logIdx ? " active" : ""
+
+        els.push(
+            <div
+                onClick={(ev) => {
+                    setActiveLogIdx(logIdx)
+                    ev.stopPropagation()
+                }}
+                className={
+                    "round-label sticky py-4 pr-4 mb-4 top-0 flex justify-end bg-card font-bold border-b rounded-t-md" +
+                    activeClass
+                }
+            >
+                {label}
+            </div>
+        )
+    } else {
+        els.push(
+            <EventRow
+                key={logIdx.toString() + logId}
+                onClick={() => setActiveLogIdx(logIdx)}
+                entry={entry}
+                isActive={activeLogIdx === logIdx}
+            />
+        )
+    }
+
+    return <>{els}</>
 }
 
 function EventRow(props: {
