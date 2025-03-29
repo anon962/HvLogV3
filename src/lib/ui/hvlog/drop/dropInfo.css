@@ -1,14 +1,14 @@
 .drop-stats {
-    .income .footer.value {
+    .income .footer:nth-child(2) {
         color: var(--color-green-300);
     }
-    .expenses .footer.value {
+    .expenses .footer:nth-child(2) {
         color: var(--color-red-300);
     }
-    .income .row.selectable .value {
+    .income .row.selectable .cell:nth-child(2) {
         color: var(--color-green-100);
     }
-    .expenses .row.selectable .value {
+    .expenses .row.selectable .cell:nth-child(2) {
         color: var(--color-red-100);
     }
 

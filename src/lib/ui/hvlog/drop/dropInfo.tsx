@@ -2,16 +2,12 @@ import { CompleteLog } from "@/lib/logDb"
 import { UsageSummary } from "@/lib/stats/dropStats"
 import { DropSummary } from "@/lib/stats/itemUsageStats"
 import { filterEvents } from "@/lib/stats/summaryStats"
-import { formatNumber } from "@/lib/utils/miscUtils"
+import { formatNumber, sortBy } from "@/lib/utils/miscUtils"
 import { alphabetical, max, range, sum } from "radash"
 import { useEffect, useRef } from "react"
 import { GOOD_EQUIPS, PRICES } from "../../constants"
 import { useLog } from "../../logContext"
-import {
-    CountValueTable,
-    CountValueTableRow,
-    CountValueTableSubRow,
-} from "../countValueTable"
+import { TallyTable, TallyTableProps } from "../tallyTable"
 import { IncomeChart } from "./incomeChart"
 
 export function DropInfo(props: { log: CompleteLog }) {
@@ -105,20 +101,28 @@ function CalculationPreview(
     )
 }
 
-function IncomeSummaryTable(drops: DropSummary) {
-    const acc = Object.fromEntries(
-        drops.groups.map((grp) => [
-            grp.label,
-            {
-                label: grp.label,
-                count: 0,
-                value: 0,
-                subRows: [] as CountValueTableSubRow[],
-            },
-        ])
-    )
+type IncomeTable = TallyTableProps<
+    { count: number; value: number },
+    { count: number; value: number; label: string }
+>
 
-    const rows = Object.values(drops.data).reduce((acc, xs) => {
+function IncomeSummaryTable(drops: DropSummary) {
+    const acc: Record<string, IncomeTable["rows"][number]> =
+        Object.fromEntries(
+            drops.groups.map((grp) => [
+                grp.label,
+                {
+                    label: grp.label,
+                    value: {
+                        count: 0,
+                        value: 0,
+                    },
+                    subValues: [],
+                },
+            ])
+        )
+
+    const rowMap = Object.values(drops.data).reduce((acc, xs) => {
         const count = sum(xs, (x) => x.count)
         const value = sum(xs, (x) => x.value)
 
@@ -127,43 +131,79 @@ function IncomeSummaryTable(drops: DropSummary) {
             return acc
         }
 
-        acc[group.label].count += count
-        acc[group.label].value += value
-        acc[group.label].subRows!.push({
-            label: xs[0].key,
-            count,
-            value,
+        acc[group.label].value.count += count
+        acc[group.label].value.value += value
+        acc[group.label].subValues!.push({
+            label: group.label,
+            count: 0,
+            value: 0,
         })
+        acc[group.label].selectable = true
 
         return acc
     }, acc)
 
+    const columns: IncomeTable["columns"] = [
+        { label: "Value", get: (x) => x.value },
+        { label: "Count", get: (x) => x.count },
+    ]
+
+    const subColumns: IncomeTable["subColumns"] = [
+        { label: "Item", get: (x) => x.label, align: "left" },
+        { label: "Value", get: (x) => x.value },
+        { label: "Count", get: (x) => x.count },
+    ]
+
+    const rows = sortBy(Object.values(rowMap), [
+        { fn: (x) => x.value.value },
+        { fn: (x) => x.value.count },
+        { fn: (x) => x.label, reverse: true },
+    ]).reverse()
+
+    for (const row of rows) {
+        row.subValues = sortBy(row.subValues ?? [], [
+            { fn: (x) => x.value },
+            { fn: (x) => x.count },
+            { fn: (x) => x.label, reverse: true },
+        ]).reverse()
+    }
+
     return (
-        <CountValueTable
+        <TallyTable
             label="Income"
-            rows={Object.values(rows)}
-            sectionClass="income"
+            rows={rows}
+            columns={columns}
+            subColumns={subColumns}
+            className="income"
         />
     )
 }
+
+type UsageTable = TallyTableProps<
+    { count: number; value: number },
+    { count: number; value: number; label: string }
+>
 
 function UsageSummaryTable(
     usage: UsageSummary,
     staminaUsage: number
 ) {
-    const acc = Object.fromEntries(
-        usage.groups.map((grp) => [
-            grp.label,
-            {
-                label: grp.label,
-                count: 0,
-                value: 0,
-                subRows: [] as CountValueTableRow[],
-            },
-        ])
-    )
+    const acc: Record<string, UsageTable["rows"][number]> =
+        Object.fromEntries(
+            usage.groups.map((grp) => [
+                grp.label,
+                {
+                    label: grp.label,
+                    value: {
+                        count: 0,
+                        value: 0,
+                    },
+                    subValues: [],
+                },
+            ])
+        )
 
-    const rows = Object.values(usage.data).reduce((acc, xs) => {
+    const rowMap = Object.values(usage.data).reduce((acc, xs) => {
         const count = sum(xs, (x) => x.count)
         const value = sum(xs, (x) => x.value)
 
@@ -172,29 +212,60 @@ function UsageSummaryTable(
             return acc
         }
 
-        acc[group.label].count += count
-        acc[group.label].value += value
-        acc[group.label].subRows!.push({
+        acc[group.label].value.count += count
+        acc[group.label].value.value += value
+        acc[group.label].subValues!.push({
             label: xs[0].key,
             count,
             value,
         })
+        acc[group.label].selectable = true
 
         return acc
     }, acc)
 
-    rows["stamina"] = {
+    rowMap["stamina"] = {
         label: "Stamina",
-        count: staminaUsage,
-        value: (staminaUsage * PRICES["Energy Drink"]) / 10,
-        subRows: [],
+        value: {
+            count: staminaUsage,
+            value: (staminaUsage * PRICES["Energy Drink"]) / 10,
+        },
+        subValues: [],
+        selectable: true,
+    }
+
+    const columns: UsageTable["columns"] = [
+        { label: "Value", get: (x) => x.value },
+        { label: "Count", get: (x) => x.count },
+    ]
+
+    const subColumns: UsageTable["subColumns"] = [
+        { label: "Item", get: (x) => x.label, align: "left" },
+        { label: "Value", get: (x) => x.value },
+        { label: "Count", get: (x) => x.count },
+    ]
+
+    const rows = sortBy(Object.values(rowMap), [
+        { fn: (x) => x.value.value },
+        { fn: (x) => x.value.count },
+        { fn: (x) => x.label, reverse: true },
+    ]).reverse()
+
+    for (const row of rows) {
+        row.subValues = sortBy(row.subValues ?? [], [
+            { fn: (x) => x.value },
+            { fn: (x) => x.count },
+            { fn: (x) => x.label, reverse: true },
+        ]).reverse()
     }
 
     return (
-        <CountValueTable
+        <TallyTable
             label="Expenses"
-            rows={Object.values(rows)}
-            sectionClass="expenses"
+            rows={rows}
+            columns={columns}
+            subColumns={subColumns}
+            className="expenses"
         />
     )
 }

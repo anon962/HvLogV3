@@ -1,8 +1,9 @@
 import { CompleteLog } from "@/lib/logDb"
 import { CombatSummary } from "@/lib/stats/combatStats"
+import { sortBy } from "@/lib/utils/miscUtils"
 import { sum } from "radash"
 import { useLog } from "../../logContext"
-import { CountTable, CountTableRow } from "../countTable"
+import { TallyTable, TallyTableProps } from "../tallyTable"
 
 export function CombatInfo({ log }: { log: CompleteLog }) {
     const { combatUsage: usage } = useLog(log, {
@@ -10,11 +11,11 @@ export function CombatInfo({ log }: { log: CompleteLog }) {
     })
 
     console.log(usage)
-    return <div className="p-8">{CombatUsageTable(usage)}</div>
+    return <div className="p-8">{CombatUsageTableWrapper(usage)}</div>
 }
 
-function CombatUsageTable(usage: CombatSummary) {
-    const rows = [] as CountTableRow[]
+function CombatUsageTableWrapper(usage: CombatSummary) {
+    let rows = [] as CombatUsageTable["rows"]
 
     const castsForGroup = (group: CombatSummary["groups"][number]) =>
         Object.entries(usage.data).flatMap(([spell, allCasts]) =>
@@ -31,7 +32,7 @@ function CombatUsageTable(usage: CombatSummary) {
             continue
         }
 
-        const subRows = castsForGroup(group).flatMap(
+        let subValues = castsForGroup(group).flatMap(
             ([spell, castsForSpell]) => {
                 const count = castsForSpell.filter((cast) => {
                     switch (group.label) {
@@ -67,12 +68,45 @@ function CombatUsageTable(usage: CombatSummary) {
         //     subRows[0].label = "Spark of Life"
         // }
 
+        subValues = sortBy(subValues, [
+            { fn: (r) => r.count },
+            { fn: (r) => r.label, reverse: true },
+        ]).reverse()
+
         rows.push({
             label: group.label,
-            count: sum(subRows, (r) => r.count),
-            subRows,
+            value: {
+                count: sum(subValues, (r) => r.count),
+            },
+            subValues,
+            selectable: subValues.length > 0,
         })
     }
 
-    return <CountTable label="Overview" rows={Object.values(rows)} />
+    rows = sortBy(rows, [
+        { fn: (r) => r.value.count },
+        { fn: (r) => r.label, reverse: true },
+    ]).reverse()
+
+    const columns: CombatUsageTable["columns"] = [
+        { label: "Casts", get: (x) => x.count },
+    ]
+    const subColumns: CombatUsageTable["subColumns"] = [
+        { label: "Spell", get: (x) => x.label, align: "left" },
+        { label: "Casts", get: (x) => x.count },
+    ]
+
+    return (
+        <TallyTable
+            label="Casts"
+            rows={rows}
+            columns={columns}
+            subColumns={subColumns}
+        />
+    )
 }
+
+type CombatUsageTable = TallyTableProps<
+    { count: number },
+    { label: string; count: number }
+>

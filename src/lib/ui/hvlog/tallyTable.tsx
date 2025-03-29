@@ -1,0 +1,260 @@
+import { enumerate, formatNumber } from "@/lib/utils/miscUtils"
+import { ReactElement, useState } from "react"
+
+export interface TallyTableProps<TItem = any, TSubItem = any> {
+    label: string
+    categoryLabel?: string
+    rows: TallyTableRow<TItem, TSubItem>[]
+    columns: TallyTableColumn<TItem>[]
+    subColumns: TallyTableSubColumn<TSubItem>[]
+    className?: string
+}
+
+export interface TallyTableColumn<TItem = any> {
+    label: string
+    get: (x: TItem) => number
+    format?: (x: number) => string
+}
+
+export interface TallyTableRow<TItem = any, TSubItem = any> {
+    label: string
+    value: TItem
+    subValues?: TSubItem[]
+    selectable?: boolean
+}
+
+export interface TallyTableSubColumn<
+    TSubItem = any,
+    TValue extends number | string = number | string
+> {
+    label: string
+    get: (x: TSubItem) => TValue
+    format?: (x: TValue) => string
+    align?: "left" | "right"
+}
+
+export function TallyTable({
+    label,
+    categoryLabel,
+    rows,
+    columns,
+    subColumns,
+    className,
+}: TallyTableProps) {
+    // Handle row selection
+    const [active, setActive] = useState(new Set<number>())
+    const toggleActive = (idx: number) => {
+        let update = new Set(active)
+        if (update.has(idx)) {
+            update.delete(idx)
+        } else {
+            update.add(idx)
+        }
+        setActive(update)
+    }
+
+    // useEffect(() => {
+    //     setActive(new Set())
+    // }, rows)
+
+    // CSS
+    const sectionClasses = `tally-table w-max ${className ?? ""}`
+    const titleClasses = `pb-4`
+    const titleRowClasses = `row ${
+        active.has(0) ? "next-active" : ""
+    }`
+    const layoutClasses = `w-auto rounded-md`
+
+    // Headers
+    const columnHeaderEls = columns.map((col) => (
+        <span className="header text-right">{col.label}</span>
+    ))
+
+    // Rows
+    const { rowEls, totals } = rows.reduce(
+        (acc, row, idx) => {
+            const rowClass = `${
+                idx === rows.length - 1 ? "before-total" : ""
+            }`
+
+            acc.rowEls.push(
+                <Row
+                    className={rowClass}
+                    onClick={() => toggleActive(idx)}
+                    row={row}
+                    columns={columns}
+                    subColumns={subColumns}
+                    isActive={active.has(idx)}
+                    isNextActive={active.has(idx + 1)}
+                />
+            )
+
+            for (const [colIdx, col] of enumerate(columns)) {
+                acc.totals[colIdx] += col.get(row.value)
+            }
+
+            return acc
+        },
+        {
+            rowEls: [] as ReactElement[],
+            totals: columns.map((col) => 0),
+        }
+    )
+
+    // Column totals
+    const totalEls = totals.map((x) => (
+        <span className="count footer text-right">
+            {x >= 1000 ? formatNumber(x) : x}
+        </span>
+    ))
+
+    const gridCss = {
+        gridTemplateColumns: `minmax(125px, 1fr) repeat(${columns.length}, 1fr)`,
+    }
+
+    return (
+        <section className={sectionClasses}>
+            <h1 className={titleClasses}>{label}</h1>
+
+            <div className={layoutClasses}>
+                <div className={titleRowClasses} style={gridCss}>
+                    <span className="category header">
+                        {categoryLabel ?? "Category"}
+                    </span>
+                    {columnHeaderEls}
+                </div>
+
+                {rowEls}
+
+                <div className="row" style={gridCss}>
+                    <span className="category footer">Total</span>
+                    {totalEls}
+                </div>
+            </div>
+        </section>
+    )
+}
+
+interface RowProps<TItem = any, TSubItem = any> {
+    onClick: () => void
+
+    row: TallyTableRow
+    columns: TallyTableColumn<TItem>[]
+    subColumns: TallyTableSubColumn<TSubItem>[]
+
+    isActive: boolean
+    isNextActive: boolean
+    className: string
+}
+
+function Row({
+    onClick,
+    row,
+    columns,
+    subColumns,
+    isActive,
+    isNextActive,
+    className,
+}: RowProps) {
+    const hasSubtable = !!row.subValues?.length
+
+    const rowClass = [
+        "row",
+        className ? className : "",
+        isActive ? "active" : "",
+        isNextActive ? "next-active" : "",
+        row.selectable ? "selectable" : "",
+    ].join(" ")
+
+    let subTable
+    if (isActive && row.subValues) {
+        subTable = (
+            <SubTable
+                subValues={row.subValues}
+                subColumns={subColumns}
+                span={columns.length + 1}
+            />
+        )
+    }
+
+    const cells = columns.map((col) => {
+        const value = col.get(row.value)
+
+        let valueStr
+        if (col.format) {
+            valueStr = col.format?.(value)
+        } else if (value >= 1000) {
+            valueStr = formatNumber(value)
+        } else {
+            valueStr = String(value)
+        }
+
+        return <div className="cell">{valueStr}</div>
+    })
+
+    return (
+        <div
+            onClick={() => (hasSubtable ? onClick() : "")}
+            className={rowClass}
+            style={{
+                gridTemplateColumns: `minmax(125px, 1fr) repeat(${columns.length}, 1fr)`,
+            }}
+        >
+            <span className="category cell">{row.label}</span>
+
+            {cells}
+
+            {subTable}
+        </div>
+    )
+}
+
+interface SubRowProps<TSubItem = any> {
+    subValues: TSubItem[]
+    subColumns: TallyTableSubColumn<TSubItem>[]
+    span: number
+}
+
+function SubTable({ subValues, subColumns, span }: SubRowProps) {
+    const alignClass = subColumns.map((col) =>
+        col.align === "left" ? "text-left" : "text-right"
+    )
+
+    const headers = subColumns.map((subCol, idx) => {
+        const cls = `subheader ${alignClass[idx]}`
+        return <div className={cls}>{subCol.label}</div>
+    })
+
+    const cells = subValues.flatMap((subValue) =>
+        subColumns.map((subCol, idx) => {
+            const value = subCol.get(subValue)
+
+            let valueStr
+            if (subCol.format) {
+                valueStr = subCol.format(value)
+            } else if (typeof value === "number" && value >= 1000) {
+                valueStr = formatNumber(value)
+            } else {
+                valueStr = String(value)
+            }
+
+            const cls = `subcell ${alignClass[idx]}`
+
+            return <div className={cls}>{valueStr}</div>
+        })
+    )
+
+    return (
+        <div
+            className="subtable"
+            style={{
+                gridColumn: `auto / span ${span}`,
+                gridTemplateColumns: `repeat(${span}, max-content)`,
+            }}
+        >
+            {headers}
+
+            {cells}
+        </div>
+    )
+}

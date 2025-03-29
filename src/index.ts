@@ -6,7 +6,6 @@ import entryJs from "../dist/ui/ui.js?raw"
 import { App } from "./lib/app/app"
 import { registerViewLogs } from "./lib/app/registerViewLogs"
 
-// @tood: combat - usage table
 // @todo: combat - usage chart (attacks, debuffs, heals, other)
 // @todo: combat - resist distribution (debuffs, other)
 // @todo: combat - melee strikes

@@ -1,4 +1,4 @@
-.count-table {
+.tally-table {
     font-size: 0.9rem;
     line-height: 1;
 
@@ -9,7 +9,6 @@
 
     .row {
         display: grid;
-        grid-template-columns: minmax(125px, 1fr) 1fr;
         min-width: 350px;
     }
 
@@ -90,12 +89,14 @@
         color: var(--muted-foreground);
     }
 
+    .cell:not(:first-child) {
+        text-align: right;
+    }
+
     .subtable {
         display: grid;
-        grid-template-columns: max-content max-content;
 
         width: 100%;
-        grid-column: auto / span 3;
         max-height: 20vh;
         overflow: auto;
         font-size: 0.8rem;
@@ -115,18 +116,12 @@
                 var(--foreground) 75%,
                 transparent
             );
-            /* display: none; */
         }
 
         .subcell,
         .subheader {
             padding-left: 0.5rem;
             padding-right: 2rem;
-        }
-
-        .subvalue,
-        .subcount {
-            text-align: right;
         }
 
         .subcell {
