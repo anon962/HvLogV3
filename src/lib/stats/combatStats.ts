@@ -148,7 +148,13 @@ export function summarizeCombatUsage(
                             }
 
                             if (!(type in acc)) {
-                                console.error("Unknown heal type", x)
+                                // Channeling
+                                // console.error(
+                                //     "Unknown heal effect from supportive cast",
+                                //     x,
+                                //     cast,
+                                //     effects
+                                // )
                                 return acc
                             }
 
@@ -192,7 +198,10 @@ export function summarizeCombatUsage(
 
                 passiveHealKeys.add(ev.effect)
             } else {
-                console.error("Unknown heal type", ev)
+                console.error(
+                    "Unknown heal effect from EFFECT_RESTORE",
+                    ev
+                )
             }
         } else if (ev.event_type === "RIDDLE_RESTORE") {
             setDefault(data, "RIDDLE_RESTORE", []).push({
@@ -258,7 +267,7 @@ function takeEntries(
     const evs = takeEvents(
         entries,
         startIdx,
-        [{ refs: [rootRef] }],
+        [{ refs: [rootRef] }, { refs: [effectRef] }],
         CAST_GRAMMAR
     )
     if (!evs) {
@@ -266,6 +275,10 @@ function takeEntries(
     }
 
     const [cast, ...firstEffects] = evs
+    if (!firstEffects.length) {
+        return null
+    }
+
     const effects = firstEffects.length ? [firstEffects] : []
 
     while (true) {
@@ -293,7 +306,7 @@ const CAST_GRAMMAR = {
         { keys: ["PLAYER_SKILL"] },
     ],
     offense: [
-        { keys: ["PLAYER_ATTACK", "PLAYER_MISS", "RESIST", "MONSTER_DEATH"] },
+        { keys: ["PLAYER_ATTACK", "PLAYER_MISS", "MONSTER_DEATH"] },
         { keys: ["DEBUFF"], optional: true }, 
     ],
     debuff: [

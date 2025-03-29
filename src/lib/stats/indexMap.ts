@@ -1,5 +1,3 @@
-import { enumerate } from "@/lib/utils/miscUtils"
-
 export class IndexMap {
     private logToTurn: Map<number, number> = new Map()
     private turnToLog: Map<number, number> = new Map()
@@ -18,14 +16,14 @@ export class IndexMap {
     private initTurnMap() {
         let lastLogIdx = 0
         let lastTurnIdx = 0
-        for (const [turnIdx, logIdx] of enumerate(this.turnIndexes)) {
+        for (const logIdx of this.turnIndexes) {
             this.turnToLog.set(lastTurnIdx, lastLogIdx)
             for (let l = lastLogIdx; l < logIdx; l++) {
                 this.logToTurn.set(l, lastTurnIdx)
             }
 
-            lastTurnIdx = turnIdx + 1
-            lastLogIdx = logIdx + 1
+            lastTurnIdx += 1
+            lastLogIdx = logIdx
         }
 
         this.turnToLog.set(lastTurnIdx, lastLogIdx)

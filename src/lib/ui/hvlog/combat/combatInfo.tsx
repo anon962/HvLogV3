@@ -10,7 +10,7 @@ export function CombatInfo({ log }: { log: CompleteLog }) {
     })
 
     console.log(usage)
-    return <>{CombatUsageTable(usage)}</>
+    return <div className="p-8">{CombatUsageTable(usage)}</div>
 }
 
 function CombatUsageTable(usage: CombatSummary) {
@@ -24,7 +24,10 @@ function CombatUsageTable(usage: CombatSummary) {
         )
 
     for (const group of usage.groups) {
-        if (group.label === "Passive Heals") {
+        if (
+            group.label === "Passive Heals" ||
+            group.label === "Times Sparked"
+        ) {
             continue
         }
 
@@ -60,9 +63,9 @@ function CombatUsageTable(usage: CombatSummary) {
             }
         )
 
-        if (group.label === "Times Sparked" && subRows.length) {
-            subRows[0].label = "Spark of Life"
-        }
+        // if (group.label === "Times Sparked" && subRows.length) {
+        //     subRows[0].label = "Spark of Life"
+        // }
 
         rows.push({
             label: group.label,
@@ -71,5 +74,5 @@ function CombatUsageTable(usage: CombatSummary) {
         })
     }
 
-    return <CountTable label="Casts" rows={Object.values(rows)} />
+    return <CountTable label="Overview" rows={Object.values(rows)} />
 }

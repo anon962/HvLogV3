@@ -69,11 +69,11 @@ function useRowsAsync(log: CompleteLog) {
         const updateTargets = new Set<number>()
 
         if (current.id !== log.id) {
-            setCurrent({
+            setCurrent((current) => ({
                 id: log.id,
                 rows: [],
                 activeLogIdx: -1,
-            })
+            }))
 
             range(0, log.entries.length - 1).forEach((idx) =>
                 updateTargets.add(idx)
@@ -121,12 +121,15 @@ function useRowsAsync(log: CompleteLog) {
                 })
 
                 if (toUpdate.length > 3_000 && !cancelled) {
-                    const rows = [...current.rows]
-                    for (const { idx, el } of toUpdate) {
-                        rows[idx] = el
-                    }
-                    setCurrent((current) => ({ ...current, rows }))
+                    const update = [...toUpdate]
                     toUpdate = []
+                    setCurrent((current) => {
+                        const rows = current.rows
+                        for (const { idx, el } of update) {
+                            rows[idx] = el
+                        }
+                        return { ...current, rows }
+                    })
 
                     await sleep(10)
                     if (cancelled) {
@@ -136,11 +139,13 @@ function useRowsAsync(log: CompleteLog) {
             }
 
             if (toUpdate.length) {
-                const rows = [...current.rows]
-                for (const { idx, el } of toUpdate) {
-                    rows[idx] = el
-                }
-                setCurrent((current) => ({ ...current, rows }))
+                setCurrent((current) => {
+                    const rows = current.rows
+                    for (const { idx, el } of toUpdate) {
+                        rows[idx] = el
+                    }
+                    return { ...current, rows }
+                })
             }
 
             setLoading(false)
