@@ -481,3 +481,114 @@ export const PRICES = {
     Chaos: 0,
     Soul: 0,
 }
+
+type PriceKey = keyof typeof PRICES
+
+export const TROPHIES = new Set<PriceKey>([
+    "ManBearPig Tail",
+    "Holy Hand Grenade of Antioch",
+    "Mithra's Flower",
+    "Dalek Voicebox",
+    "Lock of Blue Hair",
+    "Bunny-Girl Costume",
+    "Hinamatsuri Doll",
+    "Broken Glasses",
+    "Black T-Shirt",
+    "Sapling",
+    "Unicorn Horn",
+    "Noodly Appendage",
+])
+
+export const MATERIALS = new Set<PriceKey>([
+    "Scrap Metal",
+    "Scrap Leather",
+    "Scrap Cloth",
+    "Scrap Wood",
+    "Energy Cell",
+
+    "High-Grade Metals",
+    "High-Grade Leather",
+    "High-Grade Cloth",
+    "High-Grade Wood",
+
+    "Mid-Grade Metals",
+    "Mid-Grade Leather",
+    "Mid-Grade Cloth",
+    "Mid-Grade Wood",
+
+    "Low-Grade Metals",
+    "Low-Grade Leather",
+    "Low-Grade Cloth",
+    "Low-Grade Wood",
+])
+
+export const HEALTH_ITEMS = new Set<PriceKey>([
+    "Health Draught",
+    "Health Potion",
+    "Health Elixir",
+])
+
+export const MANA_ITEMS = new Set<PriceKey>([
+    "Mana Draught",
+    "Mana Potion",
+    "Mana Elixir",
+])
+
+export const SPIRIT_ITEMS = new Set<PriceKey>([
+    "Spirit Draught",
+    "Spirit Potion",
+    "Spirit Elixir",
+])
+
+export const BUBBLE_VASE = new Set<PriceKey>([
+    "Bubble-Gum",
+    "Flower Vase",
+])
+
+export const SCROLLS = new Set<PriceKey>([
+    "Infusion of Flames",
+    "Infusion of Frost",
+    "Infusion of Lightning",
+    "Infusion of Storms",
+    "Infusion of Darkness",
+    "Infusion of Divinity",
+    "Scroll of Life",
+    "Scroll of Absorption",
+    "Scroll of Shadows",
+    "Scroll of Swiftness",
+    "Scroll of Protection",
+    "Scroll of the Gods",
+    "Scroll of the Avatar",
+])
+
+export const CONSUMABLES = new Set<PriceKey>([
+    ...HEALTH_ITEMS,
+    ...MANA_ITEMS,
+    ...SPIRIT_ITEMS,
+    ...BUBBLE_VASE,
+    ...SCROLLS,
+
+    "Monster Chow",
+    "Monster Edibles",
+    "Monster Cuisine",
+    "Happy Pills",
+])
+
+export const SHARDS = new Set<PriceKey>([
+    "Amnesia Shard",
+    "Aether Shard",
+    "Featherweight Shard",
+    "Voidseeker Shard",
+])
+
+export const ARTIFACTS = new Set<PriceKey>(["Precursor Artifact"])
+
+export const GOOD_EQUIPS = [
+    /Peerless/,
+    /Legendary/,
+    /Magnificent/,
+    // /Exquisite/,
+    // /Superior/,
+    // /Fine/,
+    // /Crude/,
+]

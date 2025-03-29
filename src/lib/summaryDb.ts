@@ -2,11 +2,9 @@ import { CompleteLog, LogId } from "./logDb"
 import {
     extractBattleType,
     extractCompletionType,
-    extractDrops,
-    extractItemUsage,
     extractRoundIndexes,
     extractTurnIndexes,
-} from "./statExtractors"
+} from "./stats/summaryStats"
 
 const STORAGE_KEY = "hvlog_stats"
 const VERSION = 1
@@ -59,10 +57,6 @@ export class SummaryDb {
                     endCount === startCount - 1 :
             false
 
-        const drops = extractDrops(log)
-
-        const itemUsage = extractItemUsage(log)
-
         const analysis = {
             id: log.id,
             completionType,
@@ -70,8 +64,6 @@ export class SummaryDb {
             round,
             turnIndexes,
             roundIndexes,
-            drops,
-            itemUsage,
             errors: {
                 parsing: hasParseError,
                 inconsistentBattleTypes,
@@ -142,14 +134,6 @@ export interface LogSummary {
     } | null
     turnIndexes: number[]
     roundIndexes: Record<number, number>
-    drops: Record<
-        string,
-        {
-            name: string
-            entries: Array<{ logIdx: number; count: number }>
-        }
-    >
-    itemUsage: Record<string, number[]>
     errors: {
         parsing: boolean
         inconsistentBattleTypes: boolean

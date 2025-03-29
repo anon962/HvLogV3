@@ -1,6 +1,6 @@
 import { LogEntry } from "@/lib/logDb"
 import { parseLine } from "@/lib/parsers"
-import { extractTurnIndexes } from "@/lib/statExtractors"
+import { extractTurnIndexes } from "@/lib/stats/summaryStats"
 import { expect, it } from "vitest"
 import longLog from "./logs/full.json"
 

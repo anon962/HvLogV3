@@ -10,9 +10,9 @@ import {
     useRef,
     useState,
 } from "react"
+import { IndexMap } from "../../stats/indexMap"
 import { XIcon } from "../icons/tailwind"
 import { useLog } from "../logContext"
-import { IndexMap } from "./indexMap"
 
 export function LogEventList(props: { log: CompleteLog }) {
     const { rows, loading, indexMap, activeIdx, setActiveIdx } =

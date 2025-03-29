@@ -1,20 +1,25 @@
 import { CompleteLog } from "@/lib/logDb"
-import { filterEvents } from "@/lib/statExtractors"
-import { LogSummary } from "@/lib/summaryDb"
+import { UsageEventSummary } from "@/lib/stats/dropStats"
+import { DropEventSummary } from "@/lib/stats/itemUsageStats"
+import { filterEvents } from "@/lib/stats/summaryStats"
 import { formatNumber } from "@/lib/utils/miscUtils"
 import { alphabetical, max, range, sum } from "radash"
 import { useEffect, useRef } from "react"
-import { PRICES } from "../../constants"
+import { GOOD_EQUIPS, PRICES } from "../../constants"
 import { useLog } from "../../logContext"
-import { EventSummary } from "../eventSummary"
 import { TallyTable, TallyTableRow } from "../tallyTable"
 import { IncomeChart } from "./incomeChart"
 
 export function DropStats(props: { log: CompleteLog }) {
-    const { summary } = useLog(props.log, { summary: true })
-
-    const drops = summarizeItemDrops(summary)
-    const usage = summarizeItemUsage(summary)
+    const {
+        summary,
+        itemDrops: drops,
+        itemUsage: usage,
+    } = useLog(props.log, {
+        summary: true,
+        itemDrops: true,
+        itemUsage: true,
+    })
 
     let staminaUsage = (summary.round?.end ?? 1) / 50
     if (summary.battleType?.name === "Grindfest") {
@@ -43,17 +48,17 @@ export function DropStats(props: { log: CompleteLog }) {
 }
 
 function CalculationPreview(
-    dropSummary: DropEventSummary,
-    usageSummary: DropEventSummary,
+    drops: DropEventSummary,
+    usage: UsageEventSummary,
     staminaUsage: number
 ) {
     const totalIncome = sum(
-        Object.values(dropSummary.data).flatMap((xs) => xs),
+        Object.values(drops.data).flatMap((xs) => xs),
         (x) => x.value
     )
     let totalExpenses =
         sum(
-            Object.values(usageSummary.data).flatMap((xs) => xs),
+            Object.values(usage.data).flatMap((xs) => xs),
             (x) => x.value
         ) +
         (staminaUsage * PRICES["Energy Drink"]) / 10
@@ -96,11 +101,9 @@ function CalculationPreview(
     )
 }
 
-function IncomeSummaryTable(
-    summary: ReturnType<typeof summarizeItemDrops>
-) {
+function IncomeSummaryTable(drops: DropEventSummary) {
     const acc = Object.fromEntries(
-        summary.groups.map((grp) => [
+        drops.groups.map((grp) => [
             grp.label,
             {
                 label: grp.label,
@@ -111,11 +114,11 @@ function IncomeSummaryTable(
         ])
     )
 
-    const rows = Object.values(summary.data).reduce((acc, xs) => {
+    const rows = Object.values(drops.data).reduce((acc, xs) => {
         const count = sum(xs, (x) => x.count)
         const value = sum(xs, (x) => x.value)
 
-        const group = summary.groups.find((grp) => grp.has(xs[0].key))
+        const group = drops.groups.find((grp) => grp.has(xs[0].key))
         if (!group) {
             return acc
         }
@@ -140,99 +143,12 @@ function IncomeSummaryTable(
     )
 }
 
-function summarizeItemDrops(anal: LogSummary) {
-    const summary: DropEventSummary = {
-        data: {},
-        groups: [
-            newDropEventGroup(
-                "Artifacts",
-                new Set(["Precursor Artifact"])
-            ),
-            newDropEventGroup("Consumables", CONSUMABLES),
-            newDropEventGroup(
-                "Credits",
-                new Set(["credits", "Credits", "autosell"])
-            ),
-            newDropEventGroup("Materials", MATERIALS),
-            newDropEventGroup("Shards", SHARDS),
-            newDropEventGroup("Trophies", TROPHIES),
-        ],
-    }
-
-    const crystalKeys = new Set<string>()
-    const figurineKeys = new Set<string>()
-    const otherKeys = new Set<string>()
-
-    const mapDrops = (
-        key: string,
-        x: LogSummary["drops"][string],
-        mult: number,
-        asSingle?: boolean
-    ) =>
-        x.entries.map((entry) => {
-            if (!asSingle) {
-                return {
-                    key,
-                    count: entry.count,
-                    value: mult * entry.count,
-                    logIdx: entry.logIdx,
-                }
-            } else {
-                return {
-                    key,
-                    count: 1,
-                    value: mult * entry.count,
-                    logIdx: entry.logIdx,
-                }
-            }
-        })
-
-    for (let [key, xs] of Object.entries(anal.drops)) {
-        const k = key as any
-        const ps = PRICES as any
-
-        if (ARTIFACTS.has(k)) {
-            summary.data[k] = mapDrops(k, xs, ps[k])
-        } else if (CONSUMABLES.has(k)) {
-            summary.data[k] = mapDrops(k, xs, ps[k])
-        } else if (
-            k === "autosell" ||
-            k === "credits" ||
-            k === "Credits"
-        ) {
-            summary.data[k] = mapDrops(k, xs, 1, true)
-        } else if (key.startsWith("Crystal of ")) {
-            summary.data[k] = mapDrops(k, xs, PRICES["Crystal"])
-            crystalKeys.add(k)
-        } else if (k.includes("Figurine")) {
-            summary.data[k] = mapDrops(k, xs, PRICES["Figurine"])
-            figurineKeys.add(k)
-        } else if (MATERIALS.has(k)) {
-            summary.data[k] = mapDrops(k, xs, ps[k])
-        } else if (SHARDS.has(k)) {
-            summary.data[k] = mapDrops(k, xs, ps[k])
-        } else if (TROPHIES.has(k)) {
-            summary.data[k] = mapDrops(k, xs, ps[k])
-        } else if (["experience", "proficiency"].includes(k)) {
-        } else {
-            summary.data[k] = mapDrops(k, xs, ps[k] ?? 0)
-            otherKeys.add(k)
-        }
-    }
-
-    summary.groups.push(newDropEventGroup("Crystals", crystalKeys))
-    summary.groups.push(newDropEventGroup("Figurines", figurineKeys))
-    summary.groups.push(newDropEventGroup("Other", otherKeys))
-
-    return summary
-}
-
 function UsageSummaryTable(
-    summary: ReturnType<typeof summarizeItemUsage>,
+    usage: UsageEventSummary,
     staminaUsage: number
 ) {
     const acc = Object.fromEntries(
-        summary.groups.map((grp) => [
+        usage.groups.map((grp) => [
             grp.label,
             {
                 label: grp.label,
@@ -243,11 +159,11 @@ function UsageSummaryTable(
         ])
     )
 
-    const rows = Object.values(summary.data).reduce((acc, xs) => {
+    const rows = Object.values(usage.data).reduce((acc, xs) => {
         const count = sum(xs, (x) => x.count)
         const value = sum(xs, (x) => x.value)
 
-        const group = summary.groups.find((grp) => grp.has(xs[0].key))
+        const group = usage.groups.find((grp) => grp.has(xs[0].key))
         if (!group) {
             return acc
         }
@@ -277,60 +193,6 @@ function UsageSummaryTable(
             sectionClass="expenses"
         />
     )
-}
-
-function summarizeItemUsage(anal: LogSummary): DropEventSummary {
-    const summary: DropEventSummary = {
-        data: {},
-        groups: [
-            newDropEventGroup("Gum & Vase", BUBBLE_VASE),
-            newDropEventGroup("Scrolls", SCROLLS),
-            newDropEventGroup("Health Items", HEALTH_ITEMS),
-            newDropEventGroup("Mana Items", MANA_ITEMS),
-            newDropEventGroup("Spirit Items", SPIRIT_ITEMS),
-            newDropEventGroup(
-                "Last Elixir",
-                new Set(["Last Elixir"])
-            ),
-        ],
-    }
-
-    const mapUses = (
-        key: string,
-        logIdxs: LogSummary["itemUsage"][string],
-        value: number
-    ) =>
-        logIdxs.map((logIdx) => ({
-            key,
-            count: 1,
-            value: value,
-            logIdx,
-        }))
-
-    for (let [item, logIdxs] of Object.entries(anal.itemUsage)) {
-        const k = item as any
-        const ps = PRICES as any
-
-        if (BUBBLE_VASE.has(k)) {
-            summary.data[k] = mapUses(k, logIdxs, ps[k])
-        } else if (SCROLLS.has(k)) {
-            summary.data[k] = mapUses(k, logIdxs, ps[k])
-        } else if (HEALTH_ITEMS.has(k)) {
-            summary.data[k] = mapUses(k, logIdxs, ps[k])
-        } else if (MANA_ITEMS.has(k)) {
-            summary.data[k] = mapUses(k, logIdxs, ps[k])
-        } else if (SPIRIT_ITEMS.has(k)) {
-            summary.data[k] = mapUses(k, logIdxs, ps[k])
-        } else if (item === "Last Elixir") {
-            summary.data[k] = mapUses(
-                k,
-                logIdxs,
-                PRICES["Last Elixir"]
-            )
-        }
-    }
-
-    return summary
 }
 
 function DropChart(
@@ -378,127 +240,3 @@ function EquipSummary(log: CompleteLog) {
         </div>
     )
 }
-
-function newDropEventGroup<T extends string>(
-    label: string,
-    keys: Set<T>
-): DropEventSummary["groups"][number] {
-    return { label, has: (key) => keys.has(key as any) }
-}
-
-export type DropEventSummary = EventSummary<
-    {
-        count: number
-        value: number
-    },
-    (key: string) => boolean,
-    string
->
-
-type PriceKey = keyof typeof PRICES
-
-const TROPHIES = new Set<PriceKey>([
-    "ManBearPig Tail",
-    "Holy Hand Grenade of Antioch",
-    "Mithra's Flower",
-    "Dalek Voicebox",
-    "Lock of Blue Hair",
-    "Bunny-Girl Costume",
-    "Hinamatsuri Doll",
-    "Broken Glasses",
-    "Black T-Shirt",
-    "Sapling",
-    "Unicorn Horn",
-    "Noodly Appendage",
-])
-
-const MATERIALS = new Set<PriceKey>([
-    "Scrap Metal",
-    "Scrap Leather",
-    "Scrap Cloth",
-    "Scrap Wood",
-    "Energy Cell",
-
-    "High-Grade Metals",
-    "High-Grade Leather",
-    "High-Grade Cloth",
-    "High-Grade Wood",
-
-    "Mid-Grade Metals",
-    "Mid-Grade Leather",
-    "Mid-Grade Cloth",
-    "Mid-Grade Wood",
-
-    "Low-Grade Metals",
-    "Low-Grade Leather",
-    "Low-Grade Cloth",
-    "Low-Grade Wood",
-])
-
-const HEALTH_ITEMS = new Set<PriceKey>([
-    "Health Draught",
-    "Health Potion",
-    "Health Elixir",
-])
-
-const MANA_ITEMS = new Set<PriceKey>([
-    "Mana Draught",
-    "Mana Potion",
-    "Mana Elixir",
-])
-
-const SPIRIT_ITEMS = new Set<PriceKey>([
-    "Spirit Draught",
-    "Spirit Potion",
-    "Spirit Elixir",
-])
-
-const BUBBLE_VASE = new Set<PriceKey>(["Bubble-Gum", "Flower Vase"])
-
-const SCROLLS = new Set<PriceKey>([
-    "Infusion of Flames",
-    "Infusion of Frost",
-    "Infusion of Lightning",
-    "Infusion of Storms",
-    "Infusion of Darkness",
-    "Infusion of Divinity",
-    "Scroll of Life",
-    "Scroll of Absorption",
-    "Scroll of Shadows",
-    "Scroll of Swiftness",
-    "Scroll of Protection",
-    "Scroll of the Gods",
-    "Scroll of the Avatar",
-])
-
-const CONSUMABLES = new Set<PriceKey>([
-    ...HEALTH_ITEMS,
-    ...MANA_ITEMS,
-    ...SPIRIT_ITEMS,
-    ...BUBBLE_VASE,
-    ...SCROLLS,
-
-    "Monster Chow",
-    "Monster Edibles",
-    "Monster Cuisine",
-    "Happy Pills",
-])
-
-const SHARDS = new Set<PriceKey>([
-    "Amnesia Shard",
-    "Aether Shard",
-    "Featherweight Shard",
-    "Voidseeker Shard",
-])
-
-const ARTIFACTS = new Set<PriceKey>(["Precursor Artifact"])
-
-const GOOD_EQUIPS = [
-    /Peerless/,
-    /Legendary/,
-    /Magnificent/,
-    // /Exquisite/,
-    // /Superior/,
-    // /Fine/,
-    // /Crude/,
-]

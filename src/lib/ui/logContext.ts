@@ -1,8 +1,10 @@
 import { sleep } from "radash"
 import { createContext, useContext, useEffect, useState } from "react"
 import { CompleteLog, LogDb, LogId } from "../logDb"
+import { summarizeItemDrops } from "../stats/dropStats"
+import { IndexMap } from "../stats/indexMap"
+import { summarizeItemUsage } from "../stats/itemUsageStats"
 import { LogSummary, SummaryDb } from "../summaryDb"
-import { IndexMap } from "./hvlog/indexMap"
 
 export const LogContext = createContext<
     ReturnType<typeof createLogContext>
@@ -18,9 +20,30 @@ export function createLogContext() {
     const summaryDb = new SummaryDb()
     const getSummary = (log: CompleteLog) => summaryDb.get(log)
 
-    const getIndexMap = useIndexMap(summaryDb)
+    const { get: getIndexMap } = useCache((log) => {
+        const { roundIndexes, turnIndexes } = summaryDb.get(log)
+        return new IndexMap(
+            turnIndexes,
+            roundIndexes,
+            log.entries.length
+        )
+    })
 
-    return { logs, logsLoading, getSummary, getIndexMap }
+    const { get: getItemDrops } = useCache((log) =>
+        summarizeItemDrops(log)
+    )
+    const { get: getItemUsage } = useCache((log) =>
+        summarizeItemUsage(log)
+    )
+
+    return {
+        logs,
+        logsLoading,
+        getSummary,
+        getIndexMap,
+        getItemDrops,
+        getItemUsage,
+    }
 }
 
 function useAllLogs(refreshDelay = 5000) {
@@ -59,31 +82,28 @@ function useAllLogs(refreshDelay = 5000) {
     return { logs, loading }
 }
 
-function useIndexMap(summaryDb: SummaryDb) {
-    const cache = new Map<LogId, IndexMap>()
+function useCache<T>(generate: (log: CompleteLog) => T): {
+    cache: Map<LogId, T>
+    get: (log: CompleteLog) => T
+} {
+    const cache = new Map<LogId, T>()
 
-    const getIndexMap = (log: CompleteLog) => {
+    const get = (log: CompleteLog) => {
         if (!cache.has(log.id)) {
-            const { roundIndexes, turnIndexes } = summaryDb.get(log)
-            cache.set(
-                log.id,
-                new IndexMap(
-                    turnIndexes,
-                    roundIndexes,
-                    log.entries.length
-                )
-            )
+            cache.set(log.id, generate(log))
         }
 
         return cache.get(log.id)!
     }
 
-    return getIndexMap
+    return { cache, get }
 }
 
 interface UseSingleLogOptions {
     summary?: boolean
     indexMap?: boolean
+    itemDrops?: boolean
+    itemUsage?: boolean
 }
 
 // prettier-ignore
@@ -93,6 +113,10 @@ type UseSingleLogReturn<Opts extends UseSingleLogOptions> = {
             LogSummary : undefined :
         K extends 'indexMap' ? Opts[K] extends true ?
             IndexMap : undefined :
+        K extends 'itemDrop' ? Opts[K] extends true ?
+            ReturnType<typeof summarizeItemDrops> : undefined :
+        K extends 'itemUsage' ? Opts[K] extends true ?
+            ReturnType<typeof summarizeItemDrops> : undefined :
         never
 }
 
@@ -105,5 +129,7 @@ export function useLog<T extends UseSingleLogOptions>(
     return {
         summary: opts.summary ? ctx.getSummary(log) : undefined,
         indexMap: opts.indexMap ? ctx.getIndexMap(log) : undefined,
+        itemDrops: opts.itemDrops ? ctx.getItemDrops(log) : undefined,
+        itemUsage: opts.itemUsage ? ctx.getItemUsage(log) : undefined,
     } as UseSingleLogReturn<T>
 }
