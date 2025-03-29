@@ -25,11 +25,12 @@ export class IndexMap {
             }
 
             lastTurnIdx = turnIdx + 1
-            lastLogIdx = logIdx
+            lastLogIdx = logIdx + 1
         }
 
+        this.turnToLog.set(lastTurnIdx, lastLogIdx)
         for (let l = lastLogIdx; l < this.logSize; l++) {
-            this.turnToLog.set(lastTurnIdx, l)
+            this.logToTurn.set(l, lastTurnIdx)
         }
     }
 

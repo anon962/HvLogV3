@@ -1,4 +1,4 @@
-.tally-table {
+.count-table {
     font-size: 0.9rem;
     line-height: 1;
 
@@ -9,7 +9,7 @@
 
     .row {
         display: grid;
-        grid-template-columns: minmax(125px, 1fr) 1fr 1fr;
+        grid-template-columns: minmax(125px, 1fr) 1fr;
         min-width: 350px;
     }
 
@@ -92,7 +92,7 @@
 
     .subtable {
         display: grid;
-        grid-template-columns: max-content max-content max-content;
+        grid-template-columns: max-content max-content;
 
         width: 100%;
         grid-column: auto / span 3;

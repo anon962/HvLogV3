@@ -6,8 +6,8 @@ import {
     TabsList,
     TabsTrigger,
 } from "../shadcn/tabs"
-import { CombatStats } from "./combat/combatStats"
-import { DropStats } from "./drop/dropStats"
+import { CombatInfo } from "./combat/combatInfo"
+import { DropInfo } from "./drop/dropInfo"
 import { LogEventList } from "./logEventList"
 
 export function LogDetailsPane(props: { log?: CompleteLog }) {
@@ -49,7 +49,7 @@ export function LogDetailsPane(props: { log?: CompleteLog }) {
                     <Card className="min-h-full py-0 h-full">
                         <CardContent className="h-full p-8">
                             {props.log ? (
-                                <DropStats log={props.log} />
+                                <DropInfo log={props.log} />
                             ) : (
                                 ""
                             )}
@@ -64,7 +64,7 @@ export function LogDetailsPane(props: { log?: CompleteLog }) {
                     <Card className="min-h-0 h-full py-0">
                         <CardContent className="p-0 min-h-0">
                             {props.log ? (
-                                <CombatStats log={props.log} />
+                                <CombatInfo log={props.log} />
                             ) : (
                                 ""
                             )}

@@ -4,6 +4,16 @@
 
 @import "tailwindcss";
 
+@import "./hvlog/countValueTable.css";
+@import "./hvlog/countTable.css";
+@import "./hvlog/logDetailsPane.css";
+@import "./hvlog/logEventList.css";
+@import "./hvlog/logSummaryTable.css";
+
+@import "./hvlog/combat/combatInfo.css";
+
+@import "./hvlog/drop/dropInfo.css";
+
 :root {
     --radius: 0.625rem;
     --background: oklch(1 0 0);
@@ -172,10 +182,3 @@ body,
     );
     scrollbar-track-color: var(--muted);
 }
-
-@import "./hvlog/logSummaryTable.css";
-@import "./hvlog/logEventList.css";
-@import "./hvlog/logDetailsPane.css";
-@import "./hvlog/drop/dropStats.css";
-@import "./hvlog/tallyTable.css";
-@import "./hvlog/combat/combatStats.css";

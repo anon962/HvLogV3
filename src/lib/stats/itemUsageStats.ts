@@ -31,12 +31,10 @@ function extractItemUsage(log: CompleteLog) {
     return usage
 }
 
-export function summarizeItemUsage(
-    log: CompleteLog
-): DropEventSummary {
+export function summarizeItemUsage(log: CompleteLog): DropSummary {
     const usage = extractItemUsage(log)
 
-    const summary: DropEventSummary = {
+    const summary: DropSummary = {
         data: {},
         groups: [
             newDropEventGroup("Gum & Vase", BUBBLE_VASE),
@@ -92,15 +90,17 @@ export function summarizeItemUsage(
 function newDropEventGroup<T extends string>(
     label: string,
     keys: Set<T>
-): DropEventSummary["groups"][number] {
+): DropSummary["groups"][number] {
     return { label, has: (key) => keys.has(key as any) }
 }
 
-export type DropEventSummary = EventSummary<
+export type DropSummary = EventSummary<
     {
         count: number
         value: number
     },
-    (key: string) => boolean,
-    string
+    Array<{
+        label: string
+        has: (key: string) => boolean
+    }>
 >

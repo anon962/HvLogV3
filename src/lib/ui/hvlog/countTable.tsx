@@ -1,14 +1,14 @@
 import { formatNumber, sortBy } from "@/lib/utils/miscUtils"
-import { sort, sum } from "radash"
+import { sum } from "radash"
 import { useEffect, useState } from "react"
 
-export function TallyTable({
+export function CountTable({
     label,
     rows,
     sectionClass,
     titleClass,
     layoutClass,
-}: TallyTableProps) {
+}: CountTableProps) {
     const [active, setActive] = useState(new Set<number>())
     const toggleActive = (idx: number) => {
         let update = new Set(active)
@@ -24,7 +24,7 @@ export function TallyTable({
         setActive(new Set())
     }, rows)
 
-    const sectionClasses = `tally-table w-max ${sectionClass ?? ""}`
+    const sectionClasses = `count-table w-max ${sectionClass ?? ""}`
     const titleClasses = `pb-4 ${
         titleClass?.length ? titleClass : ""
     }`
@@ -34,12 +34,10 @@ export function TallyTable({
     const layoutClasses = `w-auto rounded-md ${layoutClass ?? ""}`
 
     rows = sortBy(rows, [
-        { fn: (r) => r.value },
         { fn: (r) => r.count },
         { fn: (r) => r.label, reverse: true },
     ]).reverse()
 
-    const totalValue = sum(Object.values(rows).map((r) => r.value))
     const totalCount = sum(Object.values(rows).map((r) => r.count))
 
     const rowEls = rows.map((row, idx) => {
@@ -65,9 +63,6 @@ export function TallyTable({
             <div className={layoutClasses}>
                 <div className={titleRowClasses}>
                     <span className="category header">Category</span>
-                    <span className="value header text-right">
-                        Value
-                    </span>
                     <span className="count header text-right">
                         Count
                     </span>
@@ -77,9 +72,6 @@ export function TallyTable({
 
                 <div className="row">
                     <span className="category footer">Total</span>
-                    <span className="value footer text-right">
-                        {formatNumber(totalValue)}
-                    </span>
                     <span className="count footer text-right">
                         {totalCount >= 1000
                             ? formatNumber(totalCount)
@@ -97,7 +89,7 @@ function Row({
     isActive,
     isNextActive,
     className,
-}: TallyTableRowProps) {
+}: CountTableRowProps) {
     const hasSubtable = !!row.subRows?.length
 
     const rowClass = [
@@ -111,7 +103,6 @@ function Row({
     let subTable
     if (isActive && hasSubtable) {
         const subRows = sortBy(row.subRows!, [
-            { fn: (r) => r.value },
             { fn: (r) => r.count },
             { fn: (r) => r.label, reverse: true },
         ]).reverse()
@@ -125,9 +116,6 @@ function Row({
             className={rowClass}
         >
             <span className="category cell">{row.label}</span>
-            <span className="value cell text-right">
-                {formatNumber(row.value)}
-            </span>
             <span className="count cell text-right">
                 {row.count >= 1000
                     ? formatNumber(row.count)
@@ -139,21 +127,20 @@ function Row({
     )
 }
 
-function SubTable({ rows }: { rows: TallyTableSubRow[] }) {
-    rows = sort(rows, (x) => x.value * 1_000_000 + x.count, true)
+function SubTable({ rows }: { rows: CountTableSubRow[] }) {
+    rows = sortBy(rows, [
+        { fn: (r) => r.count },
+        { fn: (r) => r.label, reverse: true },
+    ]).reverse()
 
     const rowEls = rows.flatMap((r) => [
         <div className="subcategory subcell">{r.label}</div>,
-        <div className="subvalue subcell">
-            {formatNumber(r.value)}
-        </div>,
         <div className="subcount subcell">{r.count}</div>,
     ])
 
     return (
         <div className="subtable">
             <div className="subcategory subheader">Item</div>
-            <div className="subvalue subheader">Value</div>
             <div className="subcount subheader">Count</div>
 
             {rowEls}
@@ -161,31 +148,29 @@ function SubTable({ rows }: { rows: TallyTableSubRow[] }) {
     )
 }
 
-export interface TallyTableProps {
+export interface CountTableProps {
     label: string
-    rows: TallyTableRow[]
+    rows: CountTableRow[]
     sectionClass?: string
     titleClass?: string
     layoutClass?: string
 }
 
-export interface TallyTableRowProps {
+export interface CountTableRowProps {
     onClick: () => void
-    row: TallyTableRow
+    row: CountTableRow
     isActive: boolean
     isNextActive: boolean
     className?: string
 }
 
-export interface TallyTableRow {
+export interface CountTableRow {
     label: string
     count: number
-    value: number
-    subRows?: TallyTableSubRow[]
+    subRows?: CountTableSubRow[]
 }
 
-export interface TallyTableSubRow {
+export interface CountTableSubRow {
     label: string
     count: number
-    value: number
 }

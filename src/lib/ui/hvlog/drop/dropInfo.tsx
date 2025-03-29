@@ -1,16 +1,20 @@
 import { CompleteLog } from "@/lib/logDb"
-import { UsageEventSummary } from "@/lib/stats/dropStats"
-import { DropEventSummary } from "@/lib/stats/itemUsageStats"
+import { UsageSummary } from "@/lib/stats/dropStats"
+import { DropSummary } from "@/lib/stats/itemUsageStats"
 import { filterEvents } from "@/lib/stats/summaryStats"
 import { formatNumber } from "@/lib/utils/miscUtils"
 import { alphabetical, max, range, sum } from "radash"
 import { useEffect, useRef } from "react"
 import { GOOD_EQUIPS, PRICES } from "../../constants"
 import { useLog } from "../../logContext"
-import { TallyTable, TallyTableRow } from "../tallyTable"
+import {
+    CountValueTable,
+    CountValueTableRow,
+    CountValueTableSubRow,
+} from "../countValueTable"
 import { IncomeChart } from "./incomeChart"
 
-export function DropStats(props: { log: CompleteLog }) {
+export function DropInfo(props: { log: CompleteLog }) {
     const {
         summary,
         itemDrops: drops,
@@ -48,8 +52,8 @@ export function DropStats(props: { log: CompleteLog }) {
 }
 
 function CalculationPreview(
-    drops: DropEventSummary,
-    usage: UsageEventSummary,
+    drops: DropSummary,
+    usage: UsageSummary,
     staminaUsage: number
 ) {
     const totalIncome = sum(
@@ -101,7 +105,7 @@ function CalculationPreview(
     )
 }
 
-function IncomeSummaryTable(drops: DropEventSummary) {
+function IncomeSummaryTable(drops: DropSummary) {
     const acc = Object.fromEntries(
         drops.groups.map((grp) => [
             grp.label,
@@ -109,7 +113,7 @@ function IncomeSummaryTable(drops: DropEventSummary) {
                 label: grp.label,
                 count: 0,
                 value: 0,
-                subRows: [] as TallyTableRow[],
+                subRows: [] as CountValueTableSubRow[],
             },
         ])
     )
@@ -135,7 +139,7 @@ function IncomeSummaryTable(drops: DropEventSummary) {
     }, acc)
 
     return (
-        <TallyTable
+        <CountValueTable
             label="Income"
             rows={Object.values(rows)}
             sectionClass="income"
@@ -144,7 +148,7 @@ function IncomeSummaryTable(drops: DropEventSummary) {
 }
 
 function UsageSummaryTable(
-    usage: UsageEventSummary,
+    usage: UsageSummary,
     staminaUsage: number
 ) {
     const acc = Object.fromEntries(
@@ -154,7 +158,7 @@ function UsageSummaryTable(
                 label: grp.label,
                 count: 0,
                 value: 0,
-                subRows: [] as TallyTableRow[],
+                subRows: [] as CountValueTableRow[],
             },
         ])
     )
@@ -187,7 +191,7 @@ function UsageSummaryTable(
     }
 
     return (
-        <TallyTable
+        <CountValueTable
             label="Expenses"
             rows={Object.values(rows)}
             sectionClass="expenses"
@@ -197,8 +201,8 @@ function UsageSummaryTable(
 
 function DropChart(
     log: CompleteLog,
-    dropSummary: DropEventSummary,
-    usageSummary: DropEventSummary
+    dropSummary: DropSummary,
+    usageSummary: DropSummary
 ) {
     const chart = new IncomeChart(log, dropSummary, usageSummary)
     const el = chart.render()

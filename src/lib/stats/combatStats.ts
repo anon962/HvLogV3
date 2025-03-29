@@ -1,17 +1,15 @@
-import { EventGrammar, takeEvents } from "@/lib/eventGrammar"
-import { CompleteLog, LogEntry } from "@/lib/logDb"
-import { HvEvent, HvEventMap } from "@/lib/parsers"
-import { setDefault } from "@/lib/utils/miscUtils"
-import { EventSummary, EventSummaryData } from "../eventSummary"
+import { EventGrammar, takeEvents } from "../eventGrammar"
+import { CompleteLog, LogEntry } from "../logDb"
+import { HvEvent, HvEventMap } from "../parsers"
+import {
+    EventSummary,
+    EventSummaryData,
+} from "../ui/hvlog/eventSummary"
+import { setDefault } from "../utils/miscUtils"
 
-export function CombatStats({ log }: { log: CompleteLog }) {
-    const combat = summarizeCombat(log)
-    console.log(combat)
-
-    return <></>
-}
-
-function summarizeCombat(log: CompleteLog): CombatSummary {
+export function summarizeCombatUsage(
+    log: CompleteLog
+): CombatSummary {
     const data: CombatSummary["data"] = {}
 
     const offenseKeys = new Set<string>()
@@ -244,7 +242,7 @@ function summarizeCombat(log: CompleteLog): CombatSummary {
                 has: (d) => passiveHealKeys.has(d.key),
             },
             {
-                label: "Spark of Life",
+                label: "Times Sparked",
                 has: (d) => d.key === "SPARK_TRIGGER",
             },
         ],
@@ -313,7 +311,16 @@ const CAST_GRAMMAR = {
 
 export type CombatSummary = EventSummary<
     CombatSummaryData,
-    (d: CombatSummaryData) => boolean
+    Array<{
+        label:
+            | "Offense"
+            | "Debuffs"
+            | "Heals"
+            | "Buffs"
+            | "Passive Heals"
+            | "Times Sparked"
+        has: (d: CombatSummaryData) => boolean
+    }>
 >
 
 type CombatSummaryData = EventSummaryData<{

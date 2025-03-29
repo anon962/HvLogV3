@@ -183,7 +183,7 @@ function EventRowContainer(
     if (isNewTurn && logIdx > 0) {
         els.push(
             <div className="turn-start flex gap-2 px-6 pb-4 items-center">
-                <span className="">{turnIdx + 1}</span>
+                <span className="">{turnIdx}</span>
                 <hr className=""></hr>
             </div>
         )

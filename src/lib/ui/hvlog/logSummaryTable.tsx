@@ -100,7 +100,7 @@ function LogRow(props: {
 
     const duration = formatDuration(props.log)
     const typeSummary = formatBattleType(props.log)
-    const turns = `${indexMap.turnIndexes.length - 1} turns`
+    const turns = `${indexMap.turnIndexes.length} turns`
     const { status, title: statusTitle } = formatCompletionType(
         props.log
     )

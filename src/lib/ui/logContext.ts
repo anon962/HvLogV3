@@ -1,9 +1,19 @@
 import { sleep } from "radash"
 import { createContext, useContext, useEffect, useState } from "react"
 import { CompleteLog, LogDb, LogId } from "../logDb"
-import { summarizeItemDrops } from "../stats/dropStats"
+import {
+    CombatSummary,
+    summarizeCombatUsage,
+} from "../stats/combatStats"
+import {
+    UsageSummary as ItemUsageSummary,
+    summarizeItemDrops,
+} from "../stats/dropStats"
 import { IndexMap } from "../stats/indexMap"
-import { summarizeItemUsage } from "../stats/itemUsageStats"
+import {
+    DropSummary,
+    summarizeItemUsage,
+} from "../stats/itemUsageStats"
 import { LogSummary, SummaryDb } from "../summaryDb"
 
 export const LogContext = createContext<
@@ -35,6 +45,9 @@ export function createLogContext() {
     const { get: getItemUsage } = useCache((log) =>
         summarizeItemUsage(log)
     )
+    const { get: getCombatUsage } = useCache((log) =>
+        summarizeCombatUsage(log)
+    )
 
     return {
         logs,
@@ -43,6 +56,7 @@ export function createLogContext() {
         getIndexMap,
         getItemDrops,
         getItemUsage,
+        getCombatUsage,
     }
 }
 
@@ -104,6 +118,7 @@ interface UseSingleLogOptions {
     indexMap?: boolean
     itemDrops?: boolean
     itemUsage?: boolean
+    combatUsage?: boolean
 }
 
 // prettier-ignore
@@ -114,9 +129,11 @@ type UseSingleLogReturn<Opts extends UseSingleLogOptions> = {
         K extends 'indexMap' ? Opts[K] extends true ?
             IndexMap : undefined :
         K extends 'itemDrop' ? Opts[K] extends true ?
-            ReturnType<typeof summarizeItemDrops> : undefined :
+            DropSummary : undefined :
         K extends 'itemUsage' ? Opts[K] extends true ?
-            ReturnType<typeof summarizeItemDrops> : undefined :
+            ItemUsageSummary : undefined :
+        K extends 'combatUsage' ? Opts[K] extends true ?
+            CombatSummary : undefined :
         never
 }
 
@@ -131,5 +148,8 @@ export function useLog<T extends UseSingleLogOptions>(
         indexMap: opts.indexMap ? ctx.getIndexMap(log) : undefined,
         itemDrops: opts.itemDrops ? ctx.getItemDrops(log) : undefined,
         itemUsage: opts.itemUsage ? ctx.getItemUsage(log) : undefined,
+        combatUsage: opts.combatUsage
+            ? ctx.getCombatUsage(log)
+            : undefined,
     } as UseSingleLogReturn<T>
 }

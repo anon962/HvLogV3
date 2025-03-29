@@ -18,7 +18,7 @@ import {
     TAILWIND_COLORS,
     TAILWIND_SHADES,
 } from "../../../ui/constants"
-import { DropEventSummary } from "./dropStats"
+import { DropEventSummary } from "./dropInfo"
 
 type Series = DataSeries<{
     value: number
