@@ -6,7 +6,6 @@ import { HvLog } from "./lib/ui/hvlog/hvLog.tsx"
 
 // @todo: combat - usage chart (attacks, debuffs, heals, other)
 // @todo: combat - resist distribution (debuffs, other)
-// @todo: combat - melee strikes
 // @todo: combat - heal breakdown (hp mp sp)
 // @todo: combat - heal breakdown (active, passive)
 // @todo: combat - SoL triggers

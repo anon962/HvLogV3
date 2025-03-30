@@ -1,6 +1,11 @@
 import { CompleteLog } from "@/lib/logDb"
 import { CombatSummary } from "@/lib/stats/combatStats"
-import { avg, setDefault, sortBy } from "@/lib/utils/miscUtils"
+import {
+    avg,
+    formatNumber,
+    setDefault,
+    sortBy,
+} from "@/lib/utils/miscUtils"
 import { sum } from "radash"
 import { useLog } from "../../logContext"
 import { TallyTable, TallyTableProps } from "../tallyTable"
@@ -11,7 +16,7 @@ export function CombatInfo({ log }: { log: CompleteLog }) {
     })
 
     return (
-        <div className="combat-info p-8">
+        <div className="combat-info p-8 overflow-auto h-full">
             {CastTable(usage)}
 
             {OffensiveTable(usage)}
@@ -115,18 +120,19 @@ function CastTable(usage: CombatSummary) {
             rows={rows}
             columns={columns}
             subColumns={subColumns}
-            className="casts max-w-[30rem]"
+            className="casts w-max"
         />
     )
 }
 
 type OffensiveTableData = TallyTableProps<{
     damage: number
-    damageLethal: number
+    damageRaw: number
     resistRate: number
     killRate: number
     hitRate: number
     hitCount: number
+    hitCountAvg: number
 }>
 
 function OffensiveTable(usage: CombatSummary) {
@@ -143,42 +149,49 @@ function OffensiveTable(usage: CombatSummary) {
         switch (group.label) {
             case "Spells":
                 for (const [label, castsForSpell] of casts) {
-                    const effects = castsForSpell.flatMap(
+                    const hits = castsForSpell.flatMap(
                         (cast) => cast.spell ?? []
                     )
 
-                    const damageEffects = effects
-                        .filter((effect) => !effect.kill)
-                        .map((effect) => effect.value)
-                    const damage = avg(damageEffects)
-
-                    const lethalCasts = effects
-                        .filter((effect) => effect.kill)
-                        .map((effect) => effect.value)
-                    const damageLethal = avg(lethalCasts)
-
-                    const resist = avg(
-                        effects.map((effect) => effect.resist)
+                    const damage = avg(
+                        hits.map((effect) => effect.value)
                     )
 
-                    const misses = effects.filter((x) => x.miss)
+                    const rawHits = hits
+                        .filter((hit) => !hit.kill)
+                        .map(
+                            (hit) =>
+                                hit.value *
+                                (hit.resist ? 100 / hit.resist : 1)
+                        )
+                    const damageRaw = avg(rawHits)
 
-                    const hitCount = avg(
+                    const resistedHits = avg(
+                        hits.map((hit) => hit.resist)
+                    )
+
+                    const misses = hits.filter((x) => x.miss)
+
+                    const hitCountAvg = avg(
                         castsForSpell.map(
                             (cast) => (cast.spell ?? []).length
                         )
                     )
 
+                    const killCount = hits.filter(
+                        (effect) => !effect.kill
+                    ).length
+
                     rows.push({
                         label,
                         value: {
                             damage,
-                            damageLethal,
-                            hitRate: misses.length / effects.length,
-                            resistRate: resist,
-                            killRate:
-                                lethalCasts.length / effects.length,
-                            hitCount,
+                            damageRaw,
+                            hitRate: 1 - misses.length / hits.length,
+                            resistRate: resistedHits,
+                            killRate: killCount / hits.length,
+                            hitCount: hits.length,
+                            hitCountAvg,
                         },
                     })
                 }
@@ -215,61 +228,70 @@ function OffensiveTable(usage: CombatSummary) {
                     }
                 }
 
-                for (const [label, effects] of Object.entries(
+                for (const [label, hits] of Object.entries(
                     groupedByName
                 )) {
-                    const damageEffects = effects
-                        .filter((effect) => !effect.kill)
-                        .map((effect) => effect.value)
-                    const damage = avg(damageEffects)
+                    const damage = avg(
+                        hits.map((effect) => effect.value)
+                    )
 
-                    const lethalCasts = effects
-                        .filter((effect) => effect.kill)
-                        .map((effect) => effect.value)
-                    const damageLethal = avg(lethalCasts)
+                    const rawHits = hits
+                        .filter((hit) => !hit.kill)
+                        .map((hit) => hit.value)
+                    const damageRaw = avg(rawHits)
 
-                    const misses = effects.filter((x) => x.miss)
+                    const misses = hits.filter((x) => x.miss)
+
+                    const killCount = hits.filter(
+                        (effect) => !effect.kill
+                    ).length
 
                     rows.push({
                         label,
                         value: {
                             damage,
-                            damageLethal,
-                            hitRate: misses.length / effects.length,
+                            damageRaw,
+                            hitRate: 1 - misses.length / hits.length,
                             resistRate: 0,
-                            killRate:
-                                lethalCasts.length / effects.length,
+                            killRate: killCount / hits.length,
                             hitCount: 1,
+                            hitCountAvg: 1,
                         },
                     })
                 }
                 break
             case "Passive Attacks":
                 for (const [spell, castsForSpell] of casts) {
-                    const effects = castsForSpell.flatMap(
-                        (cast) => cast.spell ?? []
+                    const hits = castsForSpell.flatMap((cast) =>
+                        cast.passiveAttack ? [cast.passiveAttack] : []
+                    )
+                    if (!hits.length) {
+                        continue
+                    }
+
+                    const damage = avg(
+                        hits.map((effect) => effect.value)
                     )
 
-                    const damageEffects = effects
-                        .filter((effect) => !effect.kill)
-                        .map((effect) => effect.value)
-                    const damage = avg(damageEffects)
+                    const rawHits = hits
+                        .filter((hit) => !hit.kill)
+                        .map((hit) => hit.value)
+                    const damageRaw = avg(rawHits)
 
-                    const lethalCasts = effects
-                        .filter((effect) => effect.kill)
-                        .map((effect) => effect.value)
-                    const damageLethal = avg(lethalCasts)
+                    const killCount = hits.filter(
+                        (effect) => !effect.kill
+                    ).length
 
                     rows.push({
                         label: spell,
                         value: {
                             damage,
-                            damageLethal,
-                            hitRate: 0,
+                            damageRaw,
+                            hitRate: 1,
                             resistRate: 0,
-                            killRate:
-                                lethalCasts.length / effects.length,
+                            killRate: killCount / hits.length,
                             hitCount: 1,
+                            hitCountAvg: 1,
                         },
                     })
                 }
@@ -280,27 +302,55 @@ function OffensiveTable(usage: CombatSummary) {
     rows = sortBy(rows, [{ fn: (r) => r.value.damage }]).reverse()
 
     const columns: OffensiveTableData["columns"] = [
-        { label: "Damage (non-lethal)", get: (x) => x.damage },
-        { label: "Damage (lethal)", get: (x) => x.damageLethal },
+        {
+            label: "Dmg",
+            get: (x) => x.damage,
+            format: (x) => {
+                if (x >= 100_000) {
+                    return `${(x / 1000).toFixed(0)}k`
+                } else if (x >= 1000) {
+                    return `${(x / 1000).toFixed(1)}k`
+                } else {
+                    return formatNumber(x)
+                }
+            },
+        },
+        {
+            label: "Dmg Raw",
+            get: (x) => x.damageRaw,
+            format: (x) => {
+                if (x >= 100_000) {
+                    return `${(x / 1000).toFixed(0)}k`
+                } else if (x >= 1000) {
+                    return `${(x / 1000).toFixed(1)}k`
+                } else {
+                    return formatNumber(x)
+                }
+            },
+        },
         {
             label: "Kill Rate",
             get: (x) => x.killRate,
             format: (x) => `${Math.round(x * 100)}%`,
         },
         {
+            label: "# Targets",
+            get: (x) => x.hitCountAvg,
+            format: (x) => `${x.toFixed(1)}`,
+        },
+        {
             label: "Resist Rate",
             get: (x) => x.resistRate,
             format: (x) => `${Math.round(x)}%`,
         },
+        // {
+        //     label: "Hits",
+        //     get: (x) => x.hitCount,
+        // },
         {
-            label: "Hit Rate",
-            get: (x) => x.hitRate,
+            label: "Miss Rate",
+            get: (x) => 1 - x.hitRate,
             format: (x) => `${Math.round(x * 100)}%`,
-        },
-        {
-            label: "# Targets",
-            get: (x) => x.hitCount,
-            format: (x) => `${Math.round(x * 10) / 10}`,
         },
     ]
 

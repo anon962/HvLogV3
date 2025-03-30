@@ -27,11 +27,6 @@ export default defineConfig((config) => {
                     cssSideEffects: () => {
                         return (styles) => {
                             function initCss(styles: string) {
-                                console.debug(
-                                    "Loading HvLog CSS",
-                                    styles
-                                )
-
                                 if (
                                     // @ts-ignore
                                     typeof GM_addStyle == "function"

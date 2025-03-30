@@ -237,13 +237,20 @@ export function summarizeCombatUsage(
                 melee: effectSummary,
             })
 
-            idx += sum(effects, (xs) => xs.length) - 1
+            idx += sum(effects, (xs) => xs.length)
             continue
         }
 
         // Passive attacks (eg spike shield, DoTs)
-        if (ev.event_type === "PLAYER_ATTACK") {
-            passiveAttackKeys.add(ev.spell)
+        if (
+            ev.event_type === "PLAYER_ATTACK" ||
+            ev.event_type === "PLAYER_SPIKE_SHIELD"
+        ) {
+            const key =
+                ev.event_type === "PLAYER_ATTACK"
+                    ? `${ev.spell} (passive)`
+                    : "Spike Shield"
+            passiveAttackKeys.add(key)
 
             let kill = false
             const nextEntry = xs[0]
@@ -254,8 +261,8 @@ export function summarizeCombatUsage(
                 kill = true
             }
 
-            setDefault(data, "Passive Attacks", []).push({
-                key: "Passive Attacks",
+            setDefault(data, key, []).push({
+                key,
                 logIdx: idx,
                 passiveAttack: {
                     value: ev.value,
@@ -442,7 +449,7 @@ const CAST_GRAMMAR = {
         // Debuffs can occur an indefinite number of times
         // but currently no way to express that in the grammar
         // so just add it a bunch times as optional
-        ...[...range(15)].map(() => 
+        ...[...range(10)].map(() => 
             ({ keys: [
                 "MONSTER_DEATH" as const,
                 "DEBUFF" as const,

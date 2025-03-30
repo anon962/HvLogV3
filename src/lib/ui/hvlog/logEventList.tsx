@@ -29,7 +29,7 @@ export function LogEventList(props: { log: CompleteLog }) {
         <div className="log-event-list flex flex-col h-full">
             <div
                 ref={scrollRef}
-                onClick={() => setActiveIdx(-1)}
+                // onClick={() => setActiveIdx(-1)}
                 className="flex flex-col h-full overflow-auto"
             >
                 {...rows}
@@ -210,7 +210,6 @@ function EventRowContainer(
             <div
                 onClick={(ev) => {
                     setActiveLogIdx(logIdx)
-                    ev.stopPropagation()
                 }}
                 className={
                     "round-label sticky py-4 pr-4 mb-4 top-0 flex justify-end bg-card font-bold border-b rounded-t-md" +
@@ -366,6 +365,7 @@ const EVENT_SUMMARY_MAP = {
     PLAYER_MISS: (ev) => ``,
     PLAYER_SKILL: (ev) => `Cast ${ev.spell}`,
     PLAYER_SPELL_ABSORBED: (ev) => ``,
+    PLAYER_SPIKE_SHIELD: (ev) => `Dealt ${ev.value} damage`,
     PROFICIENCY: (ev) => `Dropped ${ev.value} ${ev.type}`,
     RESIST: (ev) => `100% resist`,
     RIDDLE_MASTER: (ev) => ``,

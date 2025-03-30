@@ -312,7 +312,7 @@ function EquipSummary(log: CompleteLog) {
 
             <ul className="pl-6 font-mono">
                 {els.length ? (
-                    els
+                    <>{...els}</>
                 ) : (
                     <li className="list-disc">(none)</li>
                 )}

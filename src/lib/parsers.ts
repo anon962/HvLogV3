@@ -124,7 +124,7 @@ const EnemySpell = `${Monster()} ${Group(
 
 // prettier-ignore
 export const PARSERS = {
-    // Actions1232
+    // Actions
     PLAYER_ATTACK: new EventParser(
         "PLAYER_ATTACK",
         `^(?!Your)${Words("spell")} ${Mult("hits", "crits", "blasts")} (?!you)${Monster()} for ${Num("value")} (?:points of )?(?:${Word("damage_type")} )?damage${Resist}\\.?`,
@@ -198,6 +198,16 @@ export const PARSERS = {
         "PLAYER_SPELL_ABSORBED",
         `Your spell is absorbed\\.`,
         {}
+    ),
+    PLAYER_SPIKE_SHIELD: new EventParser(
+        "PLAYER_SPIKE_SHIELD",
+        `Your spike shield hits ${Monster()} for ${Num("value")} (?:points of )?(?:${Word("damage_type")} )?damage${Resist}\\.?`,
+        {
+            monster: t("string"),
+            damage_type: t("string").optional(),
+            value: t("number"),
+            resist: t("number").optional(),
+        }
     ),
 
     ENEMY_BASIC: new EventParser(

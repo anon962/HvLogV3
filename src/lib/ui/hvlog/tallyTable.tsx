@@ -121,7 +121,7 @@ export function TallyTable({
     })
 
     const gridCss = {
-        gridTemplateColumns: `minmax(125px, 1fr) repeat(${columns.length}, 1fr)`,
+        gridTemplateColumns: `minmax(125px, 1fr) repeat(${columns.length}, minmax(min-content, 1fr))`,
     }
 
     return (
@@ -210,7 +210,7 @@ function Row({
             onClick={() => (hasSubtable ? onClick() : "")}
             className={rowClass}
             style={{
-                gridTemplateColumns: `minmax(125px, 1fr) repeat(${columns.length}, 1fr)`,
+                gridTemplateColumns: `minmax(125px, 1fr) repeat(${columns.length}, minmax(min-content, 1fr))`,
             }}
         >
             <span className="category cell">{row.label}</span>
@@ -265,9 +265,9 @@ function SubTable({ subValues, subColumns, span }: SubRowProps) {
                 gridTemplateColumns: `repeat(${span}, max-content)`,
             }}
         >
-            {headers}
+            {...headers}
 
-            {cells}
+            {...cells}
         </div>
     )
 }

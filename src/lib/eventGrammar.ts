@@ -1,6 +1,8 @@
 import { CompleteLog } from "./logDb"
 import { HvEvent, HvEventMap } from "./parsers"
 
+// @todo: Replace with https://chevrotain.io/docs/tutorial/step2_parsing.html#complete-parser
+
 export function takeEvents(
     entries: CompleteLog["entries"],
     startIdx: number,
