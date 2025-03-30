@@ -6,7 +6,7 @@ import { formatNumber, sortBy } from "@/lib/utils/miscUtils"
 import { alphabetical, max, range, sum } from "radash"
 import { useEffect, useRef } from "react"
 import { GOOD_EQUIPS, PRICES } from "../../constants"
-import { useLog } from "../../logContext"
+import { useStats } from "../../logStatsContext"
 import { TallyTable, TallyTableProps } from "../tallyTable"
 import { IncomeChart } from "./incomeChart"
 
@@ -15,7 +15,7 @@ export function DropInfo(props: { log: CompleteLog }) {
         summary,
         itemDrops: drops,
         itemUsage: usage,
-    } = useLog(props.log, {
+    } = useStats(props.log, {
         summary: true,
         itemDrops: true,
         itemUsage: true,
@@ -25,6 +25,8 @@ export function DropInfo(props: { log: CompleteLog }) {
     if (summary.battleType?.name === "Grindfest") {
         staminaUsage += 1
     }
+
+    console.log("rerender")
 
     return (
         <div className="drop-stats h-full overflow-auto flex flex-col">

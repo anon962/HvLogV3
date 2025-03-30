@@ -1,6 +1,6 @@
 .tally-table {
     font-size: 0.9rem;
-    line-height: 1;
+    line-height: 1.25;
     overflow: auto;
 
     h1 {
@@ -10,6 +10,7 @@
 
     .row {
         display: grid;
+        align-items: center;
     }
 
     .cell,
@@ -91,6 +92,26 @@
 
     .cell:not(:first-child) {
         text-align: right;
+    }
+
+    .tooltip button {
+        width: min-content;
+        position: relative;
+
+        &::after {
+            content: "";
+            position: absolute;
+            bottom: -0.3rem;
+            width: 100%;
+            border-bottom: 3px dashed
+                color-mix(
+                    in oklab,
+                    var(--muted-foreground) 75%,
+                    transparent
+                );
+            left: 0;
+            right: 0;
+        }
     }
 
     .subtable {

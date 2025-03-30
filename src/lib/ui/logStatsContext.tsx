@@ -1,6 +1,5 @@
-import { sleep } from "radash"
-import { createContext, useContext, useEffect, useState } from "react"
-import { CompleteLog, LogDb, LogId } from "../logDb"
+import { createContext, useContext } from "react"
+import { CompleteLog, LogId } from "../logDb"
 import {
     CombatSummary,
     summarizeCombatUsage,
@@ -15,23 +14,26 @@ import {
     summarizeItemUsage,
 } from "../stats/itemUsageStats"
 import { LogSummary, SummaryDb } from "../summaryDb"
+import { ContextProviderProps } from "../utils/typeUtils"
+import { useSummaryDbContext } from "./summaryDbContext"
 
-export const LogContext = createContext<
-    ReturnType<typeof createLogContext>
->(null as any)
+const ctx = createContext<ReturnType<typeof initContext>>(null as any)
 
-export function useLogContext() {
-    return useContext(LogContext)
+export function useLogStatsContext() {
+    return useContext(ctx)
 }
 
-export function createLogContext() {
-    const { logs, loading: logsLoading } = useAllLogs()
+export function LogStatsProvider({ children }: ContextProviderProps) {
+    const db = useSummaryDbContext()
+    const value = initContext(db)
+    return <ctx.Provider value={value}>{children}</ctx.Provider>
+}
 
-    const summaryDb = new SummaryDb()
-    const getSummary = (log: CompleteLog) => summaryDb.get(log)
+function initContext(db: SummaryDb) {
+    const getSummary = (log: CompleteLog) => db.get(log)
 
     const { get: getIndexMap } = useCache((log) => {
-        const { roundIndexes, turnIndexes } = summaryDb.get(log)
+        const { roundIndexes, turnIndexes } = db.get(log)
         return new IndexMap(
             turnIndexes,
             roundIndexes,
@@ -50,50 +52,12 @@ export function createLogContext() {
     )
 
     return {
-        logs,
-        logsLoading,
         getSummary,
         getIndexMap,
         getItemDrops,
         getItemUsage,
         getCombatUsage,
     }
-}
-
-function useAllLogs(refreshDelay = 5000) {
-    const [logs, setLogs] = useState<CompleteLog[]>([])
-    const [loading, setLoading] = useState(true)
-
-    useEffect(() => {
-        const result: CompleteLog[] = []
-        const seen = new Set<string>()
-
-        async function load() {
-            const db = await LogDb.ainit()
-            const iter = db.iterArchive()
-
-            for await (const log of iter) {
-                if (seen.has(log.id)) {
-                    continue
-                }
-
-                seen.add(log.id)
-
-                result.push(log)
-                setLogs([...result])
-            }
-
-            setLoading(false)
-            await sleep(refreshDelay)
-            load()
-        }
-
-        load()
-
-        return () => {}
-    }, [])
-
-    return { logs, loading }
 }
 
 function useCache<T>(generate: (log: CompleteLog) => T): {
@@ -113,7 +77,7 @@ function useCache<T>(generate: (log: CompleteLog) => T): {
     return { cache, get }
 }
 
-interface UseSingleLogOptions {
+export interface UseStatsOptions {
     summary?: boolean
     indexMap?: boolean
     itemDrops?: boolean
@@ -122,7 +86,7 @@ interface UseSingleLogOptions {
 }
 
 // prettier-ignore
-type UseSingleLogReturn<Opts extends UseSingleLogOptions> = {
+export type UseStatsReturn<Opts extends UseStatsOptions> = {
     [K in keyof Opts]:  
         K extends 'summary' ? Opts[K] extends true ?
             LogSummary : undefined :
@@ -137,11 +101,11 @@ type UseSingleLogReturn<Opts extends UseSingleLogOptions> = {
         never
 }
 
-export function useLog<T extends UseSingleLogOptions>(
+export function useStats<T extends UseStatsOptions>(
     log: CompleteLog,
     opts: T
-): UseSingleLogReturn<T> {
-    const ctx = useLogContext()
+): UseStatsReturn<T> {
+    const ctx = useLogStatsContext()
 
     return {
         summary: opts.summary ? ctx.getSummary(log) : undefined,
@@ -151,5 +115,5 @@ export function useLog<T extends UseSingleLogOptions>(
         combatUsage: opts.combatUsage
             ? ctx.getCombatUsage(log)
             : undefined,
-    } as UseSingleLogReturn<T>
+    } as UseStatsReturn<T>
 }

@@ -11,7 +11,7 @@ import {
 } from "@/lib/ui/shadcn/table"
 import { sleep } from "radash"
 import { useEffect, useMemo, useState } from "react"
-import { useLog, useLogContext } from "../logContext"
+import { useStats } from "../logStatsContext"
 
 export function LogSummaryTable(props: {
     onClick?: (log: CompleteLog) => void
@@ -87,7 +87,7 @@ function LogRow(props: {
     selectionIdx: number
     onClick?: (log: CompleteLog) => void
 }) {
-    const { indexMap } = useLog(props.log, {
+    const { indexMap } = useStats(props.log, {
         indexMap: true,
     })
 
@@ -261,8 +261,9 @@ const arenaAliases = {
 } as Record<number, string>
 
 function formatBattleType(log: CompleteLog) {
-    const { getSummary } = useLogContext()
-    const summary = getSummary(log)
+    const { summary } = useStats(log, {
+        summary: true,
+    })
 
     let className, label
 
@@ -314,8 +315,9 @@ function formatBattleType(log: CompleteLog) {
 }
 
 function formatCompletionType(log: CompleteLog) {
-    const { getSummary } = useLogContext()
-    const summary = getSummary(log)
+    const { summary } = useStats(log, {
+        summary: true,
+    })
 
     let round, title
     if (summary.completionType !== "finish" && summary.round) {

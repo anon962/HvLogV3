@@ -1,3 +1,5 @@
+import { ReactNode } from "react"
+
 export type Result<TOk, TError> = [TOk, null] | [null, TError]
 
 export type ValueOf<T extends Record<any, any>> = T[keyof T]
@@ -22,3 +24,7 @@ export type InferGuardType<T> =
     T extends (x: any) => x is infer V ? V : never
 
 export type Or<A, B> = A extends never ? B : A
+
+export interface ContextProviderProps {
+    children: ReactNode
+}

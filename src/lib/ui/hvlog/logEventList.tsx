@@ -12,7 +12,7 @@ import {
 } from "react"
 import { IndexMap } from "../../stats/indexMap"
 import { XIcon } from "../icons/tailwind"
-import { useLog } from "../logContext"
+import { useStats } from "../logStatsContext"
 
 export function LogEventList(props: { log: CompleteLog }) {
     const { rows, loading, indexMap, activeIdx, setActiveIdx } =
@@ -61,7 +61,7 @@ function useRowsAsync(log: CompleteLog) {
 
     const [loading, setLoading] = useState(true)
 
-    const { indexMap } = useLog(log, { indexMap: true })
+    const { indexMap } = useStats(log, { indexMap: true })
 
     useEffect(() => {
         let cancelled = false

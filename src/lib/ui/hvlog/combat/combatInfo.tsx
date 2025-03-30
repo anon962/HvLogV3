@@ -7,11 +7,11 @@ import {
     sortBy,
 } from "@/lib/utils/miscUtils"
 import { sum } from "radash"
-import { useLog } from "../../logContext"
+import { useStats } from "../../logStatsContext"
 import { TallyTable, TallyTableProps } from "../tallyTable"
 
 export function CombatInfo({ log }: { log: CompleteLog }) {
-    const { combatUsage: usage } = useLog(log, {
+    const { combatUsage: usage } = useStats(log, {
         combatUsage: true,
     })
 
@@ -121,6 +121,7 @@ function CastTable(usage: CombatSummary) {
             columns={columns}
             subColumns={subColumns}
             className="casts w-max"
+            hideTotal
         />
     )
 }
@@ -314,6 +315,13 @@ function OffensiveTable(usage: CombatSummary) {
                     return formatNumber(x)
                 }
             },
+            tooltip: (
+                <span>
+                    Average damage per monster hit
+                    <br />
+                    <pre>(total_damage / total_monsters_hit)</pre>
+                </span>
+            ),
         },
         {
             label: "Dmg Raw",
@@ -327,6 +335,14 @@ function OffensiveTable(usage: CombatSummary) {
                     return formatNumber(x)
                 }
             },
+            tooltip: (
+                <span>
+                    Average damage per monster hit,
+                    <br />
+                    before resists and excluding hits that kill the
+                    target
+                </span>
+            ),
         },
         {
             label: "Kill Rate",
@@ -360,6 +376,7 @@ function OffensiveTable(usage: CombatSummary) {
             rows={rows}
             columns={columns}
             className="offensive max-w-[60rem]"
+            hideTotal
         />
     )
 }

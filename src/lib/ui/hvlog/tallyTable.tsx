@@ -1,5 +1,11 @@
 import { enumerate, formatNumber } from "@/lib/utils/miscUtils"
 import { ReactElement, useState } from "react"
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "../shadcn/tooltip"
 
 export interface TallyTableProps<TItem = any, TSubItem = any> {
     label: string
@@ -8,10 +14,12 @@ export interface TallyTableProps<TItem = any, TSubItem = any> {
     columns: TallyTableColumn<TItem>[]
     subColumns?: TallyTableSubColumn<TSubItem>[]
     className?: string
+    hideTotal?: boolean
 }
 
 export interface TallyTableColumn<TItem = any> {
     label: string
+    tooltip?: ReactElement | string
     get: (x: TItem) => number
     format?: (x: number) => string
 }
@@ -41,6 +49,7 @@ export function TallyTable({
     columns,
     subColumns,
     className,
+    hideTotal,
 }: TallyTableProps) {
     // Handle row selection
     const [active, setActive] = useState(new Set<number>())
@@ -67,9 +76,32 @@ export function TallyTable({
     const layoutClasses = `min-w-min rounded-md`
 
     // Headers
-    const columnHeaderEls = columns.map((col) => (
-        <span className="header text-right">{col.label}</span>
-    ))
+    const columnHeaderEls = columns.map((col) => {
+        const className = `header text-right ${
+            col.tooltip ? "tooltip" : ""
+        }`
+
+        return (
+            <span className={className}>
+                {col.tooltip ? (
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger
+                                style={{ textAlign: "inherit" }}
+                            >
+                                {col.label}
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                {col.tooltip}
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
+                ) : (
+                    col.label
+                )}
+            </span>
+        )
+    })
 
     // Rows
     const { rowEls, totals } = rows.reduce(
@@ -102,26 +134,38 @@ export function TallyTable({
         }
     )
 
-    // Column totals
-    const totalEls = totals.map((x, idx) => {
-        let label
-        if (columns[idx].format) {
-            label = columns[idx].format(x)
-        } else if (x > 1000) {
-            label = formatNumber(x)
-        } else if (x < 1) {
-            label = Math.trunc(x * 100) / 100
-        } else {
-            label = String(x)
-        }
-
-        return (
-            <span className="count footer text-right">{label}</span>
-        )
-    })
-
     const gridCss = {
         gridTemplateColumns: `minmax(125px, 1fr) repeat(${columns.length}, minmax(min-content, 1fr))`,
+    }
+
+    // Column totals
+    let totalRow: ReactElement | null = null
+    if (!hideTotal) {
+        const totalEls = totals.map((x, idx) => {
+            let label
+            if (columns[idx].format) {
+                label = columns[idx].format(x)
+            } else if (x >= 1000) {
+                label = formatNumber(x)
+            } else if (x < 1) {
+                label = Math.trunc(x * 100) / 100
+            } else {
+                label = Math.trunc(x * 10) / 10
+            }
+
+            return (
+                <span className="count footer text-right">
+                    {label}
+                </span>
+            )
+        })
+
+        totalRow = (
+            <div className="row" style={gridCss}>
+                <span className="category footer">Total</span>
+                {...totalEls}
+            </div>
+        )
     }
 
     return (
@@ -137,12 +181,9 @@ export function TallyTable({
                 </div>
 
                 {...rowEls}
-
-                <div className="row" style={gridCss}>
-                    <span className="category footer">Total</span>
-                    {...totalEls}
-                </div>
             </div>
+
+            {totalRow}
         </section>
     )
 }
