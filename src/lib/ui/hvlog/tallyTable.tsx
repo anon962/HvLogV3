@@ -64,7 +64,7 @@ export function TallyTable({
     const titleRowClasses = `row ${
         active.has(0) ? "next-active" : ""
     }`
-    const layoutClasses = `w-auto rounded-md`
+    const layoutClasses = `min-w-min rounded-md`
 
     // Headers
     const columnHeaderEls = columns.map((col) => (
@@ -133,14 +133,14 @@ export function TallyTable({
                     <span className="category header">
                         {categoryLabel ?? "Category"}
                     </span>
-                    {columnHeaderEls}
+                    {...columnHeaderEls}
                 </div>
 
-                {rowEls}
+                {...rowEls}
 
                 <div className="row" style={gridCss}>
                     <span className="category footer">Total</span>
-                    {totalEls}
+                    {...totalEls}
                 </div>
             </div>
         </section>
@@ -215,7 +215,7 @@ function Row({
         >
             <span className="category cell">{row.label}</span>
 
-            {cells}
+            {...cells}
 
             {subTable}
         </div>

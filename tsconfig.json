@@ -17,6 +17,7 @@
         "./src/*"
       ]
     },
-    "jsx": "react-jsxdev"
+    "jsx": "react-jsxdev",
+    "allowImportingTsExtensions": true
   }
 }

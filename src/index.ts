@@ -1,10 +1,8 @@
-// @ts-ignore
-import entryHtml from "../dist/ui/src/lib/ui/hvlog/main.html?raw"
-// @ts-ignore
-import entryJs from "../dist/ui/ui.js?raw"
-
+import React from "react"
+import { createRoot } from "react-dom/client"
 import { App } from "./lib/app/app"
 import { registerViewLogs } from "./lib/app/registerViewLogs"
+import { HvLog } from "./lib/ui/hvlog/hvLog.tsx"
 
 // @todo: combat - usage chart (attacks, debuffs, heals, other)
 // @todo: combat - resist distribution (debuffs, other)
@@ -34,7 +32,7 @@ async function main() {
 
     switch (window.location.pathname) {
         case "/hvlog/logs":
-            return await routeLogViewer(app)
+            return await routeUi(app)
         default:
             await app.runLogger()
     }
@@ -46,9 +44,17 @@ declare global {
     }
 }
 
-async function routeLogViewer(app: App) {
-    document.write(entryHtml)
-    eval(entryJs)
+async function routeUi(app: App) {
+    const rootEl = document.createElement("div")
+    document.body.innerHTML = rootEl.outerHTML
+
+    const rootComponent = React.createElement(HvLog)
+    createRoot(document.querySelector("body > div")!).render(
+        rootComponent
+    )
+
+    document.body.classList.add("dark")
+    document.title = "HvLog"
 }
 
 main()

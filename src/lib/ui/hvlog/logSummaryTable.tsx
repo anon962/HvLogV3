@@ -26,6 +26,7 @@ export function LogSummaryTable(props: {
     const logEls = props.logs.map((log, idx) => {
         return (
             <LogRow
+                key={log.id}
                 log={log}
                 now={now}
                 {...log}

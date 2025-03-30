@@ -63,7 +63,7 @@ function ResizableHandle({
                         padding: "0.3rem 0.2rem",
                     }}
                 >
-                    {range(5).map((_) => (
+                    {...[...range(5)].map((_) => (
                         <div className="size-0.75 rounded-full bg-foreground/80"></div>
                     ))}
                 </div>

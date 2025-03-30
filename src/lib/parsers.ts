@@ -116,7 +116,7 @@ const Word = (name: string) => Group(name, "[\\w\\s\\-]+")
 const Words = (name: string) => Group(name, "[\\w\\s\\- ]+")
 const Monster = () => Group("monster", "[\\w\\s\\-+]+") // "New Game +" is a valid monster name
 
-const Resist = "(?: \\((?<resist>d+)% resisted\\))?"
+const Resist = "(?: \\((?<resist>\\d+)% resisted\\))?"
 const EnemySpell = `${Monster()} ${Group(
     "spell_verb",
     "casts|uses"
@@ -195,7 +195,7 @@ export const PARSERS = {
         }
     ),
     PLAYER_SPELL_ABSORBED: new EventParser(
-        "PLAYER_OFFHAND",
+        "PLAYER_SPELL_ABSORBED",
         `Your spell is absorbed\\.`,
         {}
     ),

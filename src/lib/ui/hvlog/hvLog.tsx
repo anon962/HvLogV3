@@ -5,8 +5,7 @@ import {
     ResizablePanelGroup,
 } from "@/lib/ui/shadcn/resizable"
 import { alphabetical } from "radash"
-import { createContext, StrictMode, useMemo } from "react"
-import { createRoot } from "react-dom/client"
+import { createContext, StrictMode, useEffect, useMemo } from "react"
 import { createLogContext, LogContext } from "../logContext"
 import { useLocalJsonState } from "./hooks"
 import { LogDetailsPane } from "./logDetailsPane"
@@ -14,13 +13,7 @@ import { LogSummaryTable } from "./logSummaryTable"
 
 export const AppContext = createContext(window.HV_LOG)
 
-function main() {
-    createRoot(document.getElementById("root")!).render(
-        <HvLog></HvLog>
-    )
-}
-
-function HvLog() {
+export function HvLog() {
     const [selectedLogId, setSelectedLog] = useLocalJsonState(
         "",
         "hvlog_selected_log"
@@ -33,6 +26,11 @@ function HvLog() {
     const selectionIdx = logsSorted.findIndex(
         (l) => l.id === selectedLogId
     )
+
+    useEffect(() => {
+        // @ts-ignore
+        window.HV_LOG_INIT_STYLES()
+    }, [])
 
     return (
         <StrictMode>
@@ -71,5 +69,3 @@ function HvLog() {
         </StrictMode>
     )
 }
-
-main()

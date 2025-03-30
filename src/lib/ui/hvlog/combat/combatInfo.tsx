@@ -10,7 +10,6 @@ export function CombatInfo({ log }: { log: CompleteLog }) {
         combatUsage: true,
     })
 
-    console.log(usage, log)
     return (
         <div className="combat-info p-8">
             {CastTable(usage)}
@@ -116,7 +115,7 @@ function CastTable(usage: CombatSummary) {
             rows={rows}
             columns={columns}
             subColumns={subColumns}
-            className="casts max-w-60"
+            className="casts max-w-[30rem]"
         />
     )
 }
@@ -127,6 +126,7 @@ type OffensiveTableData = TallyTableProps<{
     resistRate: number
     killRate: number
     hitRate: number
+    hitCount: number
 }>
 
 function OffensiveTable(usage: CombatSummary) {
@@ -142,9 +142,9 @@ function OffensiveTable(usage: CombatSummary) {
 
         switch (group.label) {
             case "Spells":
-                for (const [spell, castsForSpell] of casts) {
+                for (const [label, castsForSpell] of casts) {
                     const effects = castsForSpell.flatMap(
-                        (cast) => cast.spell || []
+                        (cast) => cast.spell ?? []
                     )
 
                     const damageEffects = effects
@@ -158,15 +158,19 @@ function OffensiveTable(usage: CombatSummary) {
                     const damageLethal = avg(lethalCasts)
 
                     const resist = avg(
-                        castsForSpell
-                            .flatMap((cast) => cast.spell || [])
-                            .map((effect) => effect.resist)
+                        effects.map((effect) => effect.resist)
                     )
 
                     const misses = effects.filter((x) => x.miss)
 
+                    const hitCount = avg(
+                        castsForSpell.map(
+                            (cast) => (cast.spell ?? []).length
+                        )
+                    )
+
                     rows.push({
-                        label: spell,
+                        label,
                         value: {
                             damage,
                             damageLethal,
@@ -174,6 +178,7 @@ function OffensiveTable(usage: CombatSummary) {
                             resistRate: resist,
                             killRate:
                                 lethalCasts.length / effects.length,
+                            hitCount,
                         },
                     })
                 }
@@ -234,6 +239,7 @@ function OffensiveTable(usage: CombatSummary) {
                             resistRate: 0,
                             killRate:
                                 lethalCasts.length / effects.length,
+                            hitCount: 1,
                         },
                     })
                 }
@@ -241,7 +247,7 @@ function OffensiveTable(usage: CombatSummary) {
             case "Passive Attacks":
                 for (const [spell, castsForSpell] of casts) {
                     const effects = castsForSpell.flatMap(
-                        (cast) => cast.spell || []
+                        (cast) => cast.spell ?? []
                     )
 
                     const damageEffects = effects
@@ -263,6 +269,7 @@ function OffensiveTable(usage: CombatSummary) {
                             resistRate: 0,
                             killRate:
                                 lethalCasts.length / effects.length,
+                            hitCount: 1,
                         },
                     })
                 }
@@ -273,15 +280,15 @@ function OffensiveTable(usage: CombatSummary) {
     rows = sortBy(rows, [{ fn: (r) => r.value.damage }]).reverse()
 
     const columns: OffensiveTableData["columns"] = [
-        { label: "Avg Damage (non-lethal)", get: (x) => x.damage },
-        { label: "Avg Damage (lethal)", get: (x) => x.damageLethal },
+        { label: "Damage (non-lethal)", get: (x) => x.damage },
+        { label: "Damage (lethal)", get: (x) => x.damageLethal },
         {
             label: "Kill Rate",
             get: (x) => x.killRate,
             format: (x) => `${Math.round(x * 100)}%`,
         },
         {
-            label: "Resist / Parry Rate",
+            label: "Resist Rate",
             get: (x) => x.resistRate,
             format: (x) => `${Math.round(x)}%`,
         },
@@ -289,6 +296,11 @@ function OffensiveTable(usage: CombatSummary) {
             label: "Hit Rate",
             get: (x) => x.hitRate,
             format: (x) => `${Math.round(x * 100)}%`,
+        },
+        {
+            label: "# Targets",
+            get: (x) => x.hitCount,
+            format: (x) => `${Math.round(x * 10) / 10}`,
         },
     ]
 

@@ -32,7 +32,7 @@ export function LogEventList(props: { log: CompleteLog }) {
                 onClick={() => setActiveIdx(-1)}
                 className="flex flex-col h-full overflow-auto"
             >
-                {rows}
+                {...rows}
             </div>
 
             {props.log.entries[activeIdx] && (
@@ -231,7 +231,7 @@ function EventRowContainer(
         )
     }
 
-    return <>{els}</>
+    return <>{...els}</>
 }
 
 function EventRow(props: {
@@ -252,19 +252,23 @@ function EventRow(props: {
                       )
                     : JSON.stringify(props.entry.event)
 
-            content = [
-                <pre className="event-type">
-                    {props.entry.event.event_type}
-                </pre>,
-                <pre className="event-detail">{summary}</pre>,
-            ]
+            content = (
+                <>
+                    <pre className="event-type">
+                        {props.entry.event.event_type}
+                    </pre>
+                    <pre className="event-detail">{summary}</pre>
+                </>
+            )
         } else {
-            content = [
-                <pre className="event-type">ERROR</pre>,
-                <pre className="event-detail">
-                    {props.entry.detail}
-                </pre>,
-            ]
+            content = (
+                <>
+                    <pre className="event-type">ERROR</pre>
+                    <pre className="event-detail">
+                        {props.entry.detail}
+                    </pre>
+                </>
+            )
         }
 
         return (
@@ -361,6 +365,7 @@ const EVENT_SUMMARY_MAP = {
         `Dealt ${ev.value} ${ev.damage_type} damage`,
     PLAYER_MISS: (ev) => ``,
     PLAYER_SKILL: (ev) => `Cast ${ev.spell}`,
+    PLAYER_SPELL_ABSORBED: (ev) => ``,
     PROFICIENCY: (ev) => `Dropped ${ev.value} ${ev.type}`,
     RESIST: (ev) => `100% resist`,
     RIDDLE_MASTER: (ev) => ``,
