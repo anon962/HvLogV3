@@ -9,6 +9,7 @@ export function parseLine(
     for (const parser of ALL_PARSERS) {
         const [result, err] = parser.parse(line)
         if (result !== null) {
+            // console.debug(line, result)
             return [result, null]
         } else if (err) {
             errors.push(err.detail)
@@ -121,19 +122,12 @@ const EnemySpell = `${Monster()} ${Group(
     "casts|uses"
 )} ${Words("spell")}`
 
+// prettier-ignore
 export const PARSERS = {
-    // Actions
+    // Actions1232
     PLAYER_ATTACK: new EventParser(
         "PLAYER_ATTACK",
-        `${Words("spell")} ${Mult(
-            "hits",
-            "crits",
-            "blasts"
-        )} (?!you)${Monster()} for ${Num(
-            "value"
-        )} (?:points of )?(?:${Word(
-            "damage_type"
-        )} )?damage${Resist}\\.?`,
+        `^(?!Your)${Words("spell")} ${Mult("hits", "crits", "blasts")} (?!you)${Monster()} for ${Num("value")} (?:points of )?(?:${Word("damage_type")} )?damage${Resist}\\.?`,
         {
             spell: t("string"),
             multiplier_type: t("string"),
@@ -165,21 +159,50 @@ export const PARSERS = {
     ),
     PLAYER_DODGE: new EventParser(
         "PLAYER_DODGE",
-        `You ${Mult(
-            "evade",
-            "parry"
-        )} the attack from ${Monster()}\\.`,
+        `You ${Mult("evade", "parry")} the attack from ${Monster()}\\.`,
         {
             multiplier_type: t("string"),
             monster: t("string"),
         }
     ),
+    PLAYER_MELEE: new EventParser(
+        "PLAYER_MELEE",
+        `You ${Mult("hit", "crit")} ${Monster()} for ${Num("value")} ${Word("damage_type")} damage\\.`,
+        {
+            multiplier_type: t('string'),
+            monster: t("string"),
+            value: t("number"),
+            damage_type: t("string"),
+        }
+    ),
+    PLAYER_COUNTER: new EventParser(
+        "PLAYER_COUNTER",
+        `You counter ${Monster()} for ${Num("value")} points of ${Word("damage_type")} damage\\.`,
+        {
+            monster: t("string"),
+            value: t("number"),
+            damage_type: t("string"),
+        }
+    ),
+    PLAYER_OFFHAND: new EventParser(
+        "PLAYER_OFFHAND",
+        `Your offhand ${Mult("hits", "crits")} ${Monster()} for ${Num("value")} ${Word("damage_type")} damage\\.`,
+        {
+            multiplier_type: t('string'),
+            monster: t("string"),
+            value: t("number"),
+            damage_type: t("string"),
+        }
+    ),
+    PLAYER_SPELL_ABSORBED: new EventParser(
+        "PLAYER_OFFHAND",
+        `Your spell is absorbed\\.`,
+        {}
+    ),
 
     ENEMY_BASIC: new EventParser(
         "ENEMY_BASIC",
-        `${Monster()} ${Mult("hits", "crits")} you for ${Num(
-            "value"
-        )} ${Word("damage_type")} damage\\.`,
+        `${Monster()} ${Mult("hits", "crits")} you for ${Num("value")} ${Word("damage_type")} damage\\.`,
         {
             monster: t("string"),
             multiplier_type: t("string"),
@@ -187,11 +210,23 @@ export const PARSERS = {
             damage_type: t("string"),
         }
     ),
+    ENEMY_EVADE: new EventParser(
+        "ENEMY_EVADE",
+        `${Monster()} evades your spell.`,
+        {
+            monster: t("string")
+        }
+    ),
+    ENEMY_MISS: new EventParser(
+        "ENEMY_MISS",
+        `${Monster()} misses the attack against you.`,
+        {
+            monster: t("string")
+        }
+    ),
     ENEMY_SKILL_ABSORB: new EventParser(
         "ENEMY_SKILL_ABSORB",
-        `${EnemySpell}, but is ${Mult("absorb")}ed\\. You gain ${Word(
-            "mp"
-        )} Magic Points.`,
+        `${EnemySpell}, but is ${Mult("absorb")}ed\\. You gain ${Word("mp")} Magic Points.`,
         {
             monster: t("string"),
             spell_verb: t("string"),
@@ -202,10 +237,7 @@ export const PARSERS = {
     ),
     ENEMY_SKILL_MISS: new EventParser(
         "ENEMY_SKILL_MISS",
-        `${EnemySpell}\\. You ${Mult(
-            "evade",
-            "parry"
-        )} the attack\\.`,
+        `${EnemySpell}\\. You ${Mult("evade", "parry")} the attack\\.`,
         {
             monster: t("string"),
             spell_verb: t("string"),
@@ -215,9 +247,7 @@ export const PARSERS = {
     ),
     ENEMY_SKILL_SUCCESS: new EventParser(
         "ENEMY_SKILL_SUCCESS",
-        `${EnemySpell}, and ${Mult("hits", "crits")} you for ${Num(
-            "value"
-        )} ${Word("damage_type")} damage${Resist}\\.?`,
+        `${EnemySpell}, and ${Mult("hits", "crits")} you for ${Num("value")} ${Word("damage_type")} damage${Resist}\\.?`,
         {
             monster: t("string"),
             spell_verb: t("string"),
@@ -237,9 +267,7 @@ export const PARSERS = {
     ),
     RIDDLE_RESTORE: new EventParser(
         "RIDDLE_RESTORE",
-        `Time Bonus: Recovered ${Num("hp")} HP, ${Num(
-            "mp"
-        )} MP and ${Num("sp")} SP\\.`,
+        `Time Bonus: Recovered ${Num("hp")} HP, ${Num("mp")} MP and ${Num("sp")} SP\\.`,
         {
             hp: t("number"),
             mp: t("number"),
@@ -248,9 +276,7 @@ export const PARSERS = {
     ),
     EFFECT_RESTORE: new EventParser(
         "EFFECT_RESTORE",
-        `${Words("effect")} restores ${Num("value")} points of ${Word(
-            "type"
-        )}\\.`,
+        `${Words("effect")} restores ${Num("value")} points of ${Word("type")}\\.`,
         {
             effect: t("string"),
             value: t("number"),
@@ -272,11 +298,7 @@ export const PARSERS = {
 
     SPIRIT_SHIELD: new EventParser(
         "SPIRIT_SHIELD",
-        `Your spirit shield absorbs ${Num(
-            "damage"
-        )} points of damage from the attack into ${Num(
-            "spirit_damage"
-        )} points of spirit damage\\.`,
+        `Your spirit shield absorbs ${Num("damage")} points of damage from the attack into ${Num("spirit_damage")} points of spirit damage\\.`,
         {
             damage: t("number"),
             spirit_damage: t("number"),
@@ -325,9 +347,7 @@ export const PARSERS = {
     ),
     DEBUFF_EXPIRE: new EventParser(
         "DEBUFF_EXPIRE",
-        `The effect ${Words(
-            "effect"
-        )} on ${Monster()} has expired\\.`,
+        `The effect ${Words("effect")} on ${Monster()} has expired\\.`,
         {
             effect: t("string"),
             monster: t("string"),
@@ -337,12 +357,7 @@ export const PARSERS = {
     // Info
     ROUND_START: new EventParser(
         "ROUND_START",
-        `Initializing ${Group(
-            "battle_type",
-            "[\\w\\s\\d#]+"
-        )}(?: \\\(Round ${Num("current")} / ${Num(
-            "max"
-        )}\\\))? \\.\\.\\.`,
+        `Initializing ${Group("battle_type", "[\\w\\s\\d#]+")}(?: \\\(Round ${Num("current")} / ${Num("max")}\\\))? \\.\\.\\.`,
         {
             battle_type: t("string"),
             current: t("number").optional(),
@@ -366,9 +381,7 @@ export const PARSERS = {
     ),
     SPAWN: new EventParser(
         "SPAWN",
-        `Spawned Monster ${Group("letter", "[A-Z]")}: MID=${Num(
-            "mid"
-        )} \\\(${Monster()}\\\) LV=${Num("level")} HP=${Num("hp")}`,
+        `Spawned Monster ${Group("letter", "[A-Z]")}: MID=${Num("mid")} \\\(${Monster()}\\\) LV=${Num("level")} HP=${Num("hp")}`,
         {
             letter: t("string"),
             mid: t("number"),
@@ -437,11 +450,7 @@ export const PARSERS = {
     ),
     AUTO_SALVAGE: new EventParser(
         "AUTO_SALVAGE",
-        `A traveling salesmoogle salvages it into ${Num(
-            "value"
-        )}x \\[${Words("item")}\\](?: and ${Num(
-            "value2"
-        )}x \\[${Words("item2")}\\])`,
+        `A traveling salesmoogle salvages it into ${Num("value")}x \\[${Words("item")}\\](?: and ${Num("value2")}x \\[${Words("item2")}\\])`,
         {
             value: t("number"),
             item: t("string"),
@@ -451,9 +460,7 @@ export const PARSERS = {
     ),
     AUTO_SELL: new EventParser(
         "AUTO_SELL",
-        `A traveling salesmoogle gives you \\[${Num(
-            "value"
-        )} Credits\\] for it\\.`,
+        `A traveling salesmoogle gives you \\[${Num("value")} Credits\\] for it\\.`,
         {
             value: t("number"),
         }
@@ -498,6 +505,7 @@ const parserFrequency = {
     PLAYER_ATTACK: 10311,
     SPAWN: 8383,
     MONSTER_DEATH: 8383,
+    PLAYER_MELEE: 6326,
     PLAYER_SKILL: 6326,
     ENEMY_BASIC: 5235,
     DROP: 4580,

@@ -1,4 +1,4 @@
-import { range, sleep, zip } from "radash"
+import { range, sleep, sum, zip } from "radash"
 import { InferGuardType, Or } from "./typeUtils"
 
 export function split<T, TPass extends T = T, TFail extends T = T>(
@@ -163,8 +163,14 @@ export function sortBy<TItem = any>(
     return sorted.map((x) => x.x)
 }
 
-export function formatNumber(x: number, sign?: boolean) {
-    const digits = [...Math.trunc(x).toString()]
+export function formatNumber(x: number, alwaysShowSign?: boolean) {
+    // prettier-ignore
+    const sgn =
+        x < 0 ? "-" :
+        alwaysShowSign ? "+" :
+        ""
+
+    const digits = [...Math.trunc(Math.abs(x)).toString()]
         .reverse()
         .reduce((acc, digit, idx) => {
             if (idx % 3 === 0 && idx > 0) {
@@ -176,13 +182,7 @@ export function formatNumber(x: number, sign?: boolean) {
             return acc
         }, [] as string[])
 
-    let asStr = digits.reverse().join("")
-
-    if (sign !== undefined) {
-        asStr = (x < 0 ? "-" : "+") + asStr
-    }
-
-    return asStr
+    return sgn + digits.reverse().join("")
 }
 
 export function takeWhile<
@@ -237,4 +237,12 @@ export function setDefault<
 >(record: TRecord, key: TKey, value: TRecord[TKey]): TRecord[TKey] {
     record[key] = record[key] ?? value
     return record[key]
+}
+
+export function avg(xs: number[]) {
+    if (xs.length === 0) {
+        return 0
+    }
+
+    return sum(xs) / xs.length
 }

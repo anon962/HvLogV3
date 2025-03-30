@@ -1,3 +1,4 @@
+import { range, sum } from "radash"
 import { EventGrammar, takeEvents } from "../eventGrammar"
 import { CompleteLog, LogEntry } from "../logDb"
 import { HvEvent, HvEventMap } from "../parsers"
@@ -5,7 +6,7 @@ import {
     EventSummary,
     EventSummaryData,
 } from "../ui/hvlog/eventSummary"
-import { setDefault } from "../utils/miscUtils"
+import { enumerate, setDefault } from "../utils/miscUtils"
 
 export function summarizeCombatUsage(
     log: CompleteLog
@@ -17,6 +18,7 @@ export function summarizeCombatUsage(
     const healKeys = new Set<string>()
     const buffKeys = new Set<string>()
     const passiveHealKeys = new Set<string>()
+    const passiveAttackKeys = new Set<string>()
 
     const xs = log.entries
     for (let idx = 0; idx < xs.length; idx++) {
@@ -27,14 +29,19 @@ export function summarizeCombatUsage(
         const ev = entry.event
 
         // Offense
-        const offenseData = takeEntries(xs, idx, "cast", "offense")
+        const offenseData = takeEntriesWithRoot(
+            xs,
+            idx,
+            "cast",
+            "offense"
+        )
         if (offenseData) {
             const { cast, effects } = offenseData as {
                 cast: HvEventMap["PLAYER_SKILL"]
                 effects: HvEvent[][]
             }
 
-            const effectSummary: CombatSummaryData["offense"] = []
+            const effectSummary: CombatSummaryData["spell"] = []
 
             for (const grp of effects) {
                 const attack = grp.find(
@@ -51,12 +58,8 @@ export function summarizeCombatUsage(
                 )
                 effectSummary.push({
                     value: attack?.value ?? 0,
-                    resist:
-                        resist || miss
-                            ? 100
-                            : attack?.resist
-                            ? attack.resist
-                            : 0,
+                    miss: !!miss,
+                    resist: resist ? 100 : attack?.resist ?? 0,
                     kill: !!death,
                 })
             }
@@ -64,17 +67,22 @@ export function summarizeCombatUsage(
             setDefault(data, cast.spell, []).push({
                 key: cast.spell,
                 logIdx: idx,
-                offense: effectSummary,
+                spell: effectSummary,
             })
 
             offenseKeys.add(cast.spell)
 
-            idx += effects.length
+            idx += sum(effects, (xs) => xs.length)
             continue
         }
 
         // Debuffs
-        const debuffData = takeEntries(xs, idx, "cast", "debuff")
+        const debuffData = takeEntriesWithRoot(
+            xs,
+            idx,
+            "cast",
+            "debuff"
+        )
         if (debuffData) {
             const { cast, effects } = debuffData as {
                 cast: HvEventMap["PLAYER_SKILL"]
@@ -98,12 +106,12 @@ export function summarizeCombatUsage(
 
             debuffKeys.add(cast.spell)
 
-            idx += effects.length
+            idx += sum(effects, (xs) => xs.length)
             continue
         }
 
         // Supportive
-        const supportiveData = takeEntries(
+        const supportiveData = takeEntriesWithRoot(
             xs,
             idx,
             "supportiveCast",
@@ -173,9 +181,100 @@ export function summarizeCombatUsage(
                 healKeys.add(key)
             }
 
-            idx += effects.length
+            idx += sum(effects, (xs) => xs.length)
             continue
         }
+
+        // Melee attacks
+        const isStaffBonk =
+            ev.event_type === "PLAYER_ATTACK" &&
+            ev.spell === "Arcane Blow"
+        if (ev.event_type === "PLAYER_MELEE" || isStaffBonk) {
+            const effects = takeEntries(xs, idx, "offense")
+
+            const effectSummary: CombatSummaryData["melee"] = {
+                primary: {
+                    name: isStaffBonk ? "Arcane Blow" : "Main Hand",
+                    value: ev.value,
+                    miss: false,
+                    kill: false,
+                },
+                secondary: [],
+            }
+            for (const [idx, grp] of enumerate(effects)) {
+                const attack = grp.find(
+                    (ev) => ev.event_type === "PLAYER_ATTACK"
+                )
+                const offhand = grp.find(
+                    (ev) => ev.event_type === "PLAYER_OFFHAND"
+                )
+                const miss = grp.find(
+                    (ev) => ev.event_type === "PLAYER_MISS"
+                )
+                const death = grp.find(
+                    (ev) => ev.event_type === "MONSTER_DEATH"
+                )
+
+                if (idx === 0 && !attack && !offhand) {
+                    effectSummary.primary.miss = !!miss
+                    effectSummary.primary.kill = !!death
+                } else {
+                    effectSummary.secondary.push({
+                        name: // prettier-ignore
+                            offhand ? "Offhand" :
+                            attack ? attack.spell :
+                            "Unknown",
+                        value: attack?.value ?? 0,
+                        miss: !!miss,
+                        kill: !!death,
+                    })
+                }
+            }
+
+            setDefault(data, "Melee Attacks", []).push({
+                key: "Melee Attacks",
+                logIdx: idx,
+                melee: effectSummary,
+            })
+
+            idx += sum(effects, (xs) => xs.length) - 1
+            continue
+        }
+
+        // Passive attacks (eg spike shield, DoTs)
+        if (ev.event_type === "PLAYER_ATTACK") {
+            passiveAttackKeys.add(ev.spell)
+
+            let kill = false
+            const nextEntry = xs[0]
+            if (
+                nextEntry?.type === "event" &&
+                nextEntry?.event.event_type === "MONSTER_DEATH"
+            ) {
+                kill = true
+            }
+
+            setDefault(data, "Passive Attacks", []).push({
+                key: "Passive Attacks",
+                logIdx: idx,
+                passiveAttack: {
+                    value: ev.value,
+                    kill,
+                },
+            })
+
+            idx += kill ? 1 : 0
+            continue
+        }
+    }
+
+    for (let idx = 0; idx < xs.length; idx++) {
+        const entry = log.entries[idx]
+        if (entry.type !== "event") {
+            continue
+        }
+
+        const ev = entry.event
 
         // Draughts / Regen / Riddlemaster
         const healTypes = new Set([
@@ -231,7 +330,7 @@ export function summarizeCombatUsage(
         data,
         groups: [
             {
-                label: "Offense",
+                label: "Spells",
                 has: (d) => offenseKeys.has(d.key),
             },
             {
@@ -254,11 +353,19 @@ export function summarizeCombatUsage(
                 label: "Times Sparked",
                 has: (d) => d.key === "SPARK_TRIGGER",
             },
+            {
+                label: "Melee Attacks",
+                has: (d) => d.key === "Melee Attacks",
+            },
+            {
+                label: "Passive Attacks",
+                has: (d) => passiveAttackKeys.has(d.key),
+            },
         ],
     }
 }
 
-function takeEntries(
+function takeEntriesWithRoot(
     entries: LogEntry[],
     startIdx: number,
     rootRef: keyof typeof CAST_GRAMMAR,
@@ -280,22 +387,41 @@ function takeEntries(
     }
 
     const effects = firstEffects.length ? [firstEffects] : []
+    effects.push(
+        ...takeEntries(
+            entries,
+            startIdx + 1 + firstEffects.length,
+            effectRef
+        )
+    )
+
+    return {
+        cast,
+        effects,
+    }
+}
+
+function takeEntries(
+    entries: LogEntry[],
+    startIdx: number,
+    effectRef: keyof typeof CAST_GRAMMAR
+): HvEvent[][] {
+    const effects = []
+    let offset = 0
 
     while (true) {
         const nextEffects = takeEvents(
             entries,
-            startIdx + 1 + effects.length,
+            startIdx + offset,
             [{ refs: [effectRef] }],
             CAST_GRAMMAR
         )
 
         if (nextEffects) {
             effects.push(nextEffects)
+            offset += nextEffects.length
         } else {
-            return {
-                cast,
-                effects,
-            }
+            return effects
         }
     }
 }
@@ -306,8 +432,26 @@ const CAST_GRAMMAR = {
         { keys: ["PLAYER_SKILL"] },
     ],
     offense: [
-        { keys: ["PLAYER_ATTACK", "PLAYER_MISS", "MONSTER_DEATH"] },
-        { keys: ["DEBUFF"], optional: true }, 
+        { refs: ["offenseMiss", "offenseHit"] },
+    ],
+    offenseMiss: [
+        { keys: ["PLAYER_MISS", "ENEMY_EVADE"] },
+    ],
+    offenseHit: [
+        { keys: ["PLAYER_ATTACK", "PLAYER_OFFHAND"] },
+        // Debuffs can occur an indefinite number of times
+        // but currently no way to express that in the grammar
+        // so just add it a bunch times as optional
+        ...[...range(15)].map(() => 
+            ({ keys: [
+                "MONSTER_DEATH" as const,
+                "DEBUFF" as const,
+                "PLAYER_SPELL_ABSORBED" as const,
+            ],
+                optional: true 
+            })
+        ),
+
     ],
     debuff: [
         { keys: ["DEBUFF", "RESIST"] },
@@ -326,19 +470,22 @@ export type CombatSummary = EventSummary<
     CombatSummaryData,
     Array<{
         label:
-            | "Offense"
+            | "Spells"
             | "Debuffs"
             | "Heals"
             | "Buffs"
             | "Passive Heals"
             | "Times Sparked"
+            | "Melee Attacks"
+            | "Passive Attacks"
         has: (d: CombatSummaryData) => boolean
     }>
 >
 
 type CombatSummaryData = EventSummaryData<{
-    offense?: Array<{
+    spell?: Array<{
         value: number
+        miss: boolean
         resist: number
         kill: boolean
     }>
@@ -355,4 +502,22 @@ type CombatSummaryData = EventSummaryData<{
     debuff?: boolean[]
     buff?: boolean
     spark?: boolean
+    melee?: {
+        primary: {
+            name: string
+            value: number
+            miss: boolean
+            kill: boolean
+        }
+        secondary: Array<{
+            name: string
+            value: number
+            miss: boolean
+            kill: boolean
+        }>
+    }
+    passiveAttack?: {
+        value: number
+        kill: boolean
+    }
 }>

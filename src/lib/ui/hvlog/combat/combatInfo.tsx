@@ -1,6 +1,6 @@
 import { CompleteLog } from "@/lib/logDb"
 import { CombatSummary } from "@/lib/stats/combatStats"
-import { sortBy } from "@/lib/utils/miscUtils"
+import { avg, setDefault, sortBy } from "@/lib/utils/miscUtils"
 import { sum } from "radash"
 import { useLog } from "../../logContext"
 import { TallyTable, TallyTableProps } from "../tallyTable"
@@ -10,12 +10,23 @@ export function CombatInfo({ log }: { log: CompleteLog }) {
         combatUsage: true,
     })
 
-    console.log(usage)
-    return <div className="p-8">{CombatUsageTableWrapper(usage)}</div>
+    console.log(usage, log)
+    return (
+        <div className="combat-info p-8">
+            {CastTable(usage)}
+
+            {OffensiveTable(usage)}
+        </div>
+    )
 }
 
-function CombatUsageTableWrapper(usage: CombatSummary) {
-    let rows = [] as CombatUsageTable["rows"]
+type CastTableData = TallyTableProps<
+    { count: number },
+    { label: string; count: number }
+>
+
+function CastTable(usage: CombatSummary) {
+    let rows = [] as CastTableData["rows"]
 
     const castsForGroup = (group: CombatSummary["groups"][number]) =>
         Object.entries(usage.data).flatMap(([spell, allCasts]) =>
@@ -36,8 +47,8 @@ function CombatUsageTableWrapper(usage: CombatSummary) {
             ([spell, castsForSpell]) => {
                 const count = castsForSpell.filter((cast) => {
                     switch (group.label) {
-                        case "Offense":
-                            return !!cast.offense
+                        case "Spells":
+                            return !!cast.spell
                         case "Debuffs":
                             return !!cast.debuff
                         case "Heals":
@@ -48,6 +59,8 @@ function CombatUsageTableWrapper(usage: CombatSummary) {
                             return !!cast.effectHeals
                         case "Times Sparked":
                             return !!cast.spark
+                        case "Melee Attacks":
+                            return !!cast.melee
                     }
                 }).length
 
@@ -80,6 +93,7 @@ function CombatUsageTableWrapper(usage: CombatSummary) {
             },
             subValues,
             selectable: subValues.length > 0,
+            disabled: subValues.length === 0,
         })
     }
 
@@ -88,12 +102,194 @@ function CombatUsageTableWrapper(usage: CombatSummary) {
         { fn: (r) => r.label, reverse: true },
     ]).reverse()
 
-    const columns: CombatUsageTable["columns"] = [
-        { label: "Casts", get: (x) => x.count },
+    const columns: CastTableData["columns"] = [
+        { label: "Turns", get: (x) => x.count },
     ]
-    const subColumns: CombatUsageTable["subColumns"] = [
+    const subColumns: CastTableData["subColumns"] = [
         { label: "Spell", get: (x) => x.label, align: "left" },
-        { label: "Casts", get: (x) => x.count },
+        { label: "Turns", get: (x) => x.count },
+    ]
+
+    return (
+        <TallyTable
+            label="Actions"
+            rows={rows}
+            columns={columns}
+            subColumns={subColumns}
+            className="casts max-w-60"
+        />
+    )
+}
+
+type OffensiveTableData = TallyTableProps<{
+    damage: number
+    damageLethal: number
+    resistRate: number
+    killRate: number
+    hitRate: number
+}>
+
+function OffensiveTable(usage: CombatSummary) {
+    let rows = [] as OffensiveTableData["rows"]
+
+    for (const group of usage.groups) {
+        const casts = Object.entries(usage.data).flatMap(
+            ([spell, allCasts]) =>
+                allCasts.length && group.has(allCasts[0])
+                    ? [[spell, allCasts] as const]
+                    : []
+        )
+
+        switch (group.label) {
+            case "Spells":
+                for (const [spell, castsForSpell] of casts) {
+                    const effects = castsForSpell.flatMap(
+                        (cast) => cast.spell || []
+                    )
+
+                    const damageEffects = effects
+                        .filter((effect) => !effect.kill)
+                        .map((effect) => effect.value)
+                    const damage = avg(damageEffects)
+
+                    const lethalCasts = effects
+                        .filter((effect) => effect.kill)
+                        .map((effect) => effect.value)
+                    const damageLethal = avg(lethalCasts)
+
+                    const resist = avg(
+                        castsForSpell
+                            .flatMap((cast) => cast.spell || [])
+                            .map((effect) => effect.resist)
+                    )
+
+                    const misses = effects.filter((x) => x.miss)
+
+                    rows.push({
+                        label: spell,
+                        value: {
+                            damage,
+                            damageLethal,
+                            hitRate: misses.length / effects.length,
+                            resistRate: resist,
+                            killRate:
+                                lethalCasts.length / effects.length,
+                        },
+                    })
+                }
+                break
+            case "Melee Attacks":
+                const groupedByName = {} as Record<
+                    string,
+                    Array<{
+                        value: number
+                        kill: boolean
+                        miss: boolean
+                    }>
+                >
+
+                const attacks = casts[0]?.[1] ?? []
+                for (const x of attacks) {
+                    const { primary, secondary } = x.melee!
+                    setDefault(groupedByName, primary.name, []).push({
+                        value: primary.value,
+                        miss: primary.miss,
+                        kill: primary.kill,
+                    })
+
+                    for (const effect of secondary) {
+                        setDefault(
+                            groupedByName,
+                            effect.name,
+                            []
+                        ).push({
+                            value: effect.value,
+                            miss: effect.miss,
+                            kill: effect.kill,
+                        })
+                    }
+                }
+
+                for (const [label, effects] of Object.entries(
+                    groupedByName
+                )) {
+                    const damageEffects = effects
+                        .filter((effect) => !effect.kill)
+                        .map((effect) => effect.value)
+                    const damage = avg(damageEffects)
+
+                    const lethalCasts = effects
+                        .filter((effect) => effect.kill)
+                        .map((effect) => effect.value)
+                    const damageLethal = avg(lethalCasts)
+
+                    const misses = effects.filter((x) => x.miss)
+
+                    rows.push({
+                        label,
+                        value: {
+                            damage,
+                            damageLethal,
+                            hitRate: misses.length / effects.length,
+                            resistRate: 0,
+                            killRate:
+                                lethalCasts.length / effects.length,
+                        },
+                    })
+                }
+                break
+            case "Passive Attacks":
+                for (const [spell, castsForSpell] of casts) {
+                    const effects = castsForSpell.flatMap(
+                        (cast) => cast.spell || []
+                    )
+
+                    const damageEffects = effects
+                        .filter((effect) => !effect.kill)
+                        .map((effect) => effect.value)
+                    const damage = avg(damageEffects)
+
+                    const lethalCasts = effects
+                        .filter((effect) => effect.kill)
+                        .map((effect) => effect.value)
+                    const damageLethal = avg(lethalCasts)
+
+                    rows.push({
+                        label: spell,
+                        value: {
+                            damage,
+                            damageLethal,
+                            hitRate: 0,
+                            resistRate: 0,
+                            killRate:
+                                lethalCasts.length / effects.length,
+                        },
+                    })
+                }
+                break
+        }
+    }
+
+    rows = sortBy(rows, [{ fn: (r) => r.value.damage }]).reverse()
+
+    const columns: OffensiveTableData["columns"] = [
+        { label: "Avg Damage (non-lethal)", get: (x) => x.damage },
+        { label: "Avg Damage (lethal)", get: (x) => x.damageLethal },
+        {
+            label: "Kill Rate",
+            get: (x) => x.killRate,
+            format: (x) => `${Math.round(x * 100)}%`,
+        },
+        {
+            label: "Resist / Parry Rate",
+            get: (x) => x.resistRate,
+            format: (x) => `${Math.round(x)}%`,
+        },
+        {
+            label: "Hit Rate",
+            get: (x) => x.hitRate,
+            format: (x) => `${Math.round(x * 100)}%`,
+        },
     ]
 
     return (
@@ -101,12 +297,7 @@ function CombatUsageTableWrapper(usage: CombatSummary) {
             label="Casts"
             rows={rows}
             columns={columns}
-            subColumns={subColumns}
+            className="offensive max-w-[60rem]"
         />
     )
 }
-
-type CombatUsageTable = TallyTableProps<
-    { count: number },
-    { label: string; count: number }
->

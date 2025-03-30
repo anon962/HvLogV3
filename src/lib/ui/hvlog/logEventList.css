@@ -29,15 +29,20 @@
         }
     }
 
+    .event-row {
+        display: flex;
+        align-items: center;
+        padding: 0.5rem 2.5rem;
+        line-height: 1.5;
+    }
+
     .event-type {
         min-width: 12rem;
         padding-right: 1rem;
     }
 
-    .event-row {
-        display: flex;
-        padding: 0.5rem 2.5rem;
-        line-height: 1;
+    .event-detail {
+        white-space: wrap;
     }
 
     .event-row.active,

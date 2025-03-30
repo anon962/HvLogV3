@@ -6,7 +6,7 @@ export interface TallyTableProps<TItem = any, TSubItem = any> {
     categoryLabel?: string
     rows: TallyTableRow<TItem, TSubItem>[]
     columns: TallyTableColumn<TItem>[]
-    subColumns: TallyTableSubColumn<TSubItem>[]
+    subColumns?: TallyTableSubColumn<TSubItem>[]
     className?: string
 }
 
@@ -21,6 +21,7 @@ export interface TallyTableRow<TItem = any, TSubItem = any> {
     value: TItem
     subValues?: TSubItem[]
     selectable?: boolean
+    disabled?: boolean
 }
 
 export interface TallyTableSubColumn<
@@ -58,7 +59,7 @@ export function TallyTable({
     // }, rows)
 
     // CSS
-    const sectionClasses = `tally-table w-max ${className ?? ""}`
+    const sectionClasses = `tally-table ${className ?? ""}`
     const titleClasses = `pb-4`
     const titleRowClasses = `row ${
         active.has(0) ? "next-active" : ""
@@ -83,7 +84,7 @@ export function TallyTable({
                     onClick={() => toggleActive(idx)}
                     row={row}
                     columns={columns}
-                    subColumns={subColumns}
+                    subColumns={subColumns ?? []}
                     isActive={active.has(idx)}
                     isNextActive={active.has(idx + 1)}
                 />
@@ -102,11 +103,22 @@ export function TallyTable({
     )
 
     // Column totals
-    const totalEls = totals.map((x) => (
-        <span className="count footer text-right">
-            {x >= 1000 ? formatNumber(x) : x}
-        </span>
-    ))
+    const totalEls = totals.map((x, idx) => {
+        let label
+        if (columns[idx].format) {
+            label = columns[idx].format(x)
+        } else if (x > 1000) {
+            label = formatNumber(x)
+        } else if (x < 1) {
+            label = Math.trunc(x * 100) / 100
+        } else {
+            label = String(x)
+        }
+
+        return (
+            <span className="count footer text-right">{label}</span>
+        )
+    })
 
     const gridCss = {
         gridTemplateColumns: `minmax(125px, 1fr) repeat(${columns.length}, 1fr)`,
@@ -164,6 +176,7 @@ function Row({
         isActive ? "active" : "",
         isNextActive ? "next-active" : "",
         row.selectable ? "selectable" : "",
+        row.disabled ? "disabled" : "",
     ].join(" ")
 
     let subTable

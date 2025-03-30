@@ -22,6 +22,7 @@ import { registerViewLogs } from "./lib/app/registerViewLogs"
 // @todo: debug flag - disable localstorage reads
 // @todo: debug console
 // @todo: self-hosted ui
+// @todo: heal %maxhp
 
 async function main() {
     const app = await App.ainit()

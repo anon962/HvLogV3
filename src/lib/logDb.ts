@@ -11,8 +11,6 @@ const LIVE_META_STORE = "live_meta"
 const LIVE_HASH_STORE = "live_hash"
 
 export class LogDb {
-    private logHashCache: LogHash | null = null
-
     constructor(public db: idb.IDBPDatabase<LogDbSchema>) {}
 
     static async ainit(): Promise<LogDb> {
@@ -167,13 +165,9 @@ export class LogDb {
     }
 
     async getLogHash(): Promise<LogHash> {
-        if (this.logHashCache) {
-            return this.logHashCache
-        }
-
         const store = this.db.transaction(LIVE_HASH_STORE).store
 
-        this.logHashCache = {
+        return {
             battleType: (await this.get(store, "battleType")) as any,
             currentRound: (await this.get(
                 store,
@@ -181,8 +175,6 @@ export class LogDb {
             )) as any,
             maxRound: (await this.get(store, "maxRound")) as any,
         }
-
-        return this.logHashCache
     }
 
     async putLogHash(hash: LogHash): Promise<void> {
@@ -196,8 +188,6 @@ export class LogDb {
         await this.put(store, "battleType", hash.battleType)
         await this.put(store, "maxRound", hash.maxRound)
         await this.put(store, "currentRound", hash.currentRound)
-
-        this.logHashCache = hash
     }
 
     async *iterArchive(): AsyncIterable<CompleteLog> {

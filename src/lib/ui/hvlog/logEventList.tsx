@@ -256,12 +256,14 @@ function EventRow(props: {
                 <pre className="event-type">
                     {props.entry.event.event_type}
                 </pre>,
-                <pre>{summary}</pre>,
+                <pre className="event-detail">{summary}</pre>,
             ]
         } else {
             content = [
                 <pre className="event-type">ERROR</pre>,
-                <pre>{props.entry.detail}</pre>,
+                <pre className="event-detail">
+                    {props.entry.detail}
+                </pre>,
             ]
         }
 
@@ -328,6 +330,8 @@ const EVENT_SUMMARY_MAP = {
     EFFECT_RESTORE: (ev) =>
         `Healed ${ev.value} ${ev.type} from ${ev.effect}`,
     ENEMY_BASIC: (ev) => `Lost ${ev.value} health`,
+    ENEMY_EVADE: (ev) => ``,
+    ENEMY_MISS: (ev) => ``,
     ENEMY_SKILL_ABSORB: (ev) => `${ev.spell} absorbed`,
     ENEMY_SKILL_MISS: (ev) => ``,
     ENEMY_SKILL_SUCCESS: (ev) => ``,
@@ -335,16 +339,26 @@ const EVENT_SUMMARY_MAP = {
     EXPERIENCE: (ev) => `Dropped ${ev.value} exp`,
     FLEE: (ev) => ``,
     GEM: (ev) => `Gained ${ev.type} gem`,
-    ITEM_RESTORE: (ev) => `Healed ${ev.value}${ev.type}`,
+    ITEM_RESTORE: (ev) => `Healed ${ev.value} ${ev.type}`,
     MB_USAGE: (ev) => ``,
     MONSTER_DEATH: (ev) => ``,
-    PLAYER_ATTACK: (ev) =>
-        `Dealt ${ev.value}${
+    PLAYER_ATTACK: (ev) => {
+        const msg = `Dealt ${ev.value}${
             ev.damage_type ? " " + ev.damage_type : ""
-        } damage (${ev.resist ?? 0}% resist).`,
+        } damage`
+        if (!ev.spell.endsWith(" Strike")) {
+            return `${msg} (${ev.resist ?? 0}% resist).`
+        } else {
+            return `${msg}.`
+        }
+    },
     PLAYER_BUFF: (ev) => `Gained ${ev.effect}`,
+    PLAYER_COUNTER: (ev) => ``,
     PLAYER_DODGE: (ev) => ``,
     PLAYER_ITEM: (ev) => `Cast ${ev.item}`,
+    PLAYER_OFFHAND: (ev) => `Dealt ${ev.value} damage`,
+    PLAYER_MELEE: (ev) =>
+        `Dealt ${ev.value} ${ev.damage_type} damage`,
     PLAYER_MISS: (ev) => ``,
     PLAYER_SKILL: (ev) => `Cast ${ev.spell}`,
     PROFICIENCY: (ev) => `Dropped ${ev.value} ${ev.type}`,

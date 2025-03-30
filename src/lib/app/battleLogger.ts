@@ -55,6 +55,8 @@ export class BattleLogger {
 
         // Check if new log
         const oldHash = await this.db.getLogHash()
+        console.debug("Previous hash", oldHash)
+
         const lst = last(entries)!
         if (
             lst.type === "event" &&
@@ -69,12 +71,12 @@ export class BattleLogger {
             if (oldHash.battleType === "") {
                 // Old log doesn't have hash yet
                 // (fresh install + mid-battle)
-                await this.db.putLogHash(hash)
                 await this.db.clearLiveLog()
-            } else if (!isSameBattle(hash, oldHash)) {
                 await this.db.putLogHash(hash)
+            } else if (!isSameBattle(hash, oldHash)) {
                 await this.db.flushLiveLog()
                 this.stats.clear()
+                await this.db.putLogHash(hash)
             } else {
                 await this.db.putLogHash(hash)
             }

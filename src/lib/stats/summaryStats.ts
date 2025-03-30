@@ -93,39 +93,24 @@ export function extractTurnIndexes(log: CompleteLog): number[] {
         "PLAYER_ATTACK",
         "PLAYER_SKILL",
         "PLAYER_ITEM",
+        "PLAYER_MELEE",
     ])
 
-    const { turnIndexes } = evs.reduce(
-        (acc, ev) => {
-            const isMeleeAttack =
-                ev.event_type === "PLAYER_ATTACK" &&
-                ev.spell.endsWith(" Strike")
-
-            // Most player actions fall under PLAYER_SKILLs like "you cast blah"
-            // Exception to this is a melee attacks, which results in multiple lines like
-            //    Arcane Blow hits blah for 12345 blah damage
-            //    Void Strike hits blah for 12345 blah damage
-            // So need to check if its a melee attack and only count it once
-            const shouldCount =
-                ev.event_type !== "PLAYER_ATTACK" ||
-                (isMeleeAttack &&
-                    acc.lastMeleeAttackIndex - ev.logIndex > 1)
-
-            if (shouldCount) {
-                acc.turnIndexes.push(ev.logIndex)
-            }
-
-            if (isMeleeAttack) {
-                acc.lastMeleeAttackIndex = ev.logIndex
-            }
-
-            return acc
-        },
-        {
-            turnIndexes: [] as number[],
-            lastMeleeAttackIndex: -99,
+    const turnIndexes = evs.flatMap((ev) => {
+        // Most player actions fall under PLAYER_SKILLs like "you cast blah"
+        // Exception to this is a melee attacks, which results in multiple lines like
+        //    Arcane Blow hits blah for 12345 blah damage
+        //    Void Strike hits blah for 12345 blah damage
+        // So need to check if its a melee attack and only count it once
+        if (
+            ev.event_type === "PLAYER_ATTACK" &&
+            ev.spell !== "Arcane Blow"
+        ) {
+            return []
         }
-    )
+
+        return [ev.logIndex]
+    })
 
     return turnIndexes
 }

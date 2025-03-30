@@ -138,7 +138,6 @@ function IncomeSummaryTable(drops: DropSummary) {
             count: 0,
             value: 0,
         })
-        acc[group.label].selectable = true
 
         return acc
     }, acc)
@@ -166,6 +165,9 @@ function IncomeSummaryTable(drops: DropSummary) {
             { fn: (x) => x.count },
             { fn: (x) => x.label, reverse: true },
         ]).reverse()
+
+        row.disabled = row.value.count === 0
+        row.selectable = row.value.count > 0
     }
 
     return (
@@ -219,7 +221,6 @@ function UsageSummaryTable(
             count,
             value,
         })
-        acc[group.label].selectable = true
 
         return acc
     }, acc)
@@ -231,7 +232,8 @@ function UsageSummaryTable(
             value: (staminaUsage * PRICES["Energy Drink"]) / 10,
         },
         subValues: [],
-        selectable: true,
+        selectable: false,
+        disabled: true,
     }
 
     const columns: UsageTable["columns"] = [
@@ -257,6 +259,9 @@ function UsageSummaryTable(
             { fn: (x) => x.count },
             { fn: (x) => x.label, reverse: true },
         ]).reverse()
+
+        row.disabled = row.value.count === 0
+        row.selectable = row.value.count > 0
     }
 
     return (

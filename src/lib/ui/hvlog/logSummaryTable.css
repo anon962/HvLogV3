@@ -52,7 +52,7 @@
 
         .type {
             &.rob {
-                color: var(--color-blue-300);
+                color: var(--color-pink-200);
             }
             &.gf {
                 color: var(--color-green-200);
@@ -61,7 +61,7 @@
                 color: var(--color-purple-200);
             }
             &.iw {
-                color: var(--color-amber-200);
+                color: var(--color-blue-200);
             }
         }
 
