@@ -14,6 +14,7 @@ export function CombatInfo({ log }: { log: CompleteLog }) {
     const { combatUsage: usage } = useStats(log, {
         combatUsage: true,
     })
+    console.log(usage)
 
     return (
         <div className="combat-info p-8 overflow-auto h-full">
@@ -65,6 +66,8 @@ function CastTable(usage: CombatSummary) {
                             return !!cast.spark
                         case "Melee Attacks":
                             return !!cast.melee
+                        case "Passive Attacks":
+                            return !!cast.passiveAttack
                     }
                 }).length
 
@@ -134,6 +137,8 @@ type OffensiveTableData = TallyTableProps<{
     hitRate: number
     hitCount: number
     hitCountAvg: number
+    castCount: number
+    critRate: number
 }>
 
 function OffensiveTable(usage: CombatSummary) {
@@ -180,7 +185,11 @@ function OffensiveTable(usage: CombatSummary) {
                     )
 
                     const killCount = hits.filter(
-                        (effect) => !effect.kill
+                        (effect) => effect.kill
+                    ).length
+
+                    const critCount = hits.filter(
+                        (hit) => hit.crit
                     ).length
 
                     rows.push({
@@ -193,6 +202,8 @@ function OffensiveTable(usage: CombatSummary) {
                             killRate: killCount / hits.length,
                             hitCount: hits.length,
                             hitCountAvg,
+                            castCount: castsForSpell.length,
+                            critRate: critCount / hits.length,
                         },
                     })
                 }
@@ -204,6 +215,7 @@ function OffensiveTable(usage: CombatSummary) {
                         value: number
                         kill: boolean
                         miss: boolean
+                        crit: boolean
                     }>
                 >
 
@@ -214,6 +226,7 @@ function OffensiveTable(usage: CombatSummary) {
                         value: primary.value,
                         miss: primary.miss,
                         kill: primary.kill,
+                        crit: primary.crit,
                     })
 
                     for (const effect of secondary) {
@@ -225,6 +238,7 @@ function OffensiveTable(usage: CombatSummary) {
                             value: effect.value,
                             miss: effect.miss,
                             kill: effect.kill,
+                            crit: effect.crit,
                         })
                     }
                 }
@@ -244,7 +258,11 @@ function OffensiveTable(usage: CombatSummary) {
                     const misses = hits.filter((x) => x.miss)
 
                     const killCount = hits.filter(
-                        (effect) => !effect.kill
+                        (effect) => effect.kill
+                    ).length
+
+                    const critCount = hits.filter(
+                        (hit) => hit.crit
                     ).length
 
                     rows.push({
@@ -257,6 +275,8 @@ function OffensiveTable(usage: CombatSummary) {
                             killRate: killCount / hits.length,
                             hitCount: 1,
                             hitCountAvg: 1,
+                            castCount: hits.length,
+                            critRate: critCount / hits.length,
                         },
                     })
                 }
@@ -280,7 +300,7 @@ function OffensiveTable(usage: CombatSummary) {
                     const damageRaw = avg(rawHits)
 
                     const killCount = hits.filter(
-                        (effect) => !effect.kill
+                        (effect) => effect.kill
                     ).length
 
                     rows.push({
@@ -293,6 +313,8 @@ function OffensiveTable(usage: CombatSummary) {
                             killRate: killCount / hits.length,
                             hitCount: 1,
                             hitCountAvg: 1,
+                            castCount: hits.length,
+                            critRate: 0,
                         },
                     })
                 }
@@ -323,46 +345,62 @@ function OffensiveTable(usage: CombatSummary) {
                 </span>
             ),
         },
+        // {
+        //     label: "Dmg Raw",
+        //     get: (x) => x.damageRaw,
+        //     format: (x) => {
+        //         if (x >= 100_000) {
+        //             return `${(x / 1000).toFixed(0)}k`
+        //         } else if (x >= 1000) {
+        //             return `${(x / 1000).toFixed(1)}k`
+        //         } else {
+        //             return formatNumber(x)
+        //         }
+        //     },
+        //     tooltip: (
+        //         <span>
+        //             Average damage per monster hit,
+        //             <br />
+        //             before resists and excluding hits that kill the
+        //             target
+        //         </span>
+        //     ),
+        // },
         {
-            label: "Dmg Raw",
-            get: (x) => x.damageRaw,
-            format: (x) => {
-                if (x >= 100_000) {
-                    return `${(x / 1000).toFixed(0)}k`
-                } else if (x >= 1000) {
-                    return `${(x / 1000).toFixed(1)}k`
-                } else {
-                    return formatNumber(x)
-                }
-            },
+            label: "Casts",
+            get: (x) => x.castCount,
+        },
+        {
+            label: "Target Count",
+            get: (x) => x.hitCountAvg,
+            format: (x) => `${x.toFixed(1)}`,
             tooltip: (
-                <span>
-                    Average damage per monster hit,
-                    <br />
-                    before resists and excluding hits that kill the
-                    target
-                </span>
+                <span>Average number of monsters hit per cast.</span>
             ),
         },
         {
             label: "Kill Rate",
             get: (x) => x.killRate,
             format: (x) => `${Math.round(x * 100)}%`,
-        },
-        {
-            label: "# Targets",
-            get: (x) => x.hitCountAvg,
-            format: (x) => `${x.toFixed(1)}`,
+            tooltip: (
+                <span>
+                    Percentage of hits that killed the target.
+                </span>
+            ),
         },
         {
             label: "Resist Rate",
             get: (x) => x.resistRate,
-            format: (x) => `${Math.round(x)}%`,
+            format: (x) => `${x.toFixed(1)}%`,
+            tooltip: (
+                <span>Average damage reduction from resists.</span>
+            ),
         },
-        // {
-        //     label: "Hits",
-        //     get: (x) => x.hitCount,
-        // },
+        {
+            label: "Crit Rate",
+            get: (x) => x.critRate,
+            format: (x) => `${Math.round(x * 100)}%`,
+        },
         {
             label: "Miss Rate",
             get: (x) => 1 - x.hitRate,
@@ -375,7 +413,7 @@ function OffensiveTable(usage: CombatSummary) {
             label="Casts"
             rows={rows}
             columns={columns}
-            className="offensive max-w-[60rem]"
+            className="offensive max-w-[50rem]"
             hideTotal
         />
     )

@@ -106,13 +106,8 @@ export function TallyTable({
     // Rows
     const { rowEls, totals } = rows.reduce(
         (acc, row, idx) => {
-            const rowClass = `${
-                idx === rows.length - 1 ? "before-total" : ""
-            }`
-
             acc.rowEls.push(
                 <Row
-                    className={rowClass}
                     onClick={() => toggleActive(idx)}
                     row={row}
                     columns={columns}
@@ -160,8 +155,12 @@ export function TallyTable({
             )
         })
 
+        const footerClass = `row footer-row ${
+            active.has(rows.length - 1) ? "prev-active" : ""
+        }`
+
         totalRow = (
-            <div className="row" style={gridCss}>
+            <div className={footerClass} style={gridCss}>
                 <span className="category footer">Total</span>
                 {...totalEls}
             </div>
@@ -197,7 +196,6 @@ interface RowProps<TItem = any, TSubItem = any> {
 
     isActive: boolean
     isNextActive: boolean
-    className: string
 }
 
 function Row({
@@ -207,13 +205,11 @@ function Row({
     subColumns,
     isActive,
     isNextActive,
-    className,
 }: RowProps) {
     const hasSubtable = !!row.subValues?.length
 
     const rowClass = [
         "row",
-        className ? className : "",
         isActive ? "active" : "",
         isNextActive ? "next-active" : "",
         row.selectable ? "selectable" : "",

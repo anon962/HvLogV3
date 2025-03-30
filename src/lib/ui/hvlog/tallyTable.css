@@ -39,9 +39,11 @@
         border-top: 1px solid var(--border);
     }
 
-    .row:first-child,
-    .row.before-total {
+    .row:first-child {
         border-bottom-width: 3px;
+    }
+    .footer-row {
+        border-top: 2px solid var(--border);
     }
 
     .header,
@@ -64,6 +66,13 @@
     .row.active,
     .row.next-active {
         border-bottom-color: color-mix(
+            in oklab,
+            var(--foreground) 25%,
+            transparent
+        );
+    }
+    .footer-row.prev-active {
+        border-top-color: color-mix(
             in oklab,
             var(--foreground) 25%,
             transparent

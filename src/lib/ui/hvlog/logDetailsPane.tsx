@@ -1,5 +1,4 @@
 import { CompleteLog } from "@/lib/logDb"
-import { useMemo } from "react"
 import { Card, CardContent } from "../shadcn/card"
 import {
     Tabs,
@@ -11,14 +10,7 @@ import { CombatInfo } from "./combat/combatInfo"
 import { DropInfo } from "./drop/dropInfo"
 import { LogEventList } from "./logEventList"
 
-export function LogDetailsPane(props: { log?: CompleteLog }) {
-    return useMemo(
-        () => (props.log ? Inner(props.log) : <></>),
-        [props.log]
-    )
-}
-
-function Inner(log: CompleteLog) {
+export function LogDetailsPane({ log }: { log?: CompleteLog }) {
     return (
         <div
             className="details-pane-root w-full h-full"

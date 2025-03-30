@@ -26,8 +26,6 @@ export function DropInfo(props: { log: CompleteLog }) {
         staminaUsage += 1
     }
 
-    console.log("rerender")
-
     return (
         <div className="drop-stats h-full overflow-auto flex flex-col">
             <div className="overview">

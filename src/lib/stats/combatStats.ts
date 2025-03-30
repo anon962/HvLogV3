@@ -61,6 +61,9 @@ export function summarizeCombatUsage(
                     miss: !!miss,
                     resist: resist ? 100 : attack?.resist ?? 0,
                     kill: !!death,
+                    crit:
+                        attack?.multiplier_type === "crits" ||
+                        attack?.multiplier_type === "blasts",
                 })
             }
 
@@ -198,6 +201,7 @@ export function summarizeCombatUsage(
                     value: ev.value,
                     miss: false,
                     kill: false,
+                    crit: false,
                 },
                 secondary: [],
             }
@@ -227,6 +231,7 @@ export function summarizeCombatUsage(
                         value: attack?.value ?? 0,
                         miss: !!miss,
                         kill: !!death,
+                        crit: attack?.multiplier_type === "crit",
                     })
                 }
             }
@@ -495,6 +500,7 @@ type CombatSummaryData = EventSummaryData<{
         miss: boolean
         resist: number
         kill: boolean
+        crit: boolean
     }>
     heal?: {
         health: number
@@ -515,12 +521,14 @@ type CombatSummaryData = EventSummaryData<{
             value: number
             miss: boolean
             kill: boolean
+            crit: boolean
         }
         secondary: Array<{
             name: string
             value: number
             miss: boolean
             kill: boolean
+            crit: boolean
         }>
     }
     passiveAttack?: {

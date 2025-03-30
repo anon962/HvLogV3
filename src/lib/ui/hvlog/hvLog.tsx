@@ -40,11 +40,6 @@ function HvLogInner() {
         (l) => l.id === selectedLogId
     )
 
-    const detailsEl = useMemo(() => {
-        console.log("in memo", [logsSorted[selectionIdx]?.id])
-        return <LogDetailsPane log={logsSorted[selectionIdx]} />
-    }, [logsSorted[selectionIdx]?.id])
-
     useEffect(() => {
         // @ts-ignore
         window.HV_LOG_INIT_STYLES()
@@ -67,7 +62,14 @@ function HvLogInner() {
             <ResizableHandle withHandle />
 
             <ResizablePanel className="flex justify-center">
-                {detailsEl}
+                {useMemo(
+                    () => (
+                        <LogDetailsPane
+                            log={logsSorted[selectionIdx]}
+                        />
+                    ),
+                    [logsSorted[selectionIdx]?.id]
+                )}
             </ResizablePanel>
         </ResizablePanelGroup>
     )
