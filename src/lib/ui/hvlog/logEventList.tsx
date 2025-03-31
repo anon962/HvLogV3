@@ -348,16 +348,21 @@ const EVENT_SUMMARY_MAP = {
     EFFECT_RESTORE: (ev) =>
         `Healed ${ev.value} ${ev.type} from ${ev.effect}`,
     ENEMY_BASIC: (ev) => `Lost ${ev.value} health`,
+    ENEMY_DODGE: (ev) => ``,
     ENEMY_EVADE: (ev) => ``,
     ENEMY_MISS: (ev) => ``,
+    ENEMY_PARRY: (ev) => ``,
     ENEMY_SKILL_ABSORB: (ev) => `${ev.spell} absorbed`,
     ENEMY_SKILL_MISS: (ev) => ``,
+    ENEMY_SKILL_MISS_2: (ev) => ``,
     ENEMY_SKILL_SUCCESS: (ev) => ``,
     EVENT_ITEM: (ev) => `Dropped ${ev.item}`,
     EXPERIENCE: (ev) => `Dropped ${ev.value} exp`,
     FLEE: (ev) => ``,
     GEM: (ev) => `Gained ${ev.type} gem`,
     ITEM_RESTORE: (ev) => `Healed ${ev.value} ${ev.type}`,
+    LEVEL_UP: (ev) => `Reached Level ${ev.level}!`,
+    MASTERY_GAIN: (ev) => ``,
     MB_USAGE: (ev) => ``,
     MONSTER_DEATH: (ev) => ``,
     PLAYER_ATTACK: (ev) => {
@@ -377,7 +382,6 @@ const EVENT_SUMMARY_MAP = {
     PLAYER_OFFHAND: (ev) => `Dealt ${ev.value} damage`,
     PLAYER_MELEE: (ev) =>
         `Dealt ${ev.value} ${ev.damage_type} damage`,
-    PLAYER_MISS: (ev) => ``,
     PLAYER_SKILL: (ev) => `Cast ${ev.spell}`,
     PLAYER_SPELL_ABSORBED: (ev) => ``,
     PLAYER_SPIKE_SHIELD: (ev) => `Dealt ${ev.value} damage`,
@@ -394,6 +398,8 @@ const EVENT_SUMMARY_MAP = {
         `Lost ${ev.damage - ev.spirit_damage} health and ${
             ev.spirit_damage
         } sp`,
+    SPIRIT_STANCE_START: (ev) => ``,
+    SPIRIT_STANCE_END: (ev) => ``,
     TOKEN_BONUS: (ev) => `Dropped ${ev.item}`,
 } satisfies {
     [K in keyof HvEventMap]: (ev: HvEventMap[K]) => string

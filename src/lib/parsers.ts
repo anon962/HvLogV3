@@ -137,14 +137,6 @@ export const PARSERS = {
             resist: t("number").optional(),
         }
     ),
-    PLAYER_MISS: new EventParser(
-        "PLAYER_MISS",
-        `${Monster()} ${Mult("parries")} your attack.`,
-        {
-            monster: t("string"),
-            multiplier_type: t("string"),
-        }
-    ),
     PLAYER_ITEM: new EventParser(
         "PLAYER_ITEM",
         `You use ${Words("item")}\\.`,
@@ -209,6 +201,16 @@ export const PARSERS = {
             resist: t("number").optional(),
         }
     ),
+    SPIRIT_STANCE_START: new EventParser(
+        "SPIRIT_STANCE_START",
+        `Spirit Stance Engaged`,
+        {}
+    ),
+    SPIRIT_STANCE_END: new EventParser(
+        "SPIRIT_STANCE_END",
+        `Spirit Stance Exhausted`,
+        {}
+    ),
 
     ENEMY_BASIC: new EventParser(
         "ENEMY_BASIC",
@@ -255,6 +257,14 @@ export const PARSERS = {
             multiplier_type: t("string"),
         }
     ),
+    ENEMY_SKILL_MISS_2: new EventParser(
+        "ENEMY_SKILL_MISS_2",
+        `${Monster()} uses ${Words("skill")}, but misses the attack\\.`,
+        {
+            monster: t("string"),
+            skill: t("string")
+        }
+    ),
     ENEMY_SKILL_SUCCESS: new EventParser(
         "ENEMY_SKILL_SUCCESS",
         `${EnemySpell}, and ${Mult("hits", "crits")} you for ${Num("value")} ${Word("damage_type")} damage${Resist}\\.?`,
@@ -267,6 +277,19 @@ export const PARSERS = {
             damage_type: t("string"),
             resist: t("number").optional(),
         }
+    ),
+    ENEMY_PARRY: new EventParser(
+        "ENEMY_PARRY",
+        `${Monster()} ${Mult("parries")} your attack.`,
+        {
+            monster: t("string"),
+            multiplier_type: t("string"),
+        }
+    ),
+    ENEMY_DODGE: new EventParser(
+        "ENEMY_DODGE",
+        `Your attack misses its mark\\.`,
+        {}
     ),
 
     // Effects
@@ -367,7 +390,7 @@ export const PARSERS = {
     // Info
     ROUND_START: new EventParser(
         "ROUND_START",
-        `Initializing ${Group("battle_type", "[\\w\\s\\d#]+")}(?: \\\(Round ${Num("current")} / ${Num("max")}\\\))? \\.\\.\\.`,
+        `Initializing ${Group("battle_type", ".+?")}(?: \\\(Round ${Num("current")} / ${Num("max")}\\\))? \\.\\.\\.`,
         {
             battle_type: t("string"),
             current: t("number").optional(),
@@ -494,6 +517,20 @@ export const PARSERS = {
         `You found a \\[${Words("item")}\\]`,
         {
             item: t("string"),
+        }
+    ),
+    LEVEL_UP: new EventParser(
+        "LEVEL_UP",
+        `You have reached Level \\\((\d+)\\\)!`,
+        {
+            level: t("number"),
+        }
+    ),
+    MASTERY_GAIN: new EventParser(
+        "LEVEL_UP",
+        `You gain ${Words("value")} Mastery Point!`,
+        {
+            value: t("number"),
         }
     ),
 

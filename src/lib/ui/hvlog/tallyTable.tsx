@@ -210,7 +210,7 @@ function Row({
 
     const rowClass = [
         "row",
-        isActive ? "active" : "",
+        isActive && hasSubtable ? "active" : "",
         isNextActive ? "next-active" : "",
         row.selectable ? "selectable" : "",
         row.disabled ? "disabled" : "",

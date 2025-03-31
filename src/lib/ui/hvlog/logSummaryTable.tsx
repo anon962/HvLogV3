@@ -304,6 +304,10 @@ function formatBattleType(log: CompleteLog) {
                 label = `Arena`
             }
             break
+        case "Tower":
+            className = "tower"
+            label = `Tower - Floor ${summary.battleType.floor}`
+            break
         default:
             className = ""
             label = "???"

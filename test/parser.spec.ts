@@ -79,3 +79,85 @@ it("should parse all lines", () => {
 
     logParseResults("./logs/full_parse_test.log", results)
 })
+
+describe("should parse ROUND_START", () => {
+    it("for tower", () => {
+        expect(
+            PARSERS["ROUND_START"].parse(
+                "Initializing The Tower (Floor 2) (Round 1 / 11) ..."
+            )
+        ).toEqual([
+            {
+                event_type: "ROUND_START",
+                battle_type: "The Tower (Floor 2)",
+                current: 1,
+                max: 11,
+            },
+            null,
+        ])
+    })
+
+    it("for random encounter", () => {
+        expect(
+            PARSERS["ROUND_START"].parse(
+                "Initializing random encounter ..."
+            )
+        ).toEqual([
+            {
+                event_type: "ROUND_START",
+                battle_type: "random encounter",
+                current: undefined,
+                max: undefined,
+            },
+            null,
+        ])
+    })
+
+    it("for grindfest", () => {
+        expect(
+            PARSERS["ROUND_START"].parse(
+                "Initializing Grindfest (Round 123 / 1000) ..."
+            )
+        ).toEqual([
+            {
+                event_type: "ROUND_START",
+                battle_type: "Grindfest",
+                current: 123,
+                max: 1000,
+            },
+            null,
+        ])
+    })
+
+    it("for item world", () => {
+        expect(
+            PARSERS["ROUND_START"].parse(
+                "Initializing Item World (Round 42 / 86) ..."
+            )
+        ).toEqual([
+            {
+                event_type: "ROUND_START",
+                battle_type: "Item World",
+                current: 42,
+                max: 86,
+            },
+            null,
+        ])
+    })
+
+    it("for arena", () => {
+        expect(
+            PARSERS["ROUND_START"].parse(
+                "Initializing arena challenge #112 (Round 1 / 111) ..."
+            )
+        ).toEqual([
+            {
+                event_type: "ROUND_START",
+                battle_type: "arena challenge #112",
+                current: 1,
+                max: 111,
+            },
+            null,
+        ])
+    })
+})

@@ -19,6 +19,7 @@ export function summarizeCombatUsage(
     const buffKeys = new Set<string>()
     const passiveHealKeys = new Set<string>()
     const passiveAttackKeys = new Set<string>()
+    const meleeCastKeys = new Set<string>()
 
     const xs = log.entries
     for (let idx = 0; idx < xs.length; idx++) {
@@ -51,7 +52,7 @@ export function summarizeCombatUsage(
                     (ev) => ev.event_type === "RESIST"
                 )
                 const miss = grp.find(
-                    (ev) => ev.event_type === "PLAYER_MISS"
+                    (ev) => ev.event_type === "ENEMY_PARRY"
                 )
                 const death = grp.find(
                     (ev) => ev.event_type === "MONSTER_DEATH"
@@ -201,7 +202,9 @@ export function summarizeCombatUsage(
                     value: ev.value,
                     miss: false,
                     kill: false,
-                    crit: false,
+                    crit:
+                        ev.multiplier_type === "crit" ||
+                        ev.multiplier_type === "crits",
                 },
                 secondary: [],
             }
@@ -213,7 +216,9 @@ export function summarizeCombatUsage(
                     (ev) => ev.event_type === "PLAYER_OFFHAND"
                 )
                 const miss = grp.find(
-                    (ev) => ev.event_type === "PLAYER_MISS"
+                    (ev) =>
+                        ev.event_type === "ENEMY_EVADE" ||
+                        ev.event_type === "ENEMY_DODGE"
                 )
                 const death = grp.find(
                     (ev) => ev.event_type === "MONSTER_DEATH"
@@ -241,6 +246,60 @@ export function summarizeCombatUsage(
                 logIdx: idx,
                 melee: effectSummary,
             })
+
+            idx += sum(effects, (xs) => xs.length)
+            continue
+        }
+
+        const meleeSkillData = takeEntriesWithRoot(
+            xs,
+            idx,
+            "meleeCast",
+            "offense"
+        )
+        if (meleeSkillData) {
+            const { cast, effects } = meleeSkillData as {
+                cast: HvEventMap["PLAYER_ITEM"]
+                effects: HvEvent[][]
+            }
+
+            const effectSummary: CombatSummaryData["meleeCast"] = []
+
+            for (const [idx, grp] of enumerate(effects)) {
+                const attack = grp.find(
+                    (ev) => ev.event_type === "PLAYER_ATTACK"
+                )
+                if (!attack) {
+                    console.error(
+                        "Expected melee skill to have attack but got nothing",
+                        effects
+                    )
+                    continue
+                }
+
+                const parry = grp.find(
+                    (ev) => ev.event_type === "ENEMY_PARRY"
+                )
+                const death = grp.find(
+                    (ev) => ev.event_type === "MONSTER_DEATH"
+                )
+
+                effectSummary.push({
+                    value: attack?.value ?? 0,
+                    kill: !!death,
+                    crit: attack?.multiplier_type === "crit",
+                    parry: !!parry,
+                    monster: attack.monster,
+                })
+            }
+
+            setDefault(data, cast.item, []).push({
+                key: cast.item,
+                logIdx: idx,
+                meleeCast: effectSummary,
+            })
+
+            meleeCastKeys.add(cast.item)
 
             idx += sum(effects, (xs) => xs.length)
             continue
@@ -370,6 +429,10 @@ export function summarizeCombatUsage(
                 has: (d) => d.key === "Melee Attacks",
             },
             {
+                label: "Melee Casts",
+                has: (d) => meleeCastKeys.has(d.key),
+            },
+            {
                 label: "Passive Attacks",
                 has: (d) => passiveAttackKeys.has(d.key),
             },
@@ -447,7 +510,7 @@ const CAST_GRAMMAR = {
         { refs: ["offenseMiss", "offenseHit"] },
     ],
     offenseMiss: [
-        { keys: ["PLAYER_MISS", "ENEMY_EVADE"] },
+        { keys: ["ENEMY_PARRY", "ENEMY_EVADE", "ENEMY_DODGE"] },
     ],
     offenseHit: [
         { keys: ["PLAYER_ATTACK", "PLAYER_OFFHAND"] },
@@ -474,6 +537,9 @@ const CAST_GRAMMAR = {
     supportive: [
         { keys: ["CURE_RESTORE", "ITEM_RESTORE", "PLAYER_BUFF"] },
     ],
+    meleeCast: [
+        { keys: ["PLAYER_ITEM"] }
+    ],
 } as const satisfies EventGrammar
 
 //
@@ -490,6 +556,7 @@ export type CombatSummary = EventSummary<
             | "Times Sparked"
             | "Melee Attacks"
             | "Passive Attacks"
+            | "Melee Casts"
         has: (d: CombatSummaryData) => boolean
     }>
 >
@@ -531,6 +598,13 @@ type CombatSummaryData = EventSummaryData<{
             crit: boolean
         }>
     }
+    meleeCast?: Array<{
+        value: number
+        kill: boolean
+        crit: boolean
+        parry: boolean
+        monster: string
+    }>
     passiveAttack?: {
         value: number
         kill: boolean

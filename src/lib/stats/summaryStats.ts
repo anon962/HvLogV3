@@ -69,6 +69,18 @@ export function extractBattleType(log: CompleteLog): {
                     name: "Arena",
                     id: parseInt(arena[1]),
                 }
+                break
+            }
+
+            const tower = first.battle_type.match(
+                /The Tower \\(Floor (\d+)\\)/
+            )
+            if (tower) {
+                result.battleType = {
+                    name: `Tower`,
+                    floor: parseInt(tower[1]),
+                }
+                break
             }
     }
 
@@ -94,6 +106,7 @@ export function extractTurnIndexes(log: CompleteLog): number[] {
         "PLAYER_SKILL",
         "PLAYER_ITEM",
         "PLAYER_MELEE",
+        "SPIRIT_STANCE_START",
     ])
 
     const turnIndexes = evs.flatMap((ev) => {

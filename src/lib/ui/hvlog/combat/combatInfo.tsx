@@ -68,6 +68,10 @@ function CastTable(usage: CombatSummary) {
                             return !!cast.melee
                         case "Passive Attacks":
                             return !!cast.passiveAttack
+                        case "Buffs":
+                            return !!cast.buff
+                        case "Melee Casts":
+                            return !!cast.meleeCast
                     }
                 }).length
 
@@ -319,6 +323,65 @@ function OffensiveTable(usage: CombatSummary) {
                     })
                 }
                 break
+            case "Melee Casts":
+                for (const [label, castsForSkill] of casts) {
+                    const hits = castsForSkill.flatMap(
+                        (cast) => cast.meleeCast ?? []
+                    )
+
+                    const damage = avg(
+                        hits.map((effect) => effect.value)
+                    )
+
+                    const rawHits = hits
+                        .filter((hit) => !hit.kill)
+                        .map((hit) => hit.value * (hit.parry ? 0 : 1))
+                    const damageRaw = avg(rawHits)
+
+                    const parryCount = hits.filter(
+                        (hit) => hit.parry
+                    ).length
+
+                    const hitCountAvg = avg(
+                        castsForSkill.map((cast) => {
+                            const { meleeCast } = cast
+                            if (!meleeCast) {
+                                return 0
+                            }
+
+                            const monsters = new Set(
+                                meleeCast.map(
+                                    (effect) => effect.monster
+                                )
+                            )
+                            return monsters.size
+                        })
+                    )
+
+                    const killCount = hits.filter(
+                        (effect) => effect.kill
+                    ).length
+
+                    const critCount = hits.filter(
+                        (hit) => hit.crit
+                    ).length
+
+                    rows.push({
+                        label,
+                        value: {
+                            damage,
+                            damageRaw,
+                            hitRate: 1,
+                            resistRate: parryCount / hits.length,
+                            killRate: killCount / hits.length,
+                            hitCount: hits.length,
+                            hitCountAvg,
+                            castCount: castsForSkill.length,
+                            critRate: critCount / hits.length,
+                        },
+                    })
+                }
+                break
         }
     }
 
@@ -393,7 +456,9 @@ function OffensiveTable(usage: CombatSummary) {
             get: (x) => x.resistRate,
             format: (x) => `${x.toFixed(1)}%`,
             tooltip: (
-                <span>Average damage reduction from resists.</span>
+                <span>
+                    Average damage reduction from resists / parries.
+                </span>
             ),
         },
         {

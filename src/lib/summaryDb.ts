@@ -128,6 +128,10 @@ export interface LogSummary {
               name: "Arena"
               id: number
           }
+        | {
+              name: "Tower"
+              floor: number
+          }
     round: {
         end: number
         max: number
