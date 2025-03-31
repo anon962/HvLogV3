@@ -30,6 +30,7 @@ export function useLocalState<T>(
     useEffect(() => {
         const cb = () => localStorage.setItem(key, save(state))
         window.addEventListener("beforeunload", cb)
+        return () => window.removeEventListener("beforeunload", cb)
     }, [state])
 
     return [state, setState]

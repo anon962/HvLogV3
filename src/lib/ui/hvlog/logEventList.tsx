@@ -4,9 +4,9 @@ import { enumerate } from "@/lib/utils/miscUtils"
 import JsonView from "@uiw/react-json-view"
 import { range, sleep } from "radash"
 import {
+    memo,
     ReactElement,
     useEffect,
-    useMemo,
     useRef,
     useState,
 } from "react"
@@ -106,21 +106,24 @@ function useRowsAsync(log: CompleteLog) {
 
                 toUpdate.push({
                     idx: logIdx,
-                    el: EventRowContainer(
-                        logIdx,
-                        entry,
-                        indexMap,
-                        target.activeLogIdx,
-                        () =>
-                            setTarget((target) => ({
-                                ...target,
-                                activeLogIdx: logIdx,
-                            })),
-                        log.id
+                    el: (
+                        <EventRowContainer
+                            logId={log.id}
+                            logIdx={logIdx}
+                            entry={entry}
+                            indexMap={indexMap}
+                            activeLogIdx={target.activeLogIdx}
+                            setActiveLogIdx={() =>
+                                setTarget((target) => ({
+                                    ...target,
+                                    activeLogIdx: logIdx,
+                                }))
+                            }
+                        />
                     ),
                 })
 
-                if (toUpdate.length > 3_000 && !cancelled) {
+                if (toUpdate.length > 1_000 && !cancelled) {
                     const update = [...toUpdate]
                     toUpdate = []
                     setCurrent((current) => {
@@ -171,14 +174,25 @@ function useRowsAsync(log: CompleteLog) {
     }
 }
 
-function EventRowContainer(
-    logIdx: number,
-    entry: LogEntry,
-    indexMap: IndexMap,
-    activeLogIdx: number,
-    setActiveLogIdx: (logIdx: number) => void,
+interface EventRowContainerProps {
+    logIdx: number
+    entry: LogEntry
+    indexMap: IndexMap
+    activeLogIdx: number
+    setActiveLogIdx: (logIdx: number) => void
     logId: string
-) {
+}
+
+const EventRowContainer = memo((props: EventRowContainerProps) => {
+    const {
+        logIdx,
+        entry,
+        indexMap,
+        activeLogIdx,
+        setActiveLogIdx,
+        logId,
+    } = props
+
     const els: ReactElement[] = []
 
     const turnIdx = indexMap.l2t(logIdx)
@@ -222,7 +236,7 @@ function EventRowContainer(
     } else {
         els.push(
             <EventRow
-                key={logIdx.toString() + logId}
+                key={logIdx}
                 onClick={() => setActiveLogIdx(logIdx)}
                 entry={entry}
                 isActive={activeLogIdx === logIdx}
@@ -231,60 +245,61 @@ function EventRowContainer(
     }
 
     return <>{...els}</>
-}
+})
 
-function EventRow(props: {
+interface EventRowProps {
     entry: LogEntry
     isActive: boolean
     onClick?: (entry: LogEntry) => void
-}) {
-    return useMemo(() => {
-        const activeClass = props.isActive ? " active" : ""
-
-        let content
-        if (props.entry.type === "event") {
-            const eventType = props.entry.event.event_type
-            const summary =
-                eventType in EVENT_SUMMARY_MAP
-                    ? EVENT_SUMMARY_MAP[eventType](
-                          props.entry.event as any
-                      )
-                    : JSON.stringify(props.entry.event)
-
-            content = (
-                <>
-                    <pre className="event-type">
-                        {props.entry.event.event_type}
-                    </pre>
-                    <pre className="event-detail">{summary}</pre>
-                </>
-            )
-        } else {
-            content = (
-                <>
-                    <pre className="event-type">ERROR</pre>
-                    <pre className="event-detail">
-                        {props.entry.detail}
-                    </pre>
-                </>
-            )
-        }
-
-        return (
-            <div
-                onClick={(ev) => {
-                    if (!props.isActive) {
-                        props.onClick?.(props.entry)
-                    }
-                    ev.stopPropagation()
-                }}
-                className={"event-row" + activeClass}
-            >
-                {content}
-            </div>
-        )
-    }, [props.entry, props.isActive, props.entry])
 }
+
+const EventRow = memo((props: EventRowProps) => {
+    const { entry, isActive, onClick } = props
+    const activeClass = props.isActive ? " active" : ""
+
+    let content
+    if (props.entry.type === "event") {
+        const eventType = props.entry.event.event_type
+        const summary =
+            eventType in EVENT_SUMMARY_MAP
+                ? EVENT_SUMMARY_MAP[eventType](
+                      props.entry.event as any
+                  )
+                : JSON.stringify(props.entry.event)
+
+        content = (
+            <>
+                <pre className="event-type">
+                    {props.entry.event.event_type}
+                </pre>
+                <pre className="event-detail">{summary}</pre>
+            </>
+        )
+    } else {
+        content = (
+            <>
+                <pre className="event-type">ERROR</pre>
+                <pre className="event-detail">
+                    {props.entry.detail}
+                </pre>
+            </>
+        )
+    }
+
+    return (
+        <div
+            onClick={(ev) => {
+                if (!props.isActive) {
+                    props.onClick?.(props.entry)
+                }
+                ev.stopPropagation()
+            }}
+            className={"event-row" + activeClass}
+        >
+            {content}
+        </div>
+    )
+})
 
 function LogEntryDetails(props: {
     entry: LogEntry

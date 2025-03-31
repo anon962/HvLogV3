@@ -134,9 +134,9 @@ function IncomeSummaryTable(drops: DropSummary) {
         acc[group.label].value.count += count
         acc[group.label].value.value += value
         acc[group.label].subValues!.push({
-            label: group.label,
-            count: 0,
-            value: 0,
+            label: xs[0].key,
+            count,
+            value,
         })
 
         return acc
