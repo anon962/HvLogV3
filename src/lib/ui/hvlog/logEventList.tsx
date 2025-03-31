@@ -351,6 +351,7 @@ const EVENT_SUMMARY_MAP = {
     ENEMY_DODGE: (ev) => ``,
     ENEMY_EVADE: (ev) => ``,
     ENEMY_MISS: (ev) => ``,
+    ENEMY_MISS_2: (ev) => ``,
     ENEMY_PARRY: (ev) => ``,
     ENEMY_SKILL_ABSORB: (ev) => `${ev.spell} absorbed`,
     ENEMY_SKILL_MISS: (ev) => ``,
@@ -377,7 +378,6 @@ const EVENT_SUMMARY_MAP = {
     },
     PLAYER_BUFF: (ev) => `Gained ${ev.effect}`,
     PLAYER_COUNTER: (ev) => ``,
-    PLAYER_DODGE: (ev) => ``,
     PLAYER_ITEM: (ev) => `Cast ${ev.item}`,
     PLAYER_OFFHAND: (ev) => `Dealt ${ev.value} damage`,
     PLAYER_MELEE: (ev) =>

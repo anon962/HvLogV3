@@ -1,18 +1,21 @@
 import React from "react"
 import { createRoot } from "react-dom/client"
 import { App } from "./lib/app/app"
+import { registerClearCache } from "./lib/app/registerClearCache.ts"
 import { registerViewLogs } from "./lib/app/registerViewLogs"
 import { HvLog } from "./lib/ui/hvlog/hvLog.tsx"
 
-// @todo: combat - usage chart (attacks, debuffs, heals, other)
-// @todo: combat - heal breakdown (hp mp sp)
-// @todo: combat - heal breakdown (active, passive)
 // @todo: menu - export / import logs
 // @todo: menu - clear localstorage
+// @todo: combat - heal breakdown (hp mp sp)
+// @todo: combat - heal breakdown (active, passive)
+// @todo: combat - usage chart (attacks, debuffs, heals, other)
 // @todo: menu - config (monaco)
+// @todo: isekai
+// @todo: compression
+
 // @todo: sort
 // @todo: filter
-// @todo: compression
 // @todo: live stats
 // @todo: debug flag - disable localstorage reads
 // @todo: debug console
@@ -24,8 +27,7 @@ async function main() {
     window.HV_LOG = app
 
     registerViewLogs(app)
-    // @todo: Doesnt work in ui view
-    // registerClearCache(app)
+    registerClearCache(app)
 
     switch (window.location.pathname) {
         case "/hvlog/logs":

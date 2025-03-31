@@ -85,10 +85,13 @@ export function extractBattleType(log: CompleteLog): {
     }
 
     const lst = last(evs)!
-    result.round = {
-        end: lst.current!,
-        max: lst.max!,
-    }
+    result.round =
+        lst.current && lst.max
+            ? {
+                  end: lst.current!,
+                  max: lst.max!,
+              }
+            : null
 
     result.inconsistentBattleTypes = evs.some(
         (ev) => ev.battle_type !== first.battle_type

@@ -149,14 +149,6 @@ export const PARSERS = {
         `You cast ${Words("spell")}\\.`,
         { spell: t("string") }
     ),
-    PLAYER_DODGE: new EventParser(
-        "PLAYER_DODGE",
-        `You ${Mult("evade", "parry")} the attack from ${Monster()}\\.`,
-        {
-            multiplier_type: t("string"),
-            monster: t("string"),
-        }
-    ),
     PLAYER_MELEE: new EventParser(
         "PLAYER_MELEE",
         `You ${Mult("hit", "crit")} ${Monster()} for ${Num("value")} ${Word("damage_type")} damage\\.`,
@@ -234,6 +226,14 @@ export const PARSERS = {
         `${Monster()} misses the attack against you.`,
         {
             monster: t("string")
+        }
+    ),
+    ENEMY_MISS_2: new EventParser(
+        "ENEMY_MISS_2",
+        `You ${Mult("evade", "parry")} the attack from ${Monster()}\\.`,
+        {
+            multiplier_type: t("string"),
+            monster: t("string"),
         }
     ),
     ENEMY_SKILL_ABSORB: new EventParser(
@@ -548,7 +548,7 @@ export const ALL_PARSERS = Object.values(PARSERS)
 // Run most likely parsers first
 const parserFrequency = {
     DEBUFF: 13619,
-    PLAYER_DODGE: 11264,
+    ENEMY_MISS: 11264,
     PLAYER_ATTACK: 10311,
     SPAWN: 8383,
     MONSTER_DEATH: 8383,
