@@ -2,7 +2,7 @@ import * as idb from "idb"
 import { isEqual } from "radash"
 import { migrateLogDb } from "./migrateLogDb"
 import { HvEvent } from "./parsers"
-import { uuidWithFallback } from "./utils/miscUtils"
+import { readUrlPath, uuidWithFallback } from "./utils/miscUtils"
 import { ValueOf } from "./utils/typeUtils"
 
 const COMPLETE_STORE = "complete"
@@ -14,8 +14,10 @@ export class LogDb {
     constructor(public db: idb.IDBPDatabase<LogDbSchema>) {}
 
     static async ainit(): Promise<LogDb> {
+        const key = readUrlPath().isIsekai ? "HvLog_isekai" : "HvLog"
+
         let isNewDb = false
-        const db = await idb.openDB<LogDbSchema>("HvLog", 1, {
+        const db = await idb.openDB<LogDbSchema>(key, 1, {
             upgrade: (db, oldVersion, newVersion, txn) => {
                 console.debug(
                     "Initializing log db",

@@ -1,9 +1,11 @@
+import { isEqual } from "radash"
 import React from "react"
 import { createRoot } from "react-dom/client"
 import { App } from "./lib/app/app"
 import { registerClearCache } from "./lib/app/registerClearCache.ts"
 import { registerViewLogs } from "./lib/app/registerViewLogs"
 import { HvLog } from "./lib/ui/hvlog/hvLog.tsx"
+import { readUrlPath } from "./lib/utils/miscUtils.ts"
 
 // @todo: menu - export / import logs
 // @todo: menu - clear localstorage
@@ -29,11 +31,12 @@ async function main() {
     registerViewLogs(app)
     registerClearCache(app)
 
-    switch (window.location.pathname) {
-        case "/hvlog/logs":
-            return await routeUi(app)
-        default:
-            await app.runLogger()
+    const path = readUrlPath().parts
+
+    if (isEqual(path, ["hvlog", "logs"])) {
+        return await routeUi(app)
+    } else {
+        await app.runLogger()
     }
 }
 

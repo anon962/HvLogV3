@@ -51,12 +51,23 @@ function HvLogInner() {
             autoSaveId="hvlog_detail_split"
         >
             <ResizablePanel className="overflow-auto!">
-                <LogSummaryTable
-                    onClick={(log) => setSelectedLog(log.id)}
-                    selectionIdx={selectionIdx}
-                    logs={logsSorted}
-                    loading={logsLoading}
-                />
+                <div
+                    className="flex flex-col items-center w-full h-full"
+                    style={{ containerType: "inline-size" }}
+                >
+                    <LogSummaryTable
+                        onClick={(log) => setSelectedLog(log.id)}
+                        selectionIdx={selectionIdx}
+                        logs={logsSorted}
+                        loading={logsLoading}
+                    />
+
+                    {logs.length === 0 ? (
+                        <span>No battles found!</span>
+                    ) : (
+                        ""
+                    )}
+                </div>
             </ResizablePanel>
 
             <ResizableHandle withHandle />

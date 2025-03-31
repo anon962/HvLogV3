@@ -41,33 +41,29 @@ export function LogSummaryTable(props: {
         props.selectionIdx === 0 ? " selected-next" : ""
 
     return (
-        <div
-            className="flex justify-center h-full"
-            style={{ containerType: "inline-size" }}
-        >
-            <div className="log-table-container overflow-auto h-full pb-0!">
-                <Table className="log-table w-auto min-h-0 mb-8">
-                    <TableHeader>
-                        <TableRow className={"" + headerSelected}>
-                            <TableHead className="w-[100px]">
-                                Type
-                            </TableHead>
-                            <TableHead className="text-right">
-                                Turns
-                            </TableHead>
-                            <TableHead className="text-right">
-                                Duration
-                            </TableHead>
-                            <TableHead className="">Date</TableHead>
-                            <TableHead className="text-center">
-                                Status
-                            </TableHead>
-                            {/* <TableHead className="">View</TableHead> */}
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>{logEls}</TableBody>
-                </Table>
-                {/* {props.loading ? (
+        <div className="log-table-container overflow-auto pb-0!">
+            <Table className="log-table w-auto min-h-0 mb-8">
+                <TableHeader>
+                    <TableRow className={"" + headerSelected}>
+                        <TableHead className="w-[100px]">
+                            Type
+                        </TableHead>
+                        <TableHead className="text-right">
+                            Turns
+                        </TableHead>
+                        <TableHead className="text-right">
+                            Duration
+                        </TableHead>
+                        <TableHead className="">Date</TableHead>
+                        <TableHead className="text-center">
+                            Status
+                        </TableHead>
+                        {/* <TableHead className="">View</TableHead> */}
+                    </TableRow>
+                </TableHeader>
+                <TableBody>{logEls}</TableBody>
+            </Table>
+            {/* {props.loading ? (
                     <div>Loading...</div>
                 ) : status ? (
                     <div>
@@ -75,7 +71,6 @@ export function LogSummaryTable(props: {
                         {status.currentRound} / {status.maxRound})...
                     </div>
                 ) : null} */}
-            </div>
         </div>
     )
 }
