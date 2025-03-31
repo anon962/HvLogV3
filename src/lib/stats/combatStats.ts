@@ -540,6 +540,9 @@ const CAST_GRAMMAR = {
     meleeCast: [
         { keys: ["PLAYER_ITEM"] }
     ],
+    items: [
+        { keys: ["PLAYER_ITEM"] }
+    ],
 } as const satisfies EventGrammar
 
 //

@@ -9,7 +9,6 @@ import { HvLog } from "./lib/ui/hvlog/hvLog.tsx"
 // @todo: combat - heal breakdown (hp mp sp)
 // @todo: combat - heal breakdown (active, passive)
 // @todo: combat - melee casts are PLAYER_ITEMs
-// @todo: combat - SoL triggers, riddle master, rounds, gems
 // @todo: menu - export / import logs
 // @todo: menu - clear localstorage
 // @todo: menu - config (monaco)

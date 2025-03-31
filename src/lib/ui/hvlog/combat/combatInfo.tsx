@@ -1,5 +1,6 @@
 import { CompleteLog } from "@/lib/logDb"
 import { CombatSummary } from "@/lib/stats/combatStats"
+import { LogSummary } from "@/lib/summaryDb"
 import {
     avg,
     formatNumber,
@@ -11,14 +12,18 @@ import { useStats } from "../../logStatsContext"
 import { TallyTable, TallyTableProps } from "../tallyTable"
 
 export function CombatInfo({ log }: { log: CompleteLog }) {
-    const { combatUsage: usage } = useStats(log, {
+    const { combatUsage: usage, summary } = useStats(log, {
         combatUsage: true,
+        summary: true,
     })
     console.log(usage)
 
     return (
-        <div className="combat-info p-8 overflow-auto h-full">
-            {CastTable(usage)}
+        <div className="combat-info p-8 overflow-auto h-full flex flex-col gap-12">
+            <div className="flex gap-8">
+                {CastTable(usage)}
+                {MiscTable(summary, log)}
+            </div>
 
             {OffensiveTable(usage)}
         </div>
@@ -43,7 +48,8 @@ function CastTable(usage: CombatSummary) {
     for (const group of usage.groups) {
         if (
             group.label === "Passive Heals" ||
-            group.label === "Times Sparked"
+            group.label === "Times Sparked" ||
+            group.label === "Passive Attacks"
         ) {
             continue
         }
@@ -128,7 +134,7 @@ function CastTable(usage: CombatSummary) {
             columns={columns}
             subColumns={subColumns}
             className="casts w-max"
-            hideTotal
+            // hideTotal
         />
     )
 }
@@ -145,11 +151,11 @@ type OffensiveTableData = TallyTableProps<{
     critRate: number
 }>
 
-function OffensiveTable(usage: CombatSummary) {
+function OffensiveTable(combat: CombatSummary) {
     let rows = [] as OffensiveTableData["rows"]
 
-    for (const group of usage.groups) {
-        const casts = Object.entries(usage.data).flatMap(
+    for (const group of combat.groups) {
+        const casts = Object.entries(combat.data).flatMap(
             ([spell, allCasts]) =>
                 allCasts.length && group.has(allCasts[0])
                     ? [[spell, allCasts] as const]
@@ -475,10 +481,92 @@ function OffensiveTable(usage: CombatSummary) {
 
     return (
         <TallyTable
-            label="Casts"
+            label="Damage"
             rows={rows}
             columns={columns}
             className="offensive max-w-[50rem]"
+            hideTotal
+        />
+    )
+}
+
+type MiscTableData = TallyTableProps<{
+    value: string
+}>
+// rounds: string
+//     turns: number
+//     sol: number
+//     riddlemaster: number
+//     gems: number
+
+function MiscTable(summary: LogSummary, log: CompleteLog) {
+    const rows: MiscTableData["rows"] = [
+        {
+            label: "Rounds",
+            value: {
+                value: summary.round
+                    ? `${summary.round.end} / ${summary.round.max}`
+                    : "1 / ???",
+            },
+        },
+        {
+            label: "Turns",
+            value: {
+                value: formatNumber(summary.turnIndexes.length),
+            },
+        },
+        {
+            label: "SoL Triggers",
+            value: {
+                value: formatNumber(
+                    log.entries.filter(
+                        (entry) =>
+                            entry.type === "event" &&
+                            entry.event.event_type === "SPARK_TRIGGER"
+                    ).length
+                ),
+            },
+        },
+        {
+            label: "Riddlemasters",
+            value: {
+                value: formatNumber(
+                    log.entries.filter(
+                        (entry) =>
+                            entry.type === "event" &&
+                            entry.event.event_type === "RIDDLE_MASTER"
+                    ).length
+                ),
+            },
+        },
+        {
+            label: "Gems",
+            value: {
+                value: formatNumber(
+                    log.entries.filter(
+                        (entry) =>
+                            entry.type === "event" &&
+                            entry.event.event_type === "GEM"
+                    ).length
+                ),
+            },
+        },
+    ]
+
+    const columns: MiscTableData["columns"] = [
+        {
+            label: "Value",
+            get: (x) => 0,
+            format: (_, x) => x.value,
+        },
+    ]
+
+    return (
+        <TallyTable
+            label="Misc"
+            rows={rows}
+            columns={columns}
+            className="offensive w-max"
             hideTotal
         />
     )

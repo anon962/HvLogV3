@@ -1,6 +1,6 @@
 import { CompleteLog } from "@/lib/logDb"
-import { UsageSummary } from "@/lib/stats/dropStats"
-import { DropSummary } from "@/lib/stats/itemUsageStats"
+import { DropSummary } from "@/lib/stats/dropStats"
+import { ItemUsageSummary } from "@/lib/stats/itemUsageStats"
 import { filterEvents } from "@/lib/stats/summaryStats"
 import { formatNumber, sortBy } from "@/lib/utils/miscUtils"
 import { alphabetical, max, range, sum } from "radash"
@@ -49,7 +49,7 @@ export function DropInfo(props: { log: CompleteLog }) {
 
 function CalculationPreview(
     drops: DropSummary,
-    usage: UsageSummary,
+    usage: ItemUsageSummary,
     staminaUsage: number
 ) {
     const totalIncome = sum(
@@ -106,7 +106,7 @@ type IncomeTable = TallyTableProps<
     { count: number; value: number; label: string }
 >
 
-function IncomeSummaryTable(drops: DropSummary) {
+function IncomeSummaryTable(drops: ItemUsageSummary) {
     const acc: Record<string, IncomeTable["rows"][number]> =
         Object.fromEntries(
             drops.groups.map((grp) => [
@@ -187,7 +187,7 @@ type UsageTable = TallyTableProps<
 >
 
 function UsageSummaryTable(
-    usage: UsageSummary,
+    usage: ItemUsageSummary,
     staminaUsage: number
 ) {
     const acc: Record<string, UsageTable["rows"][number]> =
@@ -278,7 +278,7 @@ function UsageSummaryTable(
 function DropChart(
     log: CompleteLog,
     dropSummary: DropSummary,
-    usageSummary: DropSummary
+    usageSummary: ItemUsageSummary
 ) {
     const chart = new IncomeChart(log, dropSummary, usageSummary)
     const el = chart.render()

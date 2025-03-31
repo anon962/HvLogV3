@@ -4,13 +4,10 @@ import {
     CombatSummary,
     summarizeCombatUsage,
 } from "../stats/combatStats"
-import {
-    UsageSummary as ItemUsageSummary,
-    summarizeItemDrops,
-} from "../stats/dropStats"
+import { DropSummary, summarizeItemDrops } from "../stats/dropStats"
 import { IndexMap } from "../stats/indexMap"
 import {
-    DropSummary,
+    ItemUsageSummary,
     summarizeItemUsage,
 } from "../stats/itemUsageStats"
 import { LogSummary, SummaryDb } from "../summaryDb"

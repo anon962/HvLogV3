@@ -91,10 +91,10 @@ function extractDrops(log: CompleteLog) {
 }
 
 // Classify drops
-export function summarizeItemDrops(log: CompleteLog): UsageSummary {
+export function summarizeItemDrops(log: CompleteLog): DropSummary {
     const drops = extractDrops(log)
 
-    const summary: UsageSummary = {
+    const summary: DropSummary = {
         data: {},
         groups: [
             newDropEventGroup(
@@ -183,11 +183,11 @@ export function summarizeItemDrops(log: CompleteLog): UsageSummary {
 function newDropEventGroup<T extends string>(
     label: string,
     keys: Set<T>
-): UsageSummary["groups"][number] {
+): DropSummary["groups"][number] {
     return { label, has: (key) => keys.has(key as any) }
 }
 
-export type UsageSummary = EventSummary<
+export type DropSummary = EventSummary<
     {
         count: number
         value: number

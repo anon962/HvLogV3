@@ -21,7 +21,8 @@ export interface TallyTableColumn<TItem = any> {
     label: string
     tooltip?: ReactElement | string
     get: (x: TItem) => number
-    format?: (x: number) => string
+    format?: (value: number, x: TItem) => string
+    formatTotal?: (value: number) => string
 }
 
 export interface TallyTableRow<TItem = any, TSubItem = any> {
@@ -138,8 +139,8 @@ export function TallyTable({
     if (!hideTotal) {
         const totalEls = totals.map((x, idx) => {
             let label
-            if (columns[idx].format) {
-                label = columns[idx].format(x)
+            if (columns[idx].formatTotal) {
+                label = columns[idx].formatTotal(x)
             } else if (x >= 1000) {
                 label = formatNumber(x)
             } else if (x < 1) {
@@ -232,7 +233,7 @@ function Row({
 
         let valueStr
         if (col.format) {
-            valueStr = col.format?.(value)
+            valueStr = col.format?.(value, row.value)
         } else if (value >= 1000) {
             valueStr = formatNumber(value)
         } else {
