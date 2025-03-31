@@ -5,10 +5,8 @@ import { registerViewLogs } from "./lib/app/registerViewLogs"
 import { HvLog } from "./lib/ui/hvlog/hvLog.tsx"
 
 // @todo: combat - usage chart (attacks, debuffs, heals, other)
-// @todo: combat - resist distribution (debuffs, other)
 // @todo: combat - heal breakdown (hp mp sp)
 // @todo: combat - heal breakdown (active, passive)
-// @todo: combat - melee casts are PLAYER_ITEMs
 // @todo: menu - export / import logs
 // @todo: menu - clear localstorage
 // @todo: menu - config (monaco)

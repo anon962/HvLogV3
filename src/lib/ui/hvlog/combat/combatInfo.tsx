@@ -26,6 +26,8 @@ export function CombatInfo({ log }: { log: CompleteLog }) {
             </div>
 
             {OffensiveTable(usage)}
+
+            {DebuffTable(usage)}
         </div>
     )
 }
@@ -493,18 +495,30 @@ function OffensiveTable(combat: CombatSummary) {
 type MiscTableData = TallyTableProps<{
     value: string
 }>
-// rounds: string
-//     turns: number
-//     sol: number
-//     riddlemaster: number
-//     gems: number
 
 function MiscTable(summary: LogSummary, log: CompleteLog) {
+    const sparks = log.entries.filter(
+        (entry) =>
+            entry.type === "event" &&
+            entry.event.event_type === "SPARK_TRIGGER"
+    ).length
+
+    const ponies = log.entries.filter(
+        (entry) =>
+            entry.type === "event" &&
+            entry.event.event_type === "RIDDLE_MASTER"
+    ).length
+
+    const gems = log.entries.filter(
+        (entry) =>
+            entry.type === "event" && entry.event.event_type === "GEM"
+    ).length
+
     const rows: MiscTableData["rows"] = [
         {
             label: "Rounds",
             value: {
-                value: summary.round
+                value: summary.round?.end
                     ? `${summary.round.end} / ${summary.round.max}`
                     : "1 / ???",
             },
@@ -518,38 +532,23 @@ function MiscTable(summary: LogSummary, log: CompleteLog) {
         {
             label: "SoL Triggers",
             value: {
-                value: formatNumber(
-                    log.entries.filter(
-                        (entry) =>
-                            entry.type === "event" &&
-                            entry.event.event_type === "SPARK_TRIGGER"
-                    ).length
-                ),
+                value: formatNumber(sparks),
             },
+            disabled: sparks === 0,
         },
         {
             label: "Riddlemasters",
             value: {
-                value: formatNumber(
-                    log.entries.filter(
-                        (entry) =>
-                            entry.type === "event" &&
-                            entry.event.event_type === "RIDDLE_MASTER"
-                    ).length
-                ),
+                value: formatNumber(ponies),
             },
+            disabled: ponies === 0,
         },
         {
             label: "Gems",
             value: {
-                value: formatNumber(
-                    log.entries.filter(
-                        (entry) =>
-                            entry.type === "event" &&
-                            entry.event.event_type === "GEM"
-                    ).length
-                ),
+                value: formatNumber(gems),
             },
+            disabled: gems === 0,
         },
     ]
 
@@ -557,7 +556,7 @@ function MiscTable(summary: LogSummary, log: CompleteLog) {
         {
             label: "Value",
             get: (x) => 0,
-            format: (_, x) => x.value,
+            format: (_, x) => x.value, // this is awful
         },
     ]
 
@@ -569,5 +568,91 @@ function MiscTable(summary: LogSummary, log: CompleteLog) {
             className="offensive w-max"
             hideTotal
         />
+    )
+}
+
+type DebuffTableData = TallyTableProps<{
+    castCount: number
+    hitCount: number
+    hitCountAvg: number
+    hitRate: number
+    resistRate: number
+}>
+
+function DebuffTable(usage: CombatSummary) {
+    const group = usage.groups.find((grp) => grp.label === "Debuffs")!
+
+    const casts = Object.entries(usage.data).flatMap(
+        ([spell, allCasts]) =>
+            allCasts.length && group.has(allCasts[0])
+                ? [[spell, allCasts] as const]
+                : []
+    )
+
+    let rows = [] as DebuffTableData["rows"]
+
+    for (const [spell, allCasts] of Object.entries(usage.data)) {
+        if (!allCasts.length || !group.has(allCasts[0])) {
+            continue
+        }
+
+        const castCount = allCasts.length
+
+        const effects = allCasts.flatMap((cast) => cast.debuff ?? [])
+
+        const hitCount = sum(
+            allCasts.map((cast) => (cast.debuff ?? []).length)
+        )
+        const hitRate = hitCount / effects.length
+
+        const resistRate =
+            1 - effects.filter((x) => x).length / effects.length
+
+        rows.push({
+            label: spell,
+            value: {
+                castCount,
+                hitCount,
+                hitCountAvg: hitCount / castCount,
+                hitRate,
+                resistRate,
+            },
+            selectable: false,
+            disabled: false,
+        })
+    }
+
+    rows = sortBy(rows, [{ fn: (r) => r.value.castCount }]).reverse()
+
+    const columns: DebuffTableData["columns"] = [
+        {
+            label: "Casts",
+            get: (x) => x.castCount,
+        },
+        {
+            label: "Target Count",
+            get: (x) => x.hitCountAvg,
+            format: (x) => `${x.toFixed(1)}`,
+            tooltip: (
+                <span>Average number of monsters hit per cast.</span>
+            ),
+        },
+        {
+            label: "Resist Rate",
+            get: (x) => x.resistRate,
+            format: (x) => `${x.toFixed(1)}%`,
+        },
+    ]
+
+    return rows.length ? (
+        <TallyTable
+            label="Debuffs"
+            rows={rows}
+            columns={columns}
+            className="casts w-max"
+            hideTotal
+        />
+    ) : (
+        <></>
     )
 }

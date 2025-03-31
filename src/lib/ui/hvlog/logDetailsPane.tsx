@@ -57,8 +57,8 @@ export function LogDetailsPane({ log }: { log?: CompleteLog }) {
                     value="combat"
                     className="h-full min-h-0"
                 >
-                    <Card className="min-h-0 h-full py-0">
-                        <CardContent className="p-0 min-h-0">
+                    <Card className="min-h-0 h-full py-0 overflow-auto">
+                        <CardContent className="p-0">
                             {log ? <CombatInfo log={log} /> : ""}
                         </CardContent>
                     </Card>

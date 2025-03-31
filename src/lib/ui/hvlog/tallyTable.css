@@ -1,7 +1,8 @@
 .tally-table {
     font-size: 0.9rem;
     line-height: 1.25;
-    overflow: auto;
+    overflow-x: auto;
+    height: max-content;
 
     h1 {
         font-size: 1rem;
