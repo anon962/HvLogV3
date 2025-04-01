@@ -4,6 +4,8 @@
 
 @import "tailwindcss";
 
+@import "./configEditor/configEditor.css";
+
 @import "./hvlog/logDetailsPane.css";
 @import "./hvlog/logEventList.css";
 @import "./hvlog/logSummaryTable.css";

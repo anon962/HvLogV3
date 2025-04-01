@@ -5,7 +5,8 @@ import { filterEvents } from "@/lib/stats/summaryStats"
 import { formatNumber, sortBy } from "@/lib/utils/miscUtils"
 import { alphabetical, max, range, sum } from "radash"
 import { useEffect, useRef } from "react"
-import { GOOD_EQUIPS, PRICES } from "../../constants"
+import { useAppContext } from "../../appContext"
+import { GOOD_EQUIPS } from "../../constants"
 import { useStats } from "../../logStatsContext"
 import { TallyTable, TallyTableProps } from "../tallyTable"
 import { IncomeChart } from "./incomeChart"
@@ -52,6 +53,8 @@ function CalculationPreview(
     usage: ItemUsageSummary,
     staminaUsage: number
 ) {
+    const app = useAppContext()
+
     const totalIncome = sum(
         Object.values(drops.data).flatMap((xs) => xs),
         (x) => x.value
@@ -61,7 +64,7 @@ function CalculationPreview(
             Object.values(usage.data).flatMap((xs) => xs),
             (x) => x.value
         ) +
-        (staminaUsage * PRICES["Energy Drink"]) / 10
+        (staminaUsage * app.config.prices["Energy Drink"]) / 10
 
     const net = totalIncome - totalExpenses
     const netClass = net > 0 ? "text-green-300" : "text-red-300"
@@ -190,6 +193,8 @@ function UsageSummaryTable(
     usage: ItemUsageSummary,
     staminaUsage: number
 ) {
+    const app = useAppContext()
+
     const acc: Record<string, UsageTable["rows"][number]> =
         Object.fromEntries(
             usage.groups.map((grp) => [
@@ -229,7 +234,9 @@ function UsageSummaryTable(
         label: "Stamina",
         value: {
             count: staminaUsage,
-            value: (staminaUsage * PRICES["Energy Drink"]) / 10,
+            value:
+                (staminaUsage * app.config.prices["Energy Drink"]) /
+                10,
         },
         subValues: [],
         selectable: false,
@@ -280,7 +287,14 @@ function DropChart(
     dropSummary: DropSummary,
     usageSummary: ItemUsageSummary
 ) {
-    const chart = new IncomeChart(log, dropSummary, usageSummary)
+    const app = useAppContext()
+
+    const chart = new IncomeChart(
+        app.config.prices,
+        log,
+        dropSummary,
+        usageSummary
+    )
     const el = chart.render()
 
     const container = useRef<HTMLDivElement>(null)

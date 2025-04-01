@@ -1,9 +1,9 @@
 import { CompleteLog } from "../logDb"
+import { useAppContext } from "../ui/appContext"
 import {
     BUBBLE_VASE,
     HEALTH_ITEMS,
     MANA_ITEMS,
-    PRICES,
     SCROLLS,
     SPIRIT_ITEMS,
 } from "../ui/constants"
@@ -34,6 +34,7 @@ function extractItemUsage(log: CompleteLog) {
 export function summarizeItemUsage(
     log: CompleteLog
 ): ItemUsageSummary {
+    const app = useAppContext()
     const usage = extractItemUsage(log)
 
     const summary: ItemUsageSummary = {
@@ -65,7 +66,7 @@ export function summarizeItemUsage(
 
     for (let [item, logIdxs] of Object.entries(usage)) {
         const k = item as any
-        const ps = PRICES as any
+        const ps = app.config.prices
 
         if (BUBBLE_VASE.has(k)) {
             summary.data[k] = mapUses(k, logIdxs, ps[k])
@@ -78,11 +79,7 @@ export function summarizeItemUsage(
         } else if (SPIRIT_ITEMS.has(k)) {
             summary.data[k] = mapUses(k, logIdxs, ps[k])
         } else if (item === "Last Elixir") {
-            summary.data[k] = mapUses(
-                k,
-                logIdxs,
-                PRICES["Last Elixir"]
-            )
+            summary.data[k] = mapUses(k, logIdxs, ps["Last Elixir"])
         }
     }
 

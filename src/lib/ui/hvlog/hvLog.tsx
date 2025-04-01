@@ -1,3 +1,4 @@
+import { App } from "@/lib/app/app"
 import "@/lib/ui/global.css"
 import {
     ResizableHandle,
@@ -5,7 +6,8 @@ import {
     ResizablePanelGroup,
 } from "@/lib/ui/shadcn/resizable"
 import { alphabetical } from "radash"
-import { StrictMode, useEffect, useMemo } from "react"
+import { StrictMode, useMemo } from "react"
+import { AppContextProvider } from "../appContext"
 import { LogContextProvider, useLogContext } from "../logContext"
 import { LogStatsProvider } from "../logStatsContext"
 import { SummaryDbProvider } from "../summaryDbContext"
@@ -13,16 +15,18 @@ import { useLocalJsonState } from "./hooks"
 import { LogDetailsPane } from "./logDetailsPane"
 import { LogSummaryTable } from "./logSummaryTable"
 
-export function HvLog() {
+export function HvLog(props: { app: App }) {
     return (
         <StrictMode>
-            <LogContextProvider>
-                <SummaryDbProvider>
-                    <LogStatsProvider>
-                        <HvLogInner />
-                    </LogStatsProvider>
-                </SummaryDbProvider>
-            </LogContextProvider>
+            <AppContextProvider app={props.app}>
+                <LogContextProvider>
+                    <SummaryDbProvider>
+                        <LogStatsProvider>
+                            <HvLogInner />
+                        </LogStatsProvider>
+                    </SummaryDbProvider>
+                </LogContextProvider>
+            </AppContextProvider>
         </StrictMode>
     )
 }
@@ -39,11 +43,6 @@ function HvLogInner() {
     const selectionIdx = logsSorted.findIndex(
         (l) => l.id === selectedLogId
     )
-
-    useEffect(() => {
-        // @ts-ignore
-        window.HV_LOG_INIT_STYLES()
-    }, [])
 
     return (
         <ResizablePanelGroup

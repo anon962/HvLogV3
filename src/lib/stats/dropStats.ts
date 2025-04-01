@@ -1,9 +1,9 @@
 import { CompleteLog } from "../logDb"
+import { useAppContext } from "../ui/appContext"
 import {
     ARTIFACTS,
     CONSUMABLES,
     MATERIALS,
-    PRICES,
     SHARDS,
     TROPHIES,
 } from "../ui/constants"
@@ -92,6 +92,7 @@ function extractDrops(log: CompleteLog) {
 
 // Classify drops
 export function summarizeItemDrops(log: CompleteLog): DropSummary {
+    const app = useAppContext()
     const drops = extractDrops(log)
 
     const summary: DropSummary = {
@@ -142,7 +143,7 @@ export function summarizeItemDrops(log: CompleteLog): DropSummary {
 
     for (let [key, xs] of Object.entries(drops)) {
         const k = key as any
-        const ps = PRICES as any
+        const ps = app.config.prices
 
         if (ARTIFACTS.has(k)) {
             summary.data[k] = classifyDrops(k, xs, ps[k])
@@ -155,10 +156,10 @@ export function summarizeItemDrops(log: CompleteLog): DropSummary {
         ) {
             summary.data[k] = classifyDrops(k, xs, 1, true)
         } else if (key.startsWith("Crystal of ")) {
-            summary.data[k] = classifyDrops(k, xs, PRICES["Crystal"])
+            summary.data[k] = classifyDrops(k, xs, ps["Crystal"])
             crystalKeys.add(k)
         } else if (k.includes("Figurine")) {
-            summary.data[k] = classifyDrops(k, xs, PRICES["Figurine"])
+            summary.data[k] = classifyDrops(k, xs, ps["Figurine"])
             figurineKeys.add(k)
         } else if (MATERIALS.has(k)) {
             summary.data[k] = classifyDrops(k, xs, ps[k])

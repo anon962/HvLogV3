@@ -1,9 +1,10 @@
 import { isEqual } from "radash"
-import React from "react"
+import React, { FunctionComponent } from "react"
 import { createRoot } from "react-dom/client"
 import { App } from "./lib/app/app"
 import { registerClearCache } from "./lib/app/registerClearCache.ts"
 import { registerViewLogs } from "./lib/app/registerViewLogs"
+import { ConfigEditor } from "./lib/ui/configEditor/configEditor.tsx"
 import { HvLog } from "./lib/ui/hvlog/hvLog.tsx"
 import { readUrlPath } from "./lib/utils/miscUtils.ts"
 
@@ -26,7 +27,6 @@ import { readUrlPath } from "./lib/utils/miscUtils.ts"
 
 async function main() {
     const app = await App.ainit()
-    window.HV_LOG = app
 
     registerViewLogs(app)
     registerClearCache(app)
@@ -34,7 +34,9 @@ async function main() {
     const path = readUrlPath().parts
 
     if (isEqual(path, ["hvlog", "logs"])) {
-        return await routeUi(app)
+        return await mountReact(HvLog, app)
+    } else if (isEqual(path, ["hvlog", "config"])) {
+        return await mountReact(ConfigEditor, app)
     } else {
         await app.runLogger()
     }
@@ -43,17 +45,26 @@ async function main() {
 declare global {
     interface Window {
         HV_LOG: App
+        HV_LOG_INIT_STYLES: () => void
     }
 }
 
-async function routeUi(app: App) {
-    const rootEl = document.createElement("div")
-    document.body.innerHTML = rootEl.outerHTML
+async function mountReact(
+    component: FunctionComponent<{ app: App }>,
+    app: App
+) {
+    window.HV_LOG_INIT_STYLES()
 
-    const rootComponent = React.createElement(HvLog)
-    createRoot(document.querySelector("body > div")!).render(
-        rootComponent
-    )
+    document.body.innerHTML = `
+        <div id="root" className="h-full w-full">
+
+        </div>
+    `
+
+    const rootComponent = React.createElement(component, {
+        app,
+    })
+    createRoot(document.querySelector("#root")!).render(rootComponent)
 
     document.body.classList.add("dark")
     document.title = "HvLog"

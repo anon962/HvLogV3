@@ -1,15 +1,14 @@
+import { clone } from "radash"
 import { LogDb } from "../logDb"
+import { DEFAULT_CONFIG } from "../ui/constants"
 import { BattleLogger } from "./battleLogger"
 
-const STORAGE_KEY = "hvlog_config"
+export const APP_CONFIG_KEY = "hvlog_config"
+export const CONFIG_VERSION = 1
 
-const APP_VERSION = 1
-
-const DEFAULT_CONFIG = () =>
-    ({
-        version: APP_VERSION,
-        prices: {},
-    } satisfies AppConfig)
+export interface AppConfig {
+    prices: Record<string, number>
+}
 
 export class App {
     public constructor(
@@ -26,7 +25,6 @@ export class App {
         const logger = await BattleLogger.ainit(db, false)
 
         const app = new App(config, db, logger)
-        app.dumpConfig()
 
         return app
     }
@@ -36,48 +34,47 @@ export class App {
     }
 
     private static loadConfig(): AppConfig {
+        const defaultConfig: AppConfig = clone(DEFAULT_CONFIG)
+
         // Load string
-        const raw = localStorage.getItem(STORAGE_KEY)
+        const raw = localStorage.getItem(APP_CONFIG_KEY)
         if (raw === null) {
-            const config = DEFAULT_CONFIG()
-            return config
+            return defaultConfig
         }
 
         // Parse json
-        let config: AppConfig
+        let userConfig: Partial<AppConfig>
+        let version: number
         try {
-            config = JSON.parse(raw)
+            ;({ config: userConfig, version } = JSON.parse(raw))
         } catch (e) {
             console.error(e)
             console.error(raw)
             alert(
-                `Invalid HvLog config. Please fix or delete the ${STORAGE_KEY} entry in localStorage.`
+                `Invalid HvLog config. Please fix or delete the ${APP_CONFIG_KEY} entry in localStorage.`
             )
             throw new Error("Invalid config")
         }
 
         // Check version
-        if (config.version === APP_VERSION) {
-            // @todo: validate?
-            return config
-        } else {
-            console.error(config)
+        // @todo: validate?
+        if (version !== CONFIG_VERSION) {
+            console.error(userConfig)
             alert(
-                `Invalid HvLog config. Please fix or delete the ${STORAGE_KEY} entry in localStorage.`
+                `Invalid HvLog config. Please fix or delete the ${APP_CONFIG_KEY} entry in localStorage.`
             )
             throw new Error("Invalid config")
         }
-    }
 
-    dumpConfig() {
-        localStorage.setItem(
-            STORAGE_KEY,
-            JSON.stringify(this.config, null, 2)
-        )
-    }
-}
+        const config = {
+            ...defaultConfig,
+            ...userConfig,
 
-interface AppConfig {
-    version: number
-    prices: Record<string, number>
+            prices: {
+                ...defaultConfig.prices,
+                ...userConfig.prices,
+            },
+        }
+        return config
+    }
 }

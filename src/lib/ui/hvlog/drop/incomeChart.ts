@@ -1,6 +1,9 @@
+import { AppConfig } from "@/lib/app/app"
 import { DataSeries } from "@/lib/charts/dataSeries"
 import { CompleteLog, LogEntry } from "@/lib/logDb"
 import { HvEventMap } from "@/lib/parsers"
+import { DropSummary } from "@/lib/stats/dropStats"
+import { ItemUsageSummary } from "@/lib/stats/itemUsageStats"
 import { findNext, formatNumber } from "@/lib/utils/miscUtils"
 import * as Plot from "@observablehq/plot"
 import {
@@ -14,11 +17,9 @@ import {
     sum,
 } from "radash"
 import {
-    PRICES,
     TAILWIND_COLORS,
     TAILWIND_SHADES,
 } from "../../../ui/constants"
-import { DropEventSummary } from "./dropInfo"
 
 type Series = DataSeries<{
     value: number
@@ -33,9 +34,10 @@ export class IncomeChart {
     endRound: number
 
     constructor(
+        public prices: AppConfig["prices"],
         public log: CompleteLog,
-        public dropSummary: DropEventSummary,
-        public usageSummary: DropEventSummary
+        public dropSummary: DropSummary,
+        public usageSummary: ItemUsageSummary
     ) {
         let toPush: Record<
             string,
@@ -106,7 +108,7 @@ export class IncomeChart {
             .map((x) => summaryToPoint(x, log))
         const staminaExpenses = [...range(1, this.endRound)].map(
             (idx) => ({
-                value: PRICES["Energy Drink"] / (10 * 50),
+                value: this.prices["Energy Drink"] / (10 * 50),
                 roundIdx: idx,
             })
         )
@@ -127,7 +129,7 @@ export class IncomeChart {
         }
 
         function summaryToPoint(
-            entry: DropEventSummary["data"][string][number],
+            entry: DropSummary["data"][string][number],
             log: CompleteLog
         ) {
             const [ev] = findNext(log.entries, isRoundStart, {

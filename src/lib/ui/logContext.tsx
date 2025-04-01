@@ -1,7 +1,8 @@
 import { sleep } from "radash"
 import { createContext, useContext, useEffect, useState } from "react"
-import { CompleteLog, LogDb } from "../logDb"
+import { CompleteLog } from "../logDb"
 import { ContextProviderProps } from "../utils/typeUtils"
+import { useAppContext } from "./appContext"
 
 export const ctx = createContext<ReturnType<typeof initContext>>(
     null as any
@@ -20,6 +21,7 @@ export function LogContextProvider({
 }
 
 function initContext(refreshDelay = 5000) {
+    const app = useAppContext()
     const [logs, setLogs] = useState<CompleteLog[]>([])
     const [loading, setLoading] = useState(true)
 
@@ -28,8 +30,7 @@ function initContext(refreshDelay = 5000) {
         const seen = new Set<string>()
 
         async function load() {
-            const db = await LogDb.ainit()
-            const iter = db.iterArchive()
+            const iter = app.db.iterArchive()
 
             for await (const log of iter) {
                 if (seen.has(log.id)) {

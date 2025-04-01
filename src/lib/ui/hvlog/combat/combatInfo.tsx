@@ -76,8 +76,6 @@ function CastTable(usage: CombatSummary) {
                             return !!cast.melee
                         case "Passive Attacks":
                             return !!cast.passiveAttack
-                        case "Buffs":
-                            return !!cast.buff
                         case "Melee Casts":
                             return !!cast.meleeCast
                     }
