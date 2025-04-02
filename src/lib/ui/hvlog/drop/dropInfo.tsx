@@ -29,11 +29,7 @@ export function DropInfo(props: { log: CompleteLog }) {
     return (
         <div className="drop-stats h-full overflow-auto flex flex-col">
             <div className="overview">
-                <CalculationPreview
-                    drops={drops}
-                    usage={usage}
-                    staminaUsage={staminaUsage}
-                />
+                <CalculationPreview log={props.log} />
                 <EquipSummary log={props.log} />
             </div>
 
@@ -54,38 +50,19 @@ export function DropInfo(props: { log: CompleteLog }) {
     )
 }
 
-interface CalculationPreviewProps {
-    drops: DropSummary
-    usage: ItemUsageSummary
-    staminaUsage: number
-}
+function CalculationPreview({ log }: { log: CompleteLog }) {
+    const {
+        finances: { income, expenses, profit },
+    } = useStats(log, { finances: true })
 
-function CalculationPreview({
-    drops,
-    usage,
-    staminaUsage,
-}: CalculationPreviewProps) {
-    const app = useAppContext()
+    const profitClass = profit > 0 ? "text-green-300" : "text-red-300"
+    const profitStr =
+        (profit > 0 ? "+" : "") + formatNumber(profit) + "c"
 
-    const totalIncome = sum(
-        Object.values(drops.data).flatMap((xs) => xs),
-        (x) => x.value
-    )
-    let totalExpenses =
-        sum(
-            Object.values(usage.data).flatMap((xs) => xs),
-            (x) => x.value
-        ) +
-        (staminaUsage * app.config.prices["Energy Drink"]) / 10
-
-    const net = totalIncome - totalExpenses
-    const netClass = net > 0 ? "text-green-300" : "text-red-300"
-    const netStr = (net > 0 ? "+" : "") + formatNumber(net) + "c"
-
-    const incomeStr = "+" + formatNumber(totalIncome) + "c"
-    const expenseStr = "-" + formatNumber(totalExpenses) + "c"
+    const incomeStr = "+" + formatNumber(income) + "c"
+    const expenseStr = "-" + formatNumber(expenses) + "c"
     const maxLength = max([
-        netStr.length,
+        profitStr.length,
         incomeStr.length,
         expenseStr.length,
     ])
@@ -110,8 +87,8 @@ function CalculationPreview({
             {/* <span></span> */}
             <span className="col-span-2">{divider}</span>
 
-            <span className="">Net:</span>
-            <span className={netClass}>{netStr}</span>
+            <span className="">Profit:</span>
+            <span className={profitClass}>{profitStr}</span>
         </pre>
     )
 }

@@ -5,8 +5,6 @@ import { mountReact } from "../utils/userscriptUtils"
 import { App } from "./app"
 
 export function registerLogExport(app: App) {
-    openDialog(app, "import")
-
     GM_registerMenuCommand(
         "Export Logs",
         () => openDialog(app, "export"),

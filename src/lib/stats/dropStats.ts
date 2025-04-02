@@ -1,5 +1,7 @@
+import { sum } from "radash"
 import { App } from "../app/app"
 import { CompleteLog } from "../logDb"
+import { LogSummary } from "../summaryDb"
 import {
     ARTIFACTS,
     CONSUMABLES,
@@ -9,6 +11,7 @@ import {
 } from "../ui/constants"
 import { EventSummary } from "../ui/hvlog/eventSummary"
 import { enumerate } from "../utils/miscUtils"
+import { ItemUsageSummary } from "./itemUsageStats"
 
 // Map events to items
 function extractDrops(log: CompleteLog) {
@@ -181,6 +184,36 @@ export function summarizeItemDrops(
     summary.groups.push(newDropEventGroup("Other", otherKeys))
 
     return summary
+}
+
+export type FinanceSummary = ReturnType<typeof summarizeFinances>
+
+export function summarizeFinances(
+    summary: LogSummary,
+    drops: DropSummary,
+    usage: ItemUsageSummary,
+    app: App
+) {
+    let staminaUsage = (summary.round?.end ?? 1) / 50
+    if (summary.battleType?.name === "Grindfest") {
+        staminaUsage += 1
+    }
+
+    const income = sum(
+        Object.values(drops.data).flatMap((xs) => xs),
+        (x) => x.value
+    )
+
+    const expenses =
+        sum(
+            Object.values(usage.data).flatMap((xs) => xs),
+            (x) => x.value
+        ) +
+        (staminaUsage * app.config.prices["Energy Drink"]) / 10
+
+    const profit = income - expenses
+
+    return { income, expenses, profit }
 }
 
 function newDropEventGroup<T extends string>(

@@ -9,6 +9,7 @@ import {
     TableHeader,
     TableRow,
 } from "@/lib/ui/shadcn/table"
+import { cn } from "@/lib/utils/shadcnUtils"
 import { sleep } from "radash"
 import { useEffect, useMemo, useState } from "react"
 import { useStats } from "./logStatsContext"
@@ -54,6 +55,9 @@ export function LogSummaryTable(props: {
                         <TableHead className="text-right">
                             Duration
                         </TableHead>
+                        <TableHead className="text-right">
+                            Profit
+                        </TableHead>
                         <TableHead className="">Date</TableHead>
                         <TableHead className="text-center">
                             Status
@@ -82,8 +86,12 @@ function LogRow(props: {
     selectionIdx: number
     onClick?: (log: CompleteLog) => void
 }) {
-    const { indexMap } = useStats(props.log, {
+    const {
+        indexMap,
+        finances: { profit },
+    } = useStats(props.log, {
         indexMap: true,
+        finances: true,
     })
 
     const startDate = useDateFormatter(
@@ -119,6 +127,18 @@ function LogRow(props: {
                 <TableCell className="text-right">{turns}</TableCell>
                 <TableCell className="text-right">
                     {duration}
+                </TableCell>
+                <TableCell
+                    className={cn(
+                        "profit text-right",
+                        // prettier-ignore
+                        profit > 10_000 ? "positive" :
+                        profit < -10_000 ? "negative" :
+                        ""
+                    )}
+                    title={props.log.meta.start}
+                >
+                    {(profit / 1000).toFixed(0)}k
                 </TableCell>
                 <TableCell className="" title={props.log.meta.start}>
                     {startDate}

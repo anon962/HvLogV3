@@ -6,6 +6,8 @@ import {
 } from "../../stats/combatStats"
 import {
     DropSummary,
+    FinanceSummary,
+    summarizeFinances,
     summarizeItemDrops,
 } from "../../stats/dropStats"
 import { IndexMap } from "../../stats/indexMap"
@@ -53,6 +55,14 @@ function initContext(db: SummaryDb) {
     const { get: getCombatUsage } = useCache((log) =>
         summarizeCombatUsage(log)
     )
+    const { get: getMoney } = useCache((log) => {
+        return summarizeFinances(
+            getSummary(log),
+            getItemDrops(log),
+            getItemUsage(log),
+            app
+        )
+    })
 
     return {
         getSummary,
@@ -60,6 +70,7 @@ function initContext(db: SummaryDb) {
         getItemDrops,
         getItemUsage,
         getCombatUsage,
+        getMoney,
     }
 }
 
@@ -86,6 +97,7 @@ export interface UseStatsOptions {
     itemDrops?: boolean
     itemUsage?: boolean
     combatUsage?: boolean
+    finances?: boolean
 }
 
 // prettier-ignore
@@ -101,6 +113,8 @@ export type UseStatsReturn<Opts extends UseStatsOptions> = {
             ItemUsageSummary : undefined :
         K extends 'combatUsage' ? Opts[K] extends true ?
             CombatSummary : undefined :
+        K extends 'finances' ? Opts[K] extends true ?
+            FinanceSummary : undefined :
         never
 }
 
@@ -118,5 +132,6 @@ export function useStats<T extends UseStatsOptions>(
         combatUsage: opts.combatUsage
             ? ctx.getCombatUsage(log)
             : undefined,
+        finances: opts.finances ? ctx.getMoney(log) : undefined,
     } as UseStatsReturn<T>
 }

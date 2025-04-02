@@ -55,7 +55,7 @@
                 color: var(--color-pink-200);
             }
             &.gf {
-                color: var(--color-green-200);
+                color: var(--color-lime-100);
             }
             &.re {
                 color: var(--color-purple-200);
@@ -81,25 +81,15 @@
             color: var(--color-muted-foreground);
         }
 
-        &:not(:hover) .view {
-            color: color-mix(
-                in oklab,
-                var(--foreground) 50%,
-                transparent
-            );
+        .profit {
+            &.positive {
+                color: var(--color-green-200);
+            }
+            &.negative {
+                color: var(--color-red-200);
+            }
         }
     }
-    /* tr:not(.selected):not(:hover) {
-        .view-selected {
-            display: none;
-        }
-    }
-    tr.selected,
-    tr:hover {
-        .view-unselected {
-            display: none;
-        }
-    } */
 }
 
 @container (width > 50rem) {

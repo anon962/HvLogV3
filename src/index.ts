@@ -11,7 +11,6 @@ import {
     readUrlPath,
 } from "./lib/utils/userscriptUtils.ts"
 
-// @todo: menu - export / import logs
 // @todo: combat - heal breakdown (hp mp sp)
 // @todo: combat - heal breakdown (active, passive)
 // @todo: combat - usage chart (attacks, debuffs, heals, other)
