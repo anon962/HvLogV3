@@ -11,8 +11,9 @@ import {
     readUrlPath,
 } from "./lib/utils/userscriptUtils.ts"
 
-// @todo: combat - usage chart (attacks, debuffs, heals, other)
 // @todo: compression
+// @todo: reparse errors
+// @todo: test db migration
 
 // @todo: sort
 // @todo: filter
