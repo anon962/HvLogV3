@@ -11,11 +11,26 @@ const LIVE_STORE = "live"
 const LIVE_META_STORE = "live_meta"
 const LIVE_HASH_STORE = "live_hash"
 
+const STORAGE_KEY_PERSISTENT = "HvLog"
+const STORAGE_KEY_ISEKAI = "HvLog_isekai"
+
 export class LogDb {
     constructor(public db: idb.IDBPDatabase<LogDbSchema>) {}
 
-    static async ainit(): Promise<LogDb> {
-        const key = readUrlPath().isIsekai ? "HvLog_isekai" : "HvLog"
+    static async ainit(
+        locationOverride?: "isekai" | "persistent"
+    ): Promise<LogDb> {
+        let key
+        if (locationOverride) {
+            key =
+                locationOverride === "isekai"
+                    ? STORAGE_KEY_ISEKAI
+                    : STORAGE_KEY_PERSISTENT
+        } else {
+            key = readUrlPath().isIsekai
+                ? STORAGE_KEY_ISEKAI
+                : STORAGE_KEY_PERSISTENT
+        }
 
         let isNewDb = false
         const db = await idb.openDB<LogDbSchema>(key, 1, {
@@ -235,6 +250,18 @@ export class LogDb {
     async count(key: idb.StoreNames<LogDbSchema>) {
         return await this.db.count(key)
     }
+
+    async *replaceLogs(logs: CompleteLog[]): AsyncIterable<number> {
+        const txn = this.db.transaction(COMPLETE_STORE, "readwrite")
+
+        await txn.store.clear()
+
+        for (let idx = 0; idx < logs.length; idx++) {
+            const log = logs[idx]
+            await this.db.add(COMPLETE_STORE, log)
+            yield idx
+        }
+    }
 }
 
 export interface LogDbSchema extends idb.DBSchema {
@@ -284,3 +311,9 @@ type LogDbStore<
     TStore extends idb.StoreNames<LogDbSchema>,
     TMode extends IDBTransactionMode = "readonly"
 > = idb.IDBPObjectStore<LogDbSchema, any, TStore, TMode>
+
+export interface LogDbBackup {
+    version: number
+    persistent: CompleteLog[]
+    isekai: CompleteLog[]
+}

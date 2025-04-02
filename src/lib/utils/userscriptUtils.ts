@@ -27,6 +27,11 @@ export function mountReact(
     const reactEl = createRoot(targetEl)
     reactEl.render(rootComponent)
 
+    targetEl.addEventListener("unmountme", () => {
+        reactEl.unmount()
+        targetEl.remove()
+    })
+
     return reactEl
 }
 

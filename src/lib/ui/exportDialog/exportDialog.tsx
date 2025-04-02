@@ -1,12 +1,9 @@
 import { App } from "@/lib/app/app"
-import { CompleteLog } from "@/lib/logDb"
+import { LogDb, LogDbBackup } from "@/lib/logDb"
 import "@/lib/ui/global.css"
 import { FC, useEffect, useRef, useState } from "react"
-import { AppContextProvider, useAppContext } from "../appContext"
-import {
-    LogContextProvider,
-    useLogContext,
-} from "../hvlog/logContext"
+import { AppContextProvider } from "../appContext"
+import { LogContextProvider } from "../hvlog/logContext"
 import { XIcon } from "../icons/tailwind"
 import { Button } from "../shadcn/button"
 
@@ -21,17 +18,15 @@ export const ExportDialog: FC<{ app: App }> = ({ app }) => {
 }
 
 function ExportDialogInner() {
-    const total = useDbSize()
-    const { logs, loading } = useLogContext()
-    const [didAutoDownload, setDidAutoDownload] = useState(false)
     const anchorEl = useRef<HTMLAnchorElement>(null)
     const dialogEl = useRef<HTMLDialogElement>(null)
-    const downloader = useDownloader(anchorEl.current)
+    const { status, download } = useDownloader()
 
-    if (!loading && !didAutoDownload && anchorEl.current) {
-        setDidAutoDownload(true)
-        downloader(logs)
-    }
+    useEffect(() => {
+        if (anchorEl.current) {
+            download(anchorEl.current)
+        }
+    }, [anchorEl.current])
 
     function onClose() {
         dialogEl.current?.dispatchEvent(
@@ -42,31 +37,35 @@ function ExportDialogInner() {
         )
     }
 
+    let statusEl
+    switch (status.type) {
+        case "idle":
+            statusEl = <>Exporting 0 / ??? logs</>
+            break
+        case "loading":
+            statusEl = <>{status.detail}</>
+            break
+        case "done":
+            statusEl = <>Done! Exported {status.count} logs.</>
+            break
+        case "error":
+            statusEl = <>Error. ${status.detail}</>
+            break
+    }
+
     return (
         <div
             onClick={() => onClose()}
-            className="absolute top-0 left-0 right-0 bottom-0 bg-black/30 cursor-pointer"
+            className="hvlog-dialog-container"
         >
             <dialog
                 onClick={(ev) => ev.stopPropagation()}
                 ref={dialogEl}
                 open
-                className={`
-                bg-gray-300 text-foreground rounded-lg border-2 border-black
-                top-0 bottom-0 left-0 right-0 size-full max-w-[30rem] max-h-[15rem] m-auto
-                flex flex-col items-center justify-center`}
+                className="max-w-[30rem] max-h-[15rem] z-20 flex flex-col items-center justify-center"
             >
-                <span className="text-lg font-mono pt-4">
-                    Exporting {logs.length} / {total || "???"} logs
-                    ...
-                    {!loading ? (
-                        <>
-                            <br />
-                            Done!
-                        </>
-                    ) : (
-                        ""
-                    )}
+                <span className="text-lg font-mono pt-4 text-center">
+                    {statusEl}
                 </span>
 
                 <Button
@@ -84,33 +83,22 @@ function ExportDialogInner() {
     )
 }
 
-function useDbSize() {
-    const [size, setSize] = useState(0)
-
-    const app = useAppContext()
-
-    useEffect(() => {
-        async function load() {
-            setSize(await app.db.count("complete"))
-        }
-
-        load()
+function useDownloader() {
+    const [status, setStatus] = useState<
+        | { type: "idle" }
+        | { type: "loading"; detail: string }
+        | { type: "done"; count: number }
+        | { type: "error"; detail: string }
+    >({
+        type: "idle",
     })
 
-    return size
-}
-
-function useDownloader(anchorEl: HTMLAnchorElement | null) {
-    const [currentDownload, setCurrentDownload] =
-        useState<Promise<void> | null>(null)
-
-    async function download(logs: CompleteLog[]) {
-        if (!anchorEl) {
-            return
-        }
-
+    async function download(
+        backup: LogDbBackup,
+        anchorEl: HTMLAnchorElement
+    ) {
         const now = new Date().toISOString()
-        const asStr = JSON.stringify(logs)
+        const asStr = JSON.stringify(backup)
         const asBytes = new TextEncoder().encode(asStr)
         const asStream = new ReadableStream({
             start(controller) {
@@ -127,9 +115,11 @@ function useDownloader(anchorEl: HTMLAnchorElement | null) {
                 done: boolean
                 value: Uint8Array
             }
-            asCompressed.push(value)
+
             if (done) {
                 break
+            } else {
+                asCompressed.push(value)
             }
         }
 
@@ -137,16 +127,78 @@ function useDownloader(anchorEl: HTMLAnchorElement | null) {
             type: "application/octet-stream",
         })
         anchorEl.href = URL.createObjectURL(asBlob)
-        anchorEl.download = `hvlog_${now}.json.gzip`
+        anchorEl.download = `hvlog_${now}.json.gz`
         anchorEl.click()
-        setCurrentDownload(null)
     }
 
-    return (logs: CompleteLog[]) => {
-        if (currentDownload) {
-            return
+    async function buildBackup() {
+        const persistentDb = await LogDb.ainit("persistent")
+        const isekaiDb = await LogDb.ainit("isekai")
+
+        if (persistentDb.db.version !== isekaiDb.db.version) {
+            setStatus({
+                type: "error",
+                detail: `Persistent db version (${persistentDb.db.version}) does not match isekai db version (${isekaiDb.db.version})`,
+            })
+            throw new Error()
         }
 
-        setCurrentDownload(download(logs))
+        const backup: LogDbBackup = {
+            version: persistentDb.db.version,
+            persistent: [],
+            isekai: [],
+        }
+
+        const total =
+            (await persistentDb.count("complete")) +
+            (await isekaiDb.count("complete"))
+
+        let idx = 0
+
+        for await (const log of persistentDb.iterArchive()) {
+            idx += 1
+            backup.persistent.push(log)
+            setStatus({
+                type: "loading",
+                detail: `Exporting logs (${idx} / ${total}) ...`,
+            })
+        }
+
+        for await (const log of isekaiDb.iterArchive()) {
+            idx += 1
+            backup.isekai.push(log)
+            setStatus({
+                type: "loading",
+                detail: `Exporting logs (${idx} / ${total}) ...`,
+            })
+        }
+
+        return { backup, total }
+    }
+
+    return {
+        status,
+        download: async (anchorEl: HTMLAnchorElement) => {
+            if (status.type !== "idle") {
+                return
+            }
+
+            setStatus({
+                type: "loading",
+                detail: "Exporting logs ...",
+            })
+            const { backup, total } = await buildBackup()
+
+            setStatus({
+                type: "loading",
+                detail: `Generating download ...`,
+            })
+            await download(backup, anchorEl)
+
+            setStatus({
+                type: "done",
+                count: total,
+            })
+        },
     }
 }
