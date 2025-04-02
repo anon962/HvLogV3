@@ -8,8 +8,10 @@ import {
     sortBy,
 } from "@/lib/utils/miscUtils"
 import { sort, sum } from "radash"
+import { useEffect, useRef } from "react"
 import { useStats } from "../logStatsContext"
 import { TallyTable, TallyTableProps } from "../tallyTable"
+import { HealChart } from "./healChart"
 
 export function CombatInfo({ log }: { log: CompleteLog }) {
     const { combatUsage: usage, summary } = useStats(log, {
@@ -30,6 +32,8 @@ export function CombatInfo({ log }: { log: CompleteLog }) {
             {DebuffTable(usage)}
 
             {HealTable(usage)}
+
+            <HealChartWrapper log={log} />
         </div>
     )
 }
@@ -842,4 +846,29 @@ function HealTable(usage: CombatSummary) {
             hideTotal
         />
     )
+}
+
+function HealChartWrapper({ log }: { log: CompleteLog }) {
+    const { combatUsage, indexMap, summary } = useStats(log, {
+        combatUsage: true,
+        indexMap: true,
+        summary: true,
+    })
+
+    const chart = new HealChart(
+        combatUsage,
+        indexMap,
+        summary.round?.end ?? 1
+    )
+    const el = chart.render()
+
+    const container = useRef<HTMLDivElement>(null)
+
+    useEffect(() => {
+        el.remove()
+        container?.current?.appendChild(el)
+        return () => el.remove()
+    }, [el, container.current])
+
+    return <div ref={container} className="w-full flex"></div>
 }

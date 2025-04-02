@@ -3,7 +3,7 @@ import { HvEvent } from "../parsers"
 import { CustomChart } from "./customChart"
 import { DataSeries } from "./dataSeries"
 
-export class HealChart implements CustomChart {
+export class HealChartOld implements CustomChart {
     enabled = true
     containerEl?: HTMLElement
     plotEl?: Element

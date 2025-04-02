@@ -1,6 +1,6 @@
 import { last, sleep, sort } from "radash"
 import { ChartManager } from "../charts/chartManager"
-import { HealChart } from "../charts/healChart"
+import { HealChartOld } from "../charts/healChartOld"
 import { LogDb, LogEntry, LogHash } from "../logDb"
 import { isEventFrom, parseLine, PARSERS } from "../parsers"
 
@@ -22,7 +22,7 @@ export class BattleLogger {
         if (!!document.querySelector("#riddlemaster")) {
             return
         } else if (!!document.querySelector("#textlog")) {
-            this.stats.addChart(new HealChart("heals"))
+            this.stats.addChart(new HealChartOld("heals"))
             this.stats.attach()
 
             while (true) {

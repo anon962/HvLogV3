@@ -151,10 +151,10 @@ export class IncomeChart {
         )
 
         const incomePoints = seriesEntries.flatMap(
-            ([label, series]) =>
+            ([label, series], idx) =>
                 series.mappedPoints.map((pt) => ({
                     ...pt,
-                    label,
+                    label: label.padStart(idx + label.length, " "),
                 }))
         )
 
@@ -189,7 +189,7 @@ export class IncomeChart {
                 Plot.lineY(this.expenses.mappedPoints, {
                     x: "x",
                     y: "y",
-                    stroke: (d) => " Expenses",
+                    stroke: (d) => "Expenses".padStart(99, " "),
                     strokeWidth: 3,
                 }),
                 Plot.ruleX(

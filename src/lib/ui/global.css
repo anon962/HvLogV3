@@ -224,3 +224,24 @@ input::file-selector-button {
     border-radius: revert;
     background: revert;
 }
+
+figure {
+    width: 100%;
+
+    svg {
+        width: 100%;
+
+        [aria-label="tip"] {
+            fill: color-mix(
+                in oklab,
+                var(--muted-foreground) 25%,
+                var(--card)
+            );
+
+            text {
+                font-family: monospace;
+                color: var(--foreground);
+            }
+        }
+    }
+}
