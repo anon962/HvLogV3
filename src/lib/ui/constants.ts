@@ -492,20 +492,10 @@ export const SHARDS = new Set<PriceKey>([
 
 export const ARTIFACTS = new Set<PriceKey>(["Precursor Artifact"])
 
-export const GOOD_EQUIPS = [
-    /Peerless/,
-    /Legendary/,
-    /Magnificent/,
-    // /Exquisite/,
-    // /Superior/,
-    // /Fine/,
-    // /Crude/,
-]
-
 // thanks BattleStats
 // https://forums.e-hentai.org/index.php?showtopic=243497
 export const DEFAULT_CONFIG = {
-    equipFilters: ["(?:magnificent|legendary|peerless).*"],
+    equipFilters: ["(?:magnificent|legendary|peerless)"],
 
     prices: {
         // Special

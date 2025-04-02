@@ -6,7 +6,6 @@ import { formatNumber, sortBy } from "@/lib/utils/miscUtils"
 import { alphabetical, max, range, sum } from "radash"
 import { useEffect, useRef } from "react"
 import { useAppContext } from "../../appContext"
-import { GOOD_EQUIPS } from "../../constants"
 import { useStats } from "../logStatsContext"
 import { TallyTable, TallyTableProps } from "../tallyTable"
 import { IncomeChart } from "./incomeChart"
@@ -309,9 +308,15 @@ function DropChart(
 }
 
 function EquipSummary(log: CompleteLog) {
+    const app = useAppContext()
+
+    const patts = app.config.equipFilters.map(
+        (patt) => new RegExp(patt, "i")
+    )
+
     const evs = alphabetical(
         filterEvents(log, ["DROP"]).filter((ev) =>
-            GOOD_EQUIPS.some((patt) => ev.item.match(patt))
+            patts.some((patt) => ev.item.match(patt))
         ),
         (ev) => ev.item
     )

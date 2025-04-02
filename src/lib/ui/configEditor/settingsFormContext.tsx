@@ -18,7 +18,7 @@ export function SettingsFormProvider(props: {
 }
 
 function initContext(app: App) {
-    const [settings, setSettings] = useState<AppConfig>({
+    const [settings, setSettings] = useState<FormValue>({
         equipFilters: ["", ""],
         prices: {},
         ...clone(app.userConfig),
@@ -55,7 +55,7 @@ export function useSettingsForm() {
     return useContext(ctx)
 }
 
-function resolveSettings(settings: AppConfig): Partial<AppConfig> {
+function resolveSettings(settings: FormValue): Partial<AppConfig> {
     const userConfig: Partial<AppConfig> = {}
 
     const equipFilters = settings.equipFilters
@@ -65,9 +65,16 @@ function resolveSettings(settings: AppConfig): Partial<AppConfig> {
         userConfig.equipFilters = equipFilters
     }
 
-    if (Object.entries(settings.prices).length > 0) {
-        userConfig.prices = settings.prices
+    const entries = Object.entries(settings.prices).filter(
+        (kv): kv is [string, number] => kv[1] !== undefined
+    )
+    if (entries.length > 0) {
+        userConfig.prices = Object.fromEntries(entries)
     }
 
     return userConfig
+}
+
+type FormValue = Omit<AppConfig, "prices"> & {
+    prices: Record<string, number | undefined>
 }

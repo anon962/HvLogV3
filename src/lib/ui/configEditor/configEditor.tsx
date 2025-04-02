@@ -46,17 +46,19 @@ function ConfigEditorInner() {
             return
         }
 
-        formRef.current.onchange = () => {
+        formRef.current.oninput = () => {
             const update = !!formRef.current?.checkValidity()
 
-            if (update !== isValid) {
-                setIsValid(update)
-            }
+            setIsValid(update)
         }
     }, [formRef.current])
 
     function onSubmit(ev?: FormEvent) {
         ev?.preventDefault()
+
+        if (!isValid) {
+            return
+        }
 
         submit()
 
@@ -174,7 +176,7 @@ function EquipFilter() {
                     onInput={(ev) => onInput(ev, idx)}
                     key={idx}
                     value={patt}
-                    placeholder="(?:magnificent|legendary|peerless).*"
+                    placeholder="legendary.*boots.*slaughter"
                     type="text"
                 />
 
@@ -253,7 +255,7 @@ function EquipFilter() {
                         </Button>
                         . Defaults to{" "}
                         <pre className="inline">
-                            (?:magnificent|legendary|peerless).*
+                            (?:magnificent|legendary|peerless)
                         </pre>
                     </span>
                 }
@@ -269,6 +271,20 @@ function EquipFilter() {
 function Prices() {
     const { settings, setSettings } = useSettingsForm()
 
+    function onInput(ev: Event, key: string) {
+        const value = parseFloat(
+            (ev.target as HTMLInputElement)?.value
+        )
+
+        setSettings({
+            ...settings,
+            prices: {
+                ...settings.prices,
+                [key]: isNaN(value) ? undefined : value,
+            },
+        })
+    }
+
     const rows = Object.entries(DEFAULT_CONFIG.prices).map(
         ([label, default_]) => {
             const curr = settings.prices[label]
@@ -280,10 +296,11 @@ function Prices() {
                     </TableCell>
                     <TableCell>
                         <Input
+                            onInput={(ev) => onInput(ev, label)}
                             className="px-2"
                             type="number"
                             placeholder={default_.toString()}
-                            value={curr}
+                            defaultValue={curr}
                         />
                     </TableCell>
                 </TableRow>

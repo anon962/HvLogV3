@@ -21,6 +21,7 @@ export class App {
 
     public static async ainit(): Promise<App> {
         const { config, userConfig } = App.loadConfig()
+        console.debug("Using config", config)
 
         const db = await LogDb.ainit()
 
