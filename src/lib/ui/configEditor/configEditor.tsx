@@ -154,11 +154,15 @@ function ConfigEditorInner() {
                     </Button>
 
                     <Button
-                        className="px-8 py-3 cursor-pointer h-auto text-base font-semibold text-foreground bg-pink-600 hover:bg-pink-600/90"
+                        className="px-8 py-3 cursor-pointer h-auto text-base font-semibold text-foreground bg-pink-600 hover:bg-pink-600/90 flex flex-col leading-none gap-0.5"
                         size="lg"
                         disabled={!isValid}
                     >
-                        Save
+                        <span>Save</span>
+
+                        <span className="text-xs text-foreground/90">
+                            ctrl+s
+                        </span>
                     </Button>
                 </div>
             </div>
@@ -242,7 +246,7 @@ function EquipFilter() {
                 label="Equip Filters"
                 description={
                     <span>
-                        Which equip drops to highlight, as a{" "}
+                        Equip drops to highlight. Entries should be a{" "}
                         <Button variant="link" className="p-0 h-auto">
                             <a
                                 href="https://regexr.com/8dofe"

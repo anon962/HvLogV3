@@ -3,6 +3,7 @@ import React, { FunctionComponent } from "react"
 import { createRoot } from "react-dom/client"
 import { App } from "./lib/app/app"
 import { registerClearCache } from "./lib/app/registerClearCache.ts"
+import { registerViewConfig } from "./lib/app/registerViewConfig.ts"
 import { registerViewLogs } from "./lib/app/registerViewLogs"
 import { ConfigEditor } from "./lib/ui/configEditor/configEditor.tsx"
 import { HvLog } from "./lib/ui/hvlog/hvLog.tsx"
@@ -12,7 +13,6 @@ import { readUrlPath } from "./lib/utils/miscUtils.ts"
 // @todo: combat - heal breakdown (hp mp sp)
 // @todo: combat - heal breakdown (active, passive)
 // @todo: combat - usage chart (attacks, debuffs, heals, other)
-// @todo: menu - config (monaco)
 // @todo: compression
 
 // @todo: sort
@@ -27,6 +27,7 @@ async function main() {
     const app = await App.ainit()
 
     registerViewLogs(app)
+    registerViewConfig(app)
     registerClearCache(app)
 
     const path = readUrlPath().parts

@@ -4,12 +4,12 @@ import {
 } from "vite-plugin-monkey/dist/client"
 import { App } from "./app"
 
-export function registerViewLogs(app: App) {
+export function registerViewConfig(app: App) {
     GM_registerMenuCommand(
-        "Battle Logs",
+        "Settings",
         () => {
             const w = (unsafeWindow ?? window).open(
-                "/hvlog/logs",
+                "/hvlog/config",
                 "_blank"
             )
             if (!w) {
@@ -20,7 +20,7 @@ export function registerViewLogs(app: App) {
             }
         },
         {
-            id: "view_logs",
+            id: "view_settings",
         }
     )
 }
