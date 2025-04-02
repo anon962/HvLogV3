@@ -1,6 +1,7 @@
 import { DataSeries } from "@/lib/charts/dataSeries"
 import { CombatSummary } from "@/lib/stats/combatStats"
 import { IndexMap } from "@/lib/stats/indexMap"
+import { setDefault } from "@/lib/utils/miscUtils"
 import * as Plot from "@observablehq/plot"
 import {
     alphabetical,
@@ -20,7 +21,7 @@ interface PointData {
 
 type Series = DataSeries<PointData>
 
-export class HealChart {
+export class CastChart {
     series: Record<string, Series> = {}
     sparks: number[]
 
@@ -31,37 +32,29 @@ export class HealChart {
     ) {
         const toPush: Record<string, Array<PointData>> = {}
 
-        for (const [label, castsForSpell] of Object.entries(
-            combat.data
-        )) {
-            const activePoints = castsForSpell.flatMap(
-                ({ logIdx, heal }) =>
-                    heal?.health
-                        ? [
-                              {
-                                  value: heal.health,
-                                  roundIdx: indexMap.l2r(logIdx),
-                              },
-                          ]
-                        : []
-            )
-            if (activePoints.length > 0) {
-                toPush[label] = activePoints
-            }
+        for (const castsForSpell of Object.values(combat.data)) {
+            for (const cast of castsForSpell) {
+                let label
+                if (cast.spell) {
+                    label = "Spell"
+                } else if (cast.debuff) {
+                    label = "Debuff"
+                } else if (cast.heal) {
+                    label = "Heals"
+                } else if (cast.buff) {
+                    label = "Buff"
+                } else if (cast.melee) {
+                    label = "Melee Atk"
+                } else if (cast.meleeCast) {
+                    label = "Melee Spell"
+                } else {
+                    continue
+                }
 
-            const passivePoints = castsForSpell.flatMap(
-                ({ logIdx, effectHeals }) =>
-                    effectHeals?.health
-                        ? [
-                              {
-                                  value: effectHeals.health,
-                                  roundIdx: indexMap.l2r(logIdx),
-                              },
-                          ]
-                        : []
-            )
-            if (passivePoints.length > 0) {
-                toPush[label] = passivePoints
+                setDefault(toPush, label, []).push({
+                    value: 1,
+                    roundIdx: indexMap.l2r(cast.logIdx),
+                })
             }
         }
 
@@ -125,23 +118,11 @@ export class HealChart {
                 grid: true,
             },
             y: {
-                label: "HP Healed",
+                label: "Turn Count",
                 grid: true,
             },
             marks: [
                 Plot.ruleY([0]),
-                Plot.ruleX(this.sparks, {
-                    y1: 0,
-                    y2: absoluteMax / 20,
-                    stroke: "red",
-                    opacity: 0.75,
-                }),
-                Plot.lineY(allPoints, {
-                    x: "x",
-                    y: "y",
-                    stroke: (d) => d["label"],
-                    interval: 1,
-                }),
                 Plot.ruleX(
                     percs,
                     Plot.pointerX({
@@ -152,6 +133,18 @@ export class HealChart {
                         strokeWidth: 2,
                     })
                 ),
+                Plot.lineY(allPoints, {
+                    x: "x",
+                    y: "y",
+                    stroke: (d) => d["label"],
+                    interval: 1,
+                }),
+                Plot.ruleX(this.sparks, {
+                    y1: 0,
+                    y2: absoluteMax / 20,
+                    stroke: "red",
+                    opacity: 0.75,
+                }),
                 Plot.tip(
                     percs,
                     Plot.pointerX({

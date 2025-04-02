@@ -11,6 +11,7 @@ import { sort, sum } from "radash"
 import { useEffect, useRef } from "react"
 import { useStats } from "../logStatsContext"
 import { TallyTable, TallyTableProps } from "../tallyTable"
+import { CastChart } from "./castChart"
 import { HealChart } from "./healChart"
 
 export function CombatInfo({ log }: { log: CompleteLog }) {
@@ -34,6 +35,8 @@ export function CombatInfo({ log }: { log: CompleteLog }) {
             {HealTable(usage)}
 
             <HealChartWrapper log={log} />
+
+            <CastChartWrapper log={log} />
         </div>
     )
 }
@@ -870,5 +873,48 @@ function HealChartWrapper({ log }: { log: CompleteLog }) {
         return () => el.remove()
     }, [el, container.current])
 
-    return <div ref={container} className="w-full flex"></div>
+    return (
+        <div className="flex flex-col">
+            <h1 className="text-base font-bold">Heals</h1>
+            <span className="text-sm text-muted-foreground py-1">
+                Red tick marks denote Spark of Life triggers
+            </span>
+
+            <div ref={container} className="w-full flex"></div>
+        </div>
+    )
+}
+
+function CastChartWrapper({ log }: { log: CompleteLog }) {
+    const { combatUsage, indexMap, summary } = useStats(log, {
+        combatUsage: true,
+        indexMap: true,
+        summary: true,
+    })
+
+    const chart = new CastChart(
+        combatUsage,
+        indexMap,
+        summary.round?.end ?? 1
+    )
+    const el = chart.render()
+
+    const container = useRef<HTMLDivElement>(null)
+
+    useEffect(() => {
+        el.remove()
+        container?.current?.appendChild(el)
+        return () => el.remove()
+    }, [el, container.current])
+
+    return (
+        <div className="flex flex-col">
+            <h1 className="text-base font-bold">Casts</h1>
+            <span className="text-sm text-muted-foreground py-1">
+                Red tick marks denote Spark of Life triggers
+            </span>
+
+            <div ref={container} className="w-full flex"></div>
+        </div>
+    )
 }
