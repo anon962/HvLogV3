@@ -62,3 +62,29 @@ export function openPath(path: string) {
         return
     }
 }
+
+// Monsterbation clears timers on new round which causes sleep() to never return
+// This fixes that by patching clearInterval() to check for any ids that we're using
+export const ACTIVE_TIMERS = new Set<number>()
+export function patchClearInterval() {
+    const clearInterval = unsafeWindow.clearInterval
+    unsafeWindow.clearInterval = (id: any) => {
+        if (ACTIVE_TIMERS.has(id)) {
+            return
+        }
+
+        clearInterval(id)
+    }
+}
+export async function sleepWithRegistration(
+    t: number
+): Promise<void> {
+    return new Promise((resolve) => {
+        const cb = () => {
+            ACTIVE_TIMERS.delete(id)
+            resolve()
+        }
+        let id: any = setTimeout(cb, t)
+        ACTIVE_TIMERS.add(id)
+    })
+}

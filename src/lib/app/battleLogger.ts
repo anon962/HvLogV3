@@ -1,8 +1,8 @@
-import { last, sleep, sort } from "radash"
+import { last, sort } from "radash"
 import { ChartManager } from "../charts/chartManager"
-import { HealChartOld } from "../charts/healChartOld"
 import { LogDb, LogEntry, LogHash } from "../logDb"
 import { isEventFrom, parseLine, PARSERS } from "../parsers"
+import { sleepWithRegistration } from "../utils/userscriptUtils"
 
 export class BattleLogger {
     constructor(public db: LogDb, public stats: ChartManager) {}
@@ -22,8 +22,8 @@ export class BattleLogger {
         if (!!document.querySelector("#riddlemaster")) {
             return
         } else if (!!document.querySelector("#textlog")) {
-            this.stats.addChart(new HealChartOld("heals"))
-            this.stats.attach()
+            // this.stats.addChart(new HealChartOld("heals"))
+            // this.stats.attach()
 
             while (true) {
                 await this.initialLogScan()
@@ -141,7 +141,7 @@ export class BattleLogger {
                 await this.appendLogEntries(newEntries)
             }
 
-            await sleep(1)
+            await sleepWithRegistration(1)
         }
     }
 

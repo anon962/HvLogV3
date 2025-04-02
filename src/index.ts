@@ -8,10 +8,11 @@ import { ConfigEditor } from "./lib/ui/configEditor/configEditor.tsx"
 import { HvLog } from "./lib/ui/hvlog/hvLog.tsx"
 import {
     mountReact,
+    patchClearInterval,
     readUrlPath,
 } from "./lib/utils/userscriptUtils.ts"
 
-// @todo: compression
+// @todo: compression - 48144 turns = 599045 events = 6.7738e+7 bytes = 4089446.4 bytes compressed (5%)
 // @todo: reparse errors
 // @todo: test db migration
 
@@ -48,5 +49,7 @@ declare global {
         HV_LOG_INIT_STYLES: () => void
     }
 }
+
+patchClearInterval()
 
 main()
