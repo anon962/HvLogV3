@@ -1,0 +1,30 @@
+.config-editor {
+    .border,
+    .border-t,
+    .divider {
+        border-color: color-mix(
+            in oklab,
+            var(--color-muted-foreground) 50%,
+            transparent
+        );
+    }
+
+    .divider {
+        margin: 2rem;
+    }
+
+    input:invalid {
+        color: red;
+        border-color: red;
+    }
+
+    .toaster li {
+        background-color: var(--color-pink-600);
+
+        font-size: 1rem;
+
+        div {
+            font-weight: bold !important;
+        }
+    }
+}

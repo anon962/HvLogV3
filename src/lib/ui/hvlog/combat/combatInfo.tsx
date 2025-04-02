@@ -8,7 +8,7 @@ import {
     sortBy,
 } from "@/lib/utils/miscUtils"
 import { sum } from "radash"
-import { useStats } from "../../logStatsContext"
+import { useStats } from "../logStatsContext"
 import { TallyTable, TallyTableProps } from "../tallyTable"
 
 export function CombatInfo({ log }: { log: CompleteLog }) {

@@ -8,12 +8,12 @@ import {
 import { alphabetical } from "radash"
 import { StrictMode, useMemo } from "react"
 import { AppContextProvider } from "../appContext"
-import { LogContextProvider, useLogContext } from "../logContext"
-import { LogStatsProvider } from "../logStatsContext"
-import { SummaryDbProvider } from "../summaryDbContext"
 import { useLocalJsonState } from "./hooks"
+import { LogContextProvider, useLogContext } from "./logContext"
 import { LogDetailsPane } from "./logDetailsPane"
+import { LogStatsProvider } from "./logStatsContext"
 import { LogSummaryTable } from "./logSummaryTable"
+import { SummaryDbProvider } from "./summaryDbContext"
 
 export function HvLog(props: { app: App }) {
     return (

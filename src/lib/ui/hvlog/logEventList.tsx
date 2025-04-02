@@ -12,7 +12,7 @@ import {
 } from "react"
 import { IndexMap } from "../../stats/indexMap"
 import { XIcon } from "../icons/tailwind"
-import { useStats } from "../logStatsContext"
+import { useStats } from "./logStatsContext"
 
 export function LogEventList(props: { log: CompleteLog }) {
     const { rows, loading, indexMap, activeIdx, setActiveIdx } =

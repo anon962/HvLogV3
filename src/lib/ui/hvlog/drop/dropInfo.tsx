@@ -7,7 +7,7 @@ import { alphabetical, max, range, sum } from "radash"
 import { useEffect, useRef } from "react"
 import { useAppContext } from "../../appContext"
 import { GOOD_EQUIPS } from "../../constants"
-import { useStats } from "../../logStatsContext"
+import { useStats } from "../logStatsContext"
 import { TallyTable, TallyTableProps } from "../tallyTable"
 import { IncomeChart } from "./incomeChart"
 

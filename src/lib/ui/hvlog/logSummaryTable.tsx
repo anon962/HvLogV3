@@ -11,7 +11,7 @@ import {
 } from "@/lib/ui/shadcn/table"
 import { sleep } from "radash"
 import { useEffect, useMemo, useState } from "react"
-import { useStats } from "../logStatsContext"
+import { useStats } from "./logStatsContext"
 
 export function LogSummaryTable(props: {
     onClick?: (log: CompleteLog) => void

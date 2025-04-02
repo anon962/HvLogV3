@@ -505,6 +505,8 @@ export const GOOD_EQUIPS = [
 // thanks BattleStats
 // https://forums.e-hentai.org/index.php?showtopic=243497
 export const DEFAULT_CONFIG = {
+    equipFilters: ["(?:magnificent|legendary|peerless).*"],
+
     prices: {
         // Special
         Crystal: 1.46,

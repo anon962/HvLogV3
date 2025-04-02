@@ -1,6 +1,6 @@
 import { createContext, useContext } from "react"
-import { SummaryDb } from "../summaryDb"
-import { ContextProviderProps } from "../utils/typeUtils"
+import { SummaryDb } from "../../summaryDb"
+import { ContextProviderProps } from "../../utils/typeUtils"
 
 const ctx = createContext<SummaryDb>(null as any)
 

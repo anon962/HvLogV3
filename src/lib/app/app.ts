@@ -4,27 +4,29 @@ import { DEFAULT_CONFIG } from "../ui/constants"
 import { BattleLogger } from "./battleLogger"
 
 export const APP_CONFIG_KEY = "hvlog_config"
-export const CONFIG_VERSION = 1
+export const APP_CONFIG_VERSION = 1
 
 export interface AppConfig {
+    equipFilters: string[]
     prices: Record<string, number>
 }
 
 export class App {
     public constructor(
         public config: AppConfig,
+        public userConfig: Partial<AppConfig>,
         public db: LogDb,
         public logger: BattleLogger
     ) {}
 
     public static async ainit(): Promise<App> {
-        const config = App.loadConfig()
+        const { config, userConfig } = App.loadConfig()
 
         const db = await LogDb.ainit()
 
         const logger = await BattleLogger.ainit(db, false)
 
-        const app = new App(config, db, logger)
+        const app = new App(config, userConfig, db, logger)
 
         return app
     }
@@ -33,17 +35,18 @@ export class App {
         await this.logger.attach()
     }
 
-    private static loadConfig(): AppConfig {
+    private static loadConfig() {
+        let userConfig: Partial<AppConfig> = {}
+
         const defaultConfig: AppConfig = clone(DEFAULT_CONFIG)
 
         // Load string
         const raw = localStorage.getItem(APP_CONFIG_KEY)
         if (raw === null) {
-            return defaultConfig
+            return { config: defaultConfig, userConfig }
         }
 
         // Parse json
-        let userConfig: Partial<AppConfig>
         let version: number
         try {
             ;({ config: userConfig, version } = JSON.parse(raw))
@@ -58,7 +61,7 @@ export class App {
 
         // Check version
         // @todo: validate?
-        if (version !== CONFIG_VERSION) {
+        if (version !== APP_CONFIG_VERSION) {
             console.error(userConfig)
             alert(
                 `Invalid HvLog config. Please fix or delete the ${APP_CONFIG_KEY} entry in localStorage.`
@@ -75,6 +78,7 @@ export class App {
                 ...userConfig.prices,
             },
         }
-        return config
+
+        return { config, userConfig }
     }
 }

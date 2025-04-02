@@ -9,12 +9,10 @@ import { HvLog } from "./lib/ui/hvlog/hvLog.tsx"
 import { readUrlPath } from "./lib/utils/miscUtils.ts"
 
 // @todo: menu - export / import logs
-// @todo: menu - clear localstorage
 // @todo: combat - heal breakdown (hp mp sp)
 // @todo: combat - heal breakdown (active, passive)
 // @todo: combat - usage chart (attacks, debuffs, heals, other)
 // @todo: menu - config (monaco)
-// @todo: isekai
 // @todo: compression
 
 // @todo: sort

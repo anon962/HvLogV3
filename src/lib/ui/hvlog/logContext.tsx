@@ -1,8 +1,8 @@
 import { sleep } from "radash"
 import { createContext, useContext, useEffect, useState } from "react"
-import { CompleteLog } from "../logDb"
-import { ContextProviderProps } from "../utils/typeUtils"
-import { useAppContext } from "./appContext"
+import { CompleteLog } from "../../logDb"
+import { ContextProviderProps } from "../../utils/typeUtils"
+import { useAppContext } from "../appContext"
 
 export const ctx = createContext<ReturnType<typeof initContext>>(
     null as any
