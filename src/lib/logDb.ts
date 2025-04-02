@@ -2,8 +2,9 @@ import * as idb from "idb"
 import { isEqual } from "radash"
 import { migrateLogDb } from "./migrateLogDb"
 import { HvEvent } from "./parsers"
-import { readUrlPath, uuidWithFallback } from "./utils/miscUtils"
+import { uuidWithFallback } from "./utils/miscUtils"
 import { ValueOf } from "./utils/typeUtils"
+import { readUrlPath } from "./utils/userscriptUtils"
 
 const COMPLETE_STORE = "complete"
 const LIVE_STORE = "live"
@@ -229,6 +230,10 @@ export class LogDb {
                 ? this.db.transaction(store, "readwrite").store
                 : store
         await store.put(value, key)
+    }
+
+    async count(key: idb.StoreNames<LogDbSchema>) {
+        return await this.db.count(key)
     }
 }
 

@@ -73,7 +73,7 @@ export function extractBattleType(log: CompleteLog): {
             }
 
             const tower = first.battle_type.match(
-                /The Tower \\(Floor (\d+)\\)/
+                /The Tower \(Floor (\d+)\)/
             )
             if (tower) {
                 result.battleType = {

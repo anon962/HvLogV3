@@ -499,6 +499,7 @@ export const DEFAULT_CONFIG = {
 
     prices: {
         // Special
+        "Energy Drink": 117000,
         Crystal: 1.46,
         "Precursor Artifact": 5500,
         Figurine: 16000,
@@ -506,7 +507,6 @@ export const DEFAULT_CONFIG = {
         "Aether Shard": 2300,
         "Featherweight Shard": 75,
         "Voidseeker Shard": 75,
-        "Energy Drink": 117000,
 
         // Trophies
         "ManBearPig Tail": 2100,

@@ -1,5 +1,5 @@
+import { App } from "../app/app"
 import { CompleteLog } from "../logDb"
-import { useAppContext } from "../ui/appContext"
 import {
     ARTIFACTS,
     CONSUMABLES,
@@ -91,8 +91,10 @@ function extractDrops(log: CompleteLog) {
 }
 
 // Classify drops
-export function summarizeItemDrops(log: CompleteLog): DropSummary {
-    const app = useAppContext()
+export function summarizeItemDrops(
+    app: App,
+    log: CompleteLog
+): DropSummary {
     const drops = extractDrops(log)
 
     const summary: DropSummary = {

@@ -13,7 +13,7 @@ export function registerClearCache(app: App) {
         },
         {
             id: "clear_cache",
-            title: "Does not clear logs / config. Only clears caches used for log summary, graphs, etc. Page will be refreshed.",
+            title: "Does NOT clear logs / config. Only clears caches used for log summary, graphs, etc. Page will be refreshed.",
         }
     )
 }

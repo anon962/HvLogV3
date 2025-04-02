@@ -246,21 +246,3 @@ export function avg(xs: number[]) {
 
     return sum(xs) / xs.length
 }
-
-export function readUrlPath() {
-    const parts = window.location.pathname
-        .split("/")
-        .filter((part) => !!part.length)
-        .map((part) => part.toLowerCase())
-
-    let isIsekai = false
-    if (parts[0] === "isekai") {
-        isIsekai = true
-        parts.shift()
-    }
-
-    return {
-        isIsekai,
-        parts,
-    }
-}

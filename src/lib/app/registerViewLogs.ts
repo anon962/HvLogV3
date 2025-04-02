@@ -1,26 +1,23 @@
-import {
-    GM_registerMenuCommand,
-    unsafeWindow,
-} from "vite-plugin-monkey/dist/client"
+import { GM_registerMenuCommand } from "vite-plugin-monkey/dist/client"
+import { openPath } from "../utils/userscriptUtils"
 import { App } from "./app"
 
 export function registerViewLogs(app: App) {
     GM_registerMenuCommand(
-        "Battle Logs",
-        () => {
-            const w = (unsafeWindow ?? window).open(
-                "/hvlog/logs",
-                "_blank"
-            )
-            if (!w) {
-                alert(
-                    "Unable to open new tab for HvLog. Please enable pop-ups for this site."
-                )
-                return
-            }
-        },
+        "Persistent Logs",
+        () => openPath("/hvlog/logs"),
         {
-            id: "view_logs",
+            id: "persistent_logs",
+            title: "/hvlog/logs",
+        }
+    )
+
+    GM_registerMenuCommand(
+        "Isekai Logs",
+        () => openPath("/isekai/hvlog/logs"),
+        {
+            id: "isekai_logs",
+            title: "/isekai/hvlog/logs",
         }
     )
 }

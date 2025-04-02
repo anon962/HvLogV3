@@ -29,29 +29,42 @@ export function DropInfo(props: { log: CompleteLog }) {
     return (
         <div className="drop-stats h-full overflow-auto flex flex-col">
             <div className="overview">
-                {CalculationPreview(drops, usage, staminaUsage)}
-                {EquipSummary(props.log)}
+                <CalculationPreview
+                    drops={drops}
+                    usage={usage}
+                    staminaUsage={staminaUsage}
+                />
+                <EquipSummary log={props.log} />
             </div>
 
             <hr className="my-12" />
 
             <div className="income-expense">
-                {IncomeSummaryTable(drops)}
-                {UsageSummaryTable(usage, staminaUsage)}
+                <IncomeSummaryTable drops={drops} />
+                <UsageSummaryTable
+                    usage={usage}
+                    staminaUsage={staminaUsage}
+                />
             </div>
 
             <hr className="my-12" />
 
-            {DropChart(props.log, drops, usage)}
+            <DropChart log={props.log} drops={drops} usage={usage} />
         </div>
     )
 }
 
-function CalculationPreview(
-    drops: DropSummary,
-    usage: ItemUsageSummary,
+interface CalculationPreviewProps {
+    drops: DropSummary
+    usage: ItemUsageSummary
     staminaUsage: number
-) {
+}
+
+function CalculationPreview({
+    drops,
+    usage,
+    staminaUsage,
+}: CalculationPreviewProps) {
     const app = useAppContext()
 
     const totalIncome = sum(
@@ -108,7 +121,7 @@ type IncomeTable = TallyTableProps<
     { count: number; value: number; label: string }
 >
 
-function IncomeSummaryTable(drops: ItemUsageSummary) {
+function IncomeSummaryTable({ drops }: { drops: ItemUsageSummary }) {
     const acc: Record<string, IncomeTable["rows"][number]> =
         Object.fromEntries(
             drops.groups.map((grp) => [
@@ -188,10 +201,13 @@ type UsageTable = TallyTableProps<
     { count: number; value: number; label: string }
 >
 
-function UsageSummaryTable(
-    usage: ItemUsageSummary,
+function UsageSummaryTable({
+    usage,
+    staminaUsage,
+}: {
+    usage: ItemUsageSummary
     staminaUsage: number
-) {
+}) {
     const app = useAppContext()
 
     const acc: Record<string, UsageTable["rows"][number]> =
@@ -281,18 +297,22 @@ function UsageSummaryTable(
     )
 }
 
-function DropChart(
-    log: CompleteLog,
-    dropSummary: DropSummary,
-    usageSummary: ItemUsageSummary
-) {
+function DropChart({
+    log,
+    drops,
+    usage,
+}: {
+    log: CompleteLog
+    drops: DropSummary
+    usage: ItemUsageSummary
+}) {
     const app = useAppContext()
 
     const chart = new IncomeChart(
         app.config.prices,
         log,
-        dropSummary,
-        usageSummary
+        drops,
+        usage
     )
     const el = chart.render()
 
@@ -307,7 +327,7 @@ function DropChart(
     return <div ref={container} className="w-full flex"></div>
 }
 
-function EquipSummary(log: CompleteLog) {
+function EquipSummary({ log }: { log: CompleteLog }) {
     const app = useAppContext()
 
     const patts = app.config.equipFilters.map(

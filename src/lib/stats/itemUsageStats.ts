@@ -1,5 +1,5 @@
+import { App } from "../app/app"
 import { CompleteLog } from "../logDb"
-import { useAppContext } from "../ui/appContext"
 import {
     BUBBLE_VASE,
     HEALTH_ITEMS,
@@ -32,9 +32,9 @@ function extractItemUsage(log: CompleteLog) {
 }
 
 export function summarizeItemUsage(
+    app: App,
     log: CompleteLog
 ): ItemUsageSummary {
-    const app = useAppContext()
     const usage = extractItemUsage(log)
 
     const summary: ItemUsageSummary = {

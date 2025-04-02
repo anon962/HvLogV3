@@ -1,26 +1,14 @@
-import {
-    GM_registerMenuCommand,
-    unsafeWindow,
-} from "vite-plugin-monkey/dist/client"
+import { GM_registerMenuCommand } from "vite-plugin-monkey/dist/client"
+import { openPath } from "../utils/userscriptUtils"
 import { App } from "./app"
 
 export function registerViewConfig(app: App) {
     GM_registerMenuCommand(
         "Settings",
-        () => {
-            const w = (unsafeWindow ?? window).open(
-                "/hvlog/config",
-                "_blank"
-            )
-            if (!w) {
-                alert(
-                    "Unable to open new tab for HvLog. Please enable pop-ups for this site."
-                )
-                return
-            }
-        },
+        () => openPath("/hvlog/config"),
         {
             id: "view_settings",
+            title: "/hvlog/config",
         }
     )
 }

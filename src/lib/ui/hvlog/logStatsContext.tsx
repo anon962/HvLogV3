@@ -15,6 +15,7 @@ import {
 } from "../../stats/itemUsageStats"
 import { LogSummary, SummaryDb } from "../../summaryDb"
 import { ContextProviderProps } from "../../utils/typeUtils"
+import { useAppContext } from "../appContext"
 import { useSummaryDbContext } from "./summaryDbContext"
 
 const ctx = createContext<ReturnType<typeof initContext>>(null as any)
@@ -30,6 +31,8 @@ export function LogStatsProvider({ children }: ContextProviderProps) {
 }
 
 function initContext(db: SummaryDb) {
+    const app = useAppContext()
+
     const getSummary = (log: CompleteLog) => db.get(log)
 
     const { get: getIndexMap } = useCache((log) => {
@@ -42,10 +45,10 @@ function initContext(db: SummaryDb) {
     })
 
     const { get: getItemDrops } = useCache((log) =>
-        summarizeItemDrops(log)
+        summarizeItemDrops(app, log)
     )
     const { get: getItemUsage } = useCache((log) =>
-        summarizeItemUsage(log)
+        summarizeItemUsage(app, log)
     )
     const { get: getCombatUsage } = useCache((log) =>
         summarizeCombatUsage(log)
