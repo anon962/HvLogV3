@@ -7,7 +7,7 @@ import {
     setDefault,
     sortBy,
 } from "@/lib/utils/miscUtils"
-import { sum } from "radash"
+import { sort, sum } from "radash"
 import { useStats } from "../logStatsContext"
 import { TallyTable, TallyTableProps } from "../tallyTable"
 
@@ -28,6 +28,8 @@ export function CombatInfo({ log }: { log: CompleteLog }) {
             {OffensiveTable(usage)}
 
             {DebuffTable(usage)}
+
+            {HealTable(usage)}
         </div>
     )
 }
@@ -652,5 +654,192 @@ function DebuffTable(usage: CombatSummary) {
         />
     ) : (
         <></>
+    )
+}
+
+type HealTableData = TallyTableProps<
+    {
+        count: number
+        value: number
+    },
+    {
+        label: string
+        count: number
+        value: number
+    }
+>
+
+function HealTable(usage: CombatSummary) {
+    const newRow = (label: string) =>
+        ({
+            label,
+            disabled: false,
+            selectable: true,
+            value: {
+                count: 0,
+                value: 0,
+            },
+            subValues: [],
+        } as HealTableData["rows"][number])
+
+    const rowMap = {
+        hpA: newRow("HP (active)"),
+        hpP: newRow("HP (passive)"),
+        mpA: newRow("MP (active)"),
+        mpP: newRow("MP (passive)"),
+        spA: newRow("SP (active)"),
+        spP: newRow("SP (passive)"),
+    } as const
+
+    for (const group of usage.groups) {
+        const casts = Object.entries(usage.data).flatMap(
+            ([spell, allCasts]) =>
+                allCasts.length && group.has(allCasts[0])
+                    ? [[spell, allCasts] as const]
+                    : []
+        )
+
+        switch (group.label) {
+            case "Heals":
+                for (const [label, castsForSpell] of casts) {
+                    const hpCasts = castsForSpell.flatMap((cast) =>
+                        cast.heal?.health ? [cast.heal?.health] : []
+                    )
+                    const hpCount = hpCasts.length
+                    const hpValue = sum(hpCasts)
+                    rowMap.hpA.value.count += hpCount
+                    rowMap.hpA.value.value += hpValue
+                    if (hpValue > 0)
+                        rowMap.hpA.subValues!.push({
+                            label,
+                            count: hpCount,
+                            value: hpValue,
+                        })
+
+                    const mpCasts = castsForSpell.flatMap((cast) =>
+                        cast.heal?.magic ? [cast.heal?.magic] : []
+                    )
+                    const mpCount = mpCasts.length
+                    const mpValue = sum(mpCasts)
+                    rowMap.mpA.value.count += mpCount
+                    rowMap.mpA.value.value += mpValue
+                    if (mpValue > 0)
+                        rowMap.mpA.subValues!.push({
+                            label,
+                            count: mpCount,
+                            value: mpValue,
+                        })
+
+                    const spCasts = castsForSpell.flatMap((cast) =>
+                        cast.heal?.spirit ? [cast.heal?.spirit] : []
+                    )
+                    const spCount = spCasts.length
+                    const spValue = sum(spCasts)
+                    rowMap.spA.value.count += spCount
+                    rowMap.spA.value.value += spValue
+                    if (spValue > 0)
+                        rowMap.spA.subValues!.push({
+                            label,
+                            count: spCount,
+                            value: spValue,
+                        })
+                }
+                break
+            case "Passive Heals":
+                for (const [label, castsForSpell] of casts) {
+                    const hpCasts = castsForSpell.flatMap((cast) =>
+                        cast.effectHeals?.health
+                            ? [cast.effectHeals?.health]
+                            : []
+                    )
+                    const hpCount = hpCasts.length
+                    const hpValue = sum(hpCasts)
+                    rowMap.hpP.value.count += hpCount
+                    rowMap.hpP.value.value += hpValue
+                    if (hpValue > 0)
+                        rowMap.hpP.subValues!.push({
+                            label,
+                            count: hpCount,
+                            value: hpValue,
+                        })
+
+                    const mpCasts = castsForSpell.flatMap((cast) =>
+                        cast.effectHeals?.magic
+                            ? [cast.effectHeals?.magic]
+                            : []
+                    )
+                    const mpCount = mpCasts.length
+                    const mpValue = sum(mpCasts)
+                    rowMap.mpP.value.count += mpCount
+                    rowMap.mpP.value.value += mpValue
+                    if (mpValue > 0)
+                        rowMap.mpP.subValues!.push({
+                            label,
+                            count: mpCount,
+                            value: mpValue,
+                        })
+
+                    const spCasts = castsForSpell.flatMap((cast) =>
+                        cast.effectHeals?.spirit
+                            ? [cast.effectHeals?.spirit]
+                            : []
+                    )
+                    const spCount = spCasts.length
+                    const spValue = sum(spCasts)
+                    rowMap.spP.value.count += spCount
+                    rowMap.spP.value.value += spValue
+                    if (spValue > 0)
+                        rowMap.spP.subValues!.push({
+                            label,
+                            count: spCount,
+                            value: spValue,
+                        })
+                }
+                break
+        }
+    }
+
+    const rows = Object.values(rowMap)
+    for (const row of rows) {
+        row.disabled = row.subValues!.length === 0
+        row.selectable = row.subValues!.length > 0
+        row.subValues = sort(row.subValues!, (r) => r.value, true)
+    }
+
+    const columns: HealTableData["columns"] = [
+        {
+            label: "Value",
+            get: (x) => x.value,
+        },
+        {
+            label: "Count",
+            get: (x) => x.count,
+        },
+    ]
+
+    const subColumns: HealTableData["subColumns"] = [
+        {
+            label: "Name",
+            get: (x) => x.label,
+        },
+        {
+            label: "Value",
+            get: (x) => x.value,
+        },
+        {
+            label: "Count",
+            get: (x) => x.count,
+        },
+    ]
+
+    return (
+        <TallyTable
+            label="Heals"
+            rows={rows}
+            columns={columns}
+            subColumns={subColumns}
+            className="heals w-max"
+            hideTotal
+        />
     )
 }
