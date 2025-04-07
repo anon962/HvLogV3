@@ -247,7 +247,7 @@ export function summarizeCombatUsage(
                 melee: effectSummary,
             })
 
-            idx += sum(effects, (xs) => xs.length)
+            idx += sum(effects, (xs) => xs.length) - 1
             continue
         }
 
@@ -457,6 +457,7 @@ function takeEntriesWithRoot(
     }
 
     const [cast, ...firstEffects] = evs
+    console.log(startIdx, cast, firstEffects)
     if (!firstEffects.length) {
         return null
     }

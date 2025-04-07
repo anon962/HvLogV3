@@ -21,7 +21,7 @@ export default defineConfig((config) => {
                         "https://hentaiverse.org/*",
                         "http://alt.hentaiverse.org/*",
                     ],
-                    grant: [],
+                    grant: ["unsafeWindow", "GM_addStyle"],
                 },
                 build: {
                     cssSideEffects: () => {
