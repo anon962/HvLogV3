@@ -1,0 +1,54 @@
+.sidebar {
+    --bg: color-mix(in oklab, var(--card), var(--foreground) 10%);
+    --bg-.sidebar-button: color-mix(
+        in oklab,
+        var(--card),
+        var(--foreground) 20%
+    );
+    --hover: color-mix(in oklab, var(--card), var(--foreground) 15%);
+    --border: color-mix(in oklab, var(--card), var(--foreground) 30%);
+    --active: color-mix(in oklab, var(--card), var(--background) 30%);
+    --active-foreground: color-mix(
+        in oklab,
+        var(--foreground),
+        transparent 50%
+    );
+    --active-foreground-decoration: color-mix(
+        in oklab,
+        var(--foreground),
+        transparent 75%
+    );
+
+    background-color: var(--bg);
+
+    a {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        cursor: pointer;
+        height: 4rem;
+        width: 4rem;
+        font-size: 1.125rem;
+        background-color: var(--bg-button);
+    }
+
+    .sidebar-button:hover:not(.active) a {
+        background-color: var(--hover);
+        text-decoration: underline;
+        /* text-decoration-thickness: 0.125rem; */
+    }
+
+    .sidebar-button.active a {
+        background-color: var(--active);
+        color: var(--active-foreground);
+        text-decoration: underline;
+        text-decoration-thickness: 0.125rem;
+        font-weight: bold;
+        text-decoration-color: var(--active-foreground-decoration);
+        pointer-events: none;
+    }
+
+    hr {
+        border-color: var(--border);
+    }
+}

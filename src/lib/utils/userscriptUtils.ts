@@ -35,8 +35,8 @@ export function mountReact(
     return reactEl
 }
 
-export function readUrlPath() {
-    const parts = window.location.pathname
+export function readUrlPath(override?: string) {
+    const parts = (override ?? window.location.pathname)
         .split("/")
         .filter((part) => !!part.length)
         .map((part) => part.toLowerCase())

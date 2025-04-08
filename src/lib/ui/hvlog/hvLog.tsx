@@ -8,6 +8,7 @@ import {
 import { alphabetical } from "radash"
 import { StrictMode, useMemo } from "react"
 import { AppContextProvider } from "../appContext"
+import { Sidebar } from "../sidebar"
 import { useLocalJsonState } from "./hooks"
 import { LogContextProvider, useLogContext } from "./logContext"
 import { LogDetailsPane } from "./logDetailsPane"
@@ -22,7 +23,9 @@ export function HvLog(props: { app: App }) {
                 <LogContextProvider>
                     <SummaryDbProvider>
                         <LogStatsProvider>
-                            <HvLogInner />
+                            <Sidebar>
+                                <HvLogInner />
+                            </Sidebar>
                         </LogStatsProvider>
                     </SummaryDbProvider>
                 </LogContextProvider>

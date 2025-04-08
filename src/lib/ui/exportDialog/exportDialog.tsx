@@ -95,7 +95,8 @@ function useDownloader() {
 
     async function download(
         backup: LogDbBackup,
-        anchorEl: HTMLAnchorElement
+        anchorEl: HTMLAnchorElement,
+        version: number
     ) {
         const now = new Date().toISOString()
         const asStr = JSON.stringify(backup)
@@ -127,7 +128,9 @@ function useDownloader() {
             type: "application/octet-stream",
         })
         anchorEl.href = URL.createObjectURL(asBlob)
-        anchorEl.download = `hvlog_${now}.json.gz`
+        anchorEl.download = `hvlog_${now}_${version
+            .toString()
+            .padStart(4, "0")}.json.gz`
         anchorEl.click()
     }
 
@@ -173,7 +176,7 @@ function useDownloader() {
             })
         }
 
-        return { backup, total }
+        return { backup, total, version: persistentDb.db.version }
     }
 
     return {
@@ -187,13 +190,13 @@ function useDownloader() {
                 type: "loading",
                 detail: "Exporting logs ...",
             })
-            const { backup, total } = await buildBackup()
+            const { backup, total, version } = await buildBackup()
 
             setStatus({
                 type: "loading",
                 detail: `Generating download ...`,
             })
-            await download(backup, anchorEl)
+            await download(backup, anchorEl, version)
 
             setStatus({
                 type: "done",

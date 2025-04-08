@@ -4,15 +4,13 @@
 
 @import "tailwindcss";
 
+@import "./sidebar.css";
 @import "./configEditor/configEditor.css";
-
 @import "./hvlog/logDetailsPane.css";
 @import "./hvlog/logEventList.css";
 @import "./hvlog/logSummaryTable.css";
 @import "./hvlog/tallyTable.css";
-
 @import "./hvlog/combat/combatInfo.css";
-
 @import "./hvlog/drop/dropInfo.css";
 
 :root {

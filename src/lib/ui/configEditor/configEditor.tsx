@@ -22,6 +22,7 @@ import { XIcon } from "../icons/tailwind"
 import { Button } from "../shadcn/button"
 import { Input } from "../shadcn/input"
 import { Toaster } from "../shadcn/sonner"
+import { Sidebar } from "../sidebar"
 import {
     SettingsFormProvider,
     useSettingsForm,
@@ -30,7 +31,9 @@ import {
 export const ConfigEditor: FC<{ app: App }> = ({ app }) => {
     return (
         <SettingsFormProvider app={app}>
-            <ConfigEditorInner />
+            <Sidebar>
+                <ConfigEditorInner />
+            </Sidebar>
         </SettingsFormProvider>
     )
 }
