@@ -1,13 +1,13 @@
 .sidebar {
     --bg: color-mix(in oklab, var(--card), var(--foreground) 10%);
-    --bg-.sidebar-button: color-mix(
+    --bg-button: color-mix(
         in oklab,
         var(--card),
         var(--foreground) 20%
     );
     --hover: color-mix(in oklab, var(--card), var(--foreground) 15%);
     --border: color-mix(in oklab, var(--card), var(--foreground) 30%);
-    --active: color-mix(in oklab, var(--card), var(--background) 30%);
+    --active: color-mix(in oklab, var(--card), var(--background) 10%);
     --active-foreground: color-mix(
         in oklab,
         var(--foreground),

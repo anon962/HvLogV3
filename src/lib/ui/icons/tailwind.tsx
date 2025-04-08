@@ -58,7 +58,7 @@ export function EyeIcon({ className }: IconProps) {
     )
 }
 
-export function Check({ className }: IconProps) {
+export function CheckIcon({ className }: IconProps) {
     return (
         <svg
             xmlns="http://www.w3.org/2000/svg"

@@ -89,7 +89,7 @@ function Link({
         <MyTooltip
             disabled={!item.tooltip?.length}
             trigger={
-                <button
+                <div
                     className={cn(
                         "sidebar-button",
                         isActive ? "active" : ""
@@ -98,7 +98,7 @@ function Link({
                     <a target={target} href={item.href}>
                         {item.icon}
                     </a>
-                </button>
+                </div>
             }
             content={item.tooltip}
             contentProps={{ side: "right" }}

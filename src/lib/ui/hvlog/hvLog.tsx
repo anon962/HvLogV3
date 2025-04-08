@@ -13,7 +13,7 @@ import { useLocalJsonState } from "./hooks"
 import { LogContextProvider, useLogContext } from "./logContext"
 import { LogDetailsPane } from "./logDetailsPane"
 import { LogStatsProvider } from "./logStatsContext"
-import { LogSummaryTable } from "./logSummaryTable"
+import { LogSummaryTable } from "./logSummaryTable/logSummaryTable"
 import { SummaryDbProvider } from "./summaryDbContext"
 
 export function HvLog(props: { app: App }) {
