@@ -67,16 +67,19 @@ export class LogDb {
     }
 
     async appendToLiveLog(entries: LogEntry[]): Promise<void> {
+        const txn = this.db.transaction(
+            [LIVE_STORE, LIVE_META_STORE],
+            "readwrite"
+        )
+
         for (const line of entries) {
-            await this.db.add(LIVE_STORE, line)
+            await txn.objectStore(LIVE_STORE).add(line)
         }
         // console.log("append", lines)
 
-        this.put(
-            LIVE_META_STORE,
-            "lastUpdate",
-            new Date().toISOString()
-        )
+        await txn
+            .objectStore(LIVE_META_STORE)
+            .put(new Date().toISOString(), "lastUpdate")
     }
 
     async isNewLine(line: LogEntry): Promise<boolean> {

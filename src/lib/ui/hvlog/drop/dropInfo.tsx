@@ -312,7 +312,7 @@ function EquipSummary({ log }: { log: CompleteLog }) {
     )
 
     const evs = alphabetical(
-        filterEvents(log, ["DROP"]).filter((ev) =>
+        filterEvents(log, ["DROP", "CLEAR_BONUS"]).filter((ev) =>
             patts.some((patt) => ev.item.match(patt))
         ),
         (ev) => ev.item
