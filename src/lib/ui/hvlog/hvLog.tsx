@@ -53,7 +53,7 @@ function HvLogInner() {
 
     const onClick = useCallback(
         (id: LogId) => setSelectedLogId(id),
-        setSelectedLogId
+        [setSelectedLogId]
     )
 
     return (

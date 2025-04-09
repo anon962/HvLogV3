@@ -4,7 +4,7 @@ import { ItemUsageSummary } from "@/lib/stats/itemUsageStats"
 import { filterEvents } from "@/lib/stats/summaryStats"
 import { formatNumber, sortBy } from "@/lib/utils/miscUtils"
 import { alphabetical, max, range, sum } from "radash"
-import { useEffect, useRef, useState } from "react"
+import { ReactNode, useEffect, useRef, useState } from "react"
 import { useAppContext } from "../../appContext"
 import { useStats } from "../logStatsContext"
 import { TallyTable, TallyTableProps } from "../tallyTable"
@@ -313,20 +313,27 @@ function DropChart({
 function EquipSummary({ log }: { log: CompleteLog }) {
     const app = useAppContext()
 
-    const patts = app.config.equipFilters.map(
-        (patt) => new RegExp(patt, "i")
-    )
+    const [els, setEls] = useState<ReactNode[]>([])
+    useEffect(() => {
+        const patts = app.config.equipFilters.map(
+            (patt) => new RegExp(patt, "i")
+        )
 
-    const evs = alphabetical(
-        filterEvents(log, ["DROP", "CLEAR_BONUS"]).filter((ev) =>
-            patts.some((patt) => ev.item.match(patt))
-        ),
-        (ev) => ev.item
-    )
+        const evs = alphabetical(
+            filterEvents(log, ["DROP", "CLEAR_BONUS"]).filter((ev) =>
+                patts.some((patt) => ev.item.match(patt))
+            ),
+            (ev) => ev.item
+        )
 
-    const els = evs.map((ev) => (
-        <li className="list-disc">{ev.item}</li>
-    ))
+        setEls(
+            evs.map((ev, idx) => (
+                <li key={idx} className="list-disc">
+                    {ev.item}
+                </li>
+            ))
+        )
+    }, [log.id])
 
     return (
         <div className="equips">

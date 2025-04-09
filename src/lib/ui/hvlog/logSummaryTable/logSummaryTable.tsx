@@ -8,18 +8,15 @@ import {
     TableRow,
 } from "@/lib/ui/shadcn/table"
 import { cn } from "@/lib/utils/shadcnUtils"
-import React, { ReactNode, useEffect, useMemo, useState } from "react"
+import React, { ReactNode, useMemo } from "react"
 import { LogSummaryColumn, S_COLS } from "./cols"
 
 export function LogSummaryTable(props: {
     onClick?: (logId: LogId) => void
-
     selectionIdx: number
     logs: LogId[]
 }) {
     const cols = useMemo(() => Object.values(S_COLS), [])
-
-    const now = useNow()
 
     const headerRow = cols.map((col) => (
         <TableHead className={cn(col.align, col.header.className)}>
@@ -35,7 +32,6 @@ export function LogSummaryTable(props: {
             <LogRow
                 key={id}
                 logId={id}
-                now={now}
                 idx={idx}
                 isSelected={isSelected}
                 isNextSelected={isNextSelected}
@@ -66,7 +62,6 @@ const LogRow = React.memo(
     (props: {
         cols: LogSummaryColumn[]
         logId: LogId
-        now: Date
         idx: number
         isSelected: boolean
         isNextSelected: boolean
@@ -81,7 +76,6 @@ const LogRow = React.memo(
         const cells = props.cols.map((col, idx) => {
             const cell = col.cell({
                 logId: props.logId,
-                now: props.now,
             })
             return (
                 <LogCell
@@ -121,19 +115,3 @@ const LogCell = React.memo(
         </TableCell>
     )
 )
-
-function useNow(refreshDelay = 3000) {
-    const [now, setNow] = useState(new Date())
-
-    useEffect(() => {
-        const timer = setInterval(() => {
-            setNow(new Date())
-        }, refreshDelay)
-
-        return () => {
-            clearInterval(timer)
-        }
-    }, [])
-
-    return now
-}

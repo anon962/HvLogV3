@@ -1,6 +1,6 @@
 import { LogId } from "@/lib/logDb"
 import { cn } from "@/lib/utils/shadcnUtils"
-import { ReactNode } from "react"
+import { ReactNode, useEffect, useState } from "react"
 import { RunIcon, Skull2Icon } from "../../icons/misc"
 import { CheckIcon } from "../../icons/tailwind"
 import { useLogContext } from "../logContext"
@@ -14,7 +14,7 @@ export interface LogSummaryColumn {
         className?: string
     }
 
-    cell: (opts: { logId: LogId; now: Date }) => {
+    cell: (opts: { logId: LogId }) => {
         content: ReactNode
         className?: string
         title?: string
@@ -49,8 +49,8 @@ const COLS = {
     } as LogSummaryColumn,
     date: {
         header: { content: "Start Date" },
-        cell: ({ logId, now }) => ({
-            ...formatStartDate(logId, now),
+        cell: ({ logId }) => ({
+            ...formatStartDate(logId),
         }),
     } as LogSummaryColumn,
     status: {
@@ -210,7 +210,6 @@ function formatProfit(logId: LogId) {
 
 function formatStartDate(
     logId: string,
-    now: Date,
     opts: {
         threshMinutes?: number
         threshHours?: number
@@ -219,41 +218,62 @@ function formatStartDate(
 ) {
     const { useLogFetch } = useLogContext()
     const { log } = useLogFetch(logId)
-    if (!log) {
-        return { content: "-" }
-    }
 
-    const d = new Date(log.meta.start)
+    const [result, setResult] = useState<
+        ReturnType<LogSummaryColumn["cell"]>
+    >({
+        content: "-",
+    })
 
-    const elapsed = now.getTime() - d.getTime()
+    useEffect(() => {
+        function load() {
+            if (!log) {
+                return
+            }
 
-    const seconds = elapsed / 1_000
-    const minutes = seconds / 60
-    const hours = seconds / 3600
+            const now = new Date()
 
-    let content: string
-    if (minutes <= (opts.threshMinutes ?? 120)) {
-        content = `${Math.trunc(minutes)} minutes ago`
-    } else if (hours <= (opts.threshHours ?? 48)) {
-        content = `${Math.trunc(hours)} hours ago`
-    } else {
-        content =
-            [
-                `${d.getDate().toString().padStart(2, "0")}`,
-                `${d.getMonth().toString().padStart(2, "0")}`,
-                `${d.getFullYear()}`,
-            ].join("-") +
-            " " +
-            [
-                `${d.getHours().toString().padStart(2, "0")}`,
-                `${d.getMinutes().toString().padStart(2, "0")}`,
-            ].join(":")
-    }
+            const d = new Date(log.meta.start)
 
-    return {
-        content,
-        title: log.meta.start,
-    }
+            const elapsed = now.getTime() - d.getTime()
+
+            const seconds = elapsed / 1_000
+            const minutes = seconds / 60
+            const hours = seconds / 3600
+
+            let content: string
+            if (minutes <= (opts.threshMinutes ?? 120)) {
+                content = `${Math.trunc(minutes)} minutes ago`
+            } else if (hours <= (opts.threshHours ?? 48)) {
+                content = `${Math.trunc(hours)} hours ago`
+            } else {
+                content =
+                    [
+                        `${d.getDate().toString().padStart(2, "0")}`,
+                        `${d.getMonth().toString().padStart(2, "0")}`,
+                        `${d.getFullYear()}`,
+                    ].join("-") +
+                    " " +
+                    [
+                        `${d.getHours().toString().padStart(2, "0")}`,
+                        `${d
+                            .getMinutes()
+                            .toString()
+                            .padStart(2, "0")}`,
+                    ].join(":")
+            }
+
+            setResult({
+                content,
+                title: log.meta.start,
+            })
+        }
+
+        const timerId = setInterval(() => load(), 3000)
+        return () => clearInterval(timerId)
+    }, [log])
+
+    return result
 }
 
 function formatCompletionType(logId: LogId) {
