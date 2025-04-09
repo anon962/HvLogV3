@@ -1,12 +1,12 @@
 import { App } from "@/lib/app/app"
+import { LogId } from "@/lib/logDb"
 import "@/lib/ui/global.css"
 import {
     ResizableHandle,
     ResizablePanel,
     ResizablePanelGroup,
 } from "@/lib/ui/shadcn/resizable"
-import { alphabetical } from "radash"
-import { StrictMode, useMemo } from "react"
+import { StrictMode, useCallback, useEffect } from "react"
 import { AppContextProvider } from "../appContext"
 import { Sidebar } from "../sidebar"
 import { useLocalJsonState } from "./hooks"
@@ -35,16 +35,25 @@ export function HvLog(props: { app: App }) {
 }
 
 function HvLogInner() {
-    const [selectedLogId, setSelectedLog] = useLocalJsonState(
+    const [selectedLogId, setSelectedLogId] = useLocalJsonState(
         "",
         "hvlog_selected_log"
     )
 
-    const { logs, loading: logsLoading } = useLogContext()
+    const { logIds, useLogFetch } = useLogContext()
 
-    const logsSorted = alphabetical(logs, (l) => l.meta.start, "desc")
+    const logsSorted = [...logIds.values()]
+
     const selectionIdx = logsSorted.findIndex(
-        (l) => l.id === selectedLogId
+        (id) => id === selectedLogId
+    )
+
+    const fetcher = useLogFetch(selectedLogId)
+    useEffect(() => fetcher.setLogId(selectedLogId), [selectedLogId])
+
+    const onClick = useCallback(
+        (id: LogId) => setSelectedLogId(id),
+        setSelectedLogId
     )
 
     return (
@@ -58,13 +67,12 @@ function HvLogInner() {
                     style={{ containerType: "inline-size" }}
                 >
                     <LogSummaryTable
-                        onClick={(log) => setSelectedLog(log.id)}
+                        onClick={onClick}
                         selectionIdx={selectionIdx}
                         logs={logsSorted}
-                        loading={logsLoading}
                     />
 
-                    {logs.length === 0 ? (
+                    {logsSorted.length === 0 ? (
                         <span>No battles found!</span>
                     ) : (
                         ""
@@ -75,13 +83,10 @@ function HvLogInner() {
             <ResizableHandle withHandle />
 
             <ResizablePanel className="flex justify-center">
-                {useMemo(
-                    () => (
-                        <LogDetailsPane
-                            log={logsSorted[selectionIdx]}
-                        />
-                    ),
-                    [logsSorted[selectionIdx]?.id]
+                {fetcher.log ? (
+                    <LogDetailsPane log={fetcher.log} />
+                ) : (
+                    "Loading..."
                 )}
             </ResizablePanel>
         </ResizablePanelGroup>

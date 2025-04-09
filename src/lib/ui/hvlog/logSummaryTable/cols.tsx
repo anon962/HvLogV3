@@ -1,9 +1,10 @@
-import { CompleteLog } from "@/lib/logDb"
+import { LogId } from "@/lib/logDb"
 import { cn } from "@/lib/utils/shadcnUtils"
 import { ReactNode } from "react"
 import { RunIcon, Skull2Icon } from "../../icons/misc"
 import { CheckIcon } from "../../icons/tailwind"
-import { useStats } from "../logStatsContext"
+import { useLogContext } from "../logContext"
+import { useStatsMaybe } from "../logStatsContext"
 
 export interface LogSummaryColumn {
     align?: "text-left" | "text-right" | "text-center"
@@ -13,10 +14,7 @@ export interface LogSummaryColumn {
         className?: string
     }
 
-    cell: (
-        log: CompleteLog,
-        now: Date
-    ) => {
+    cell: (opts: { logId: LogId; now: Date }) => {
         content: ReactNode
         className?: string
         title?: string
@@ -27,41 +25,41 @@ const COLS = {
     type: {
         header: { content: "Type", className: "w-[6rem]" },
         align: "text-left",
-        cell: (log: CompleteLog) => ({
-            ...formatBattleType(log),
+        cell: ({ logId }) => ({
+            ...formatBattleType(logId),
         }),
-    },
+    } as LogSummaryColumn,
     turns: {
         header: { content: "Turns" },
-        cell: (log: CompleteLog) => ({
-            content: formatTurns(log),
+        cell: ({ logId }) => ({
+            content: formatTurns(logId),
         }),
-    },
+    } as LogSummaryColumn,
     duration: {
         header: { content: "Duration" },
-        cell: (log: CompleteLog) => ({
-            content: formatDuration(log),
+        cell: ({ logId }) => ({
+            content: formatDuration(logId),
         }),
-    },
+    } as LogSummaryColumn,
     profit: {
         header: { content: "Profit" },
-        cell: (log: CompleteLog) => ({
-            ...formatProfit(log),
+        cell: ({ logId }) => ({
+            ...formatProfit(logId),
         }),
-    },
+    } as LogSummaryColumn,
     date: {
         header: { content: "Start Date" },
-        cell: (log: CompleteLog, now: Date) => ({
-            ...formatStartDate(log, now),
+        cell: ({ logId, now }) => ({
+            ...formatStartDate(logId, now),
         }),
-    },
+    } as LogSummaryColumn,
     status: {
         header: { content: "Status" },
         align: "text-center",
-        cell: (log: CompleteLog) => ({
-            ...formatCompletionType(log),
+        cell: ({ logId }) => ({
+            ...formatCompletionType(logId),
         }),
-    },
+    } as LogSummaryColumn,
 } as const
 
 export const S_COLS = COLS as Record<
@@ -83,15 +81,18 @@ const arenaAliases = {
     112: "RoB - TTT",
 } as Record<number, string>
 
-function formatBattleType(log: CompleteLog) {
-    const { summary } = useStats(log, {
+function formatBattleType(logId: LogId) {
+    const { summary } = useStatsMaybe(logId, {
         summary: true,
     })
 
     let content
     let className = ["type"]
 
-    switch (summary.battleType?.name) {
+    switch (summary?.battleType?.name) {
+        case undefined:
+            content = "-"
+            break
         case "Grindfest":
             className.push("gf")
             content = "Grindfest"
@@ -143,17 +144,25 @@ function formatBattleType(log: CompleteLog) {
     return { className: className.join(" "), content }
 }
 
-function formatTurns(log: CompleteLog) {
-    const { indexMap } = useStats(log, {
+function formatTurns(logId: LogId) {
+    const { indexMap } = useStatsMaybe(logId, {
         indexMap: true,
     })
 
-    const turns = `${indexMap.turnIndexes.length} turns`
-
-    return turns
+    if (indexMap) {
+        return `${indexMap.turnIndexes.length} turns`
+    } else {
+        return "-"
+    }
 }
 
-function formatDuration(log: CompleteLog) {
+function formatDuration(logId: string) {
+    const { useLogFetch } = useLogContext()
+    const { log } = useLogFetch(logId)
+    if (!log) {
+        return "-"
+    }
+
     const end = new Date(log.meta.lastUpdate)
     const start = new Date(log.meta.start)
 
@@ -175,12 +184,16 @@ function formatDuration(log: CompleteLog) {
     )
 }
 
-function formatProfit(log: CompleteLog) {
-    const {
-        finances: { profit },
-    } = useStats(log, {
+function formatProfit(logId: LogId) {
+    const { finances } = useStatsMaybe(logId, {
         finances: true,
     })
+
+    if (!finances) {
+        return { content: "-" }
+    }
+
+    const { profit } = finances
 
     const className = cn(
         "profit text-right",
@@ -196,7 +209,7 @@ function formatProfit(log: CompleteLog) {
 }
 
 function formatStartDate(
-    log: CompleteLog,
+    logId: string,
     now: Date,
     opts: {
         threshMinutes?: number
@@ -204,6 +217,12 @@ function formatStartDate(
         // threshDays?: number
     } = {}
 ) {
+    const { useLogFetch } = useLogContext()
+    const { log } = useLogFetch(logId)
+    if (!log) {
+        return { content: "-" }
+    }
+
     const d = new Date(log.meta.start)
 
     const elapsed = now.getTime() - d.getTime()
@@ -237,10 +256,14 @@ function formatStartDate(
     }
 }
 
-function formatCompletionType(log: CompleteLog) {
-    const { summary } = useStats(log, {
+function formatCompletionType(logId: LogId) {
+    const { summary } = useStatsMaybe(logId, {
         summary: true,
     })
+
+    if (!summary) {
+        return { content: "-" }
+    }
 
     let round, title
     if (summary.completionType !== "finish" && summary.round) {

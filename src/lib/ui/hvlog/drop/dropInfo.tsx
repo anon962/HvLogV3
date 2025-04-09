@@ -4,7 +4,7 @@ import { ItemUsageSummary } from "@/lib/stats/itemUsageStats"
 import { filterEvents } from "@/lib/stats/summaryStats"
 import { formatNumber, sortBy } from "@/lib/utils/miscUtils"
 import { alphabetical, max, range, sum } from "radash"
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useAppContext } from "../../appContext"
 import { useStats } from "../logStatsContext"
 import { TallyTable, TallyTableProps } from "../tallyTable"
@@ -285,17 +285,23 @@ function DropChart({
 }) {
     const app = useAppContext()
 
-    const chart = new IncomeChart(
-        app.config.prices,
-        log,
-        drops,
-        usage
-    )
-    const el = chart.render()
+    const [el, setEl] = useState<Element | null>(null)
+    useEffect(() => {
+        setEl(
+            new IncomeChart(
+                app.config.prices,
+                log,
+                drops,
+                usage
+            ).render()
+        )
+    }, [])
 
     const container = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
+        if (!el) return
+
         el.remove()
         container?.current?.appendChild(el)
         return () => el.remove()

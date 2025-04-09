@@ -7,7 +7,7 @@ import {
 } from "./stats/summaryStats"
 
 const STORAGE_KEY = "hvlog_stats"
-const VERSION = 1
+const VERSION = 2
 
 /**
  * Cache for miscellaneous log stats that are at least slightly expensive to calculate.
@@ -19,11 +19,12 @@ export class SummaryDb {
         this.data = this.load()
     }
 
-    public get(
-        log: CompleteLog,
-        opts: { save?: boolean } = {}
-    ): LogSummary {
-        return this.data.data[log.id] ?? this.analyze(log, opts)
+    public get(log: CompleteLog, opts: { save?: boolean } = {}) {
+        return this.getMaybe(log.id) ?? this.analyze(log, opts)
+    }
+
+    public getMaybe(id: LogId): LogSummary | null {
+        return this.data.data[id] ?? null
     }
 
     private analyze(
@@ -59,6 +60,7 @@ export class SummaryDb {
 
         const analysis = {
             id: log.id,
+            start: log.meta.start,
             completionType,
             battleType,
             round,
@@ -98,7 +100,7 @@ export class SummaryDb {
         }
 
         if (parsed.version !== VERSION) {
-            console.error(
+            console.log(
                 `Wiping outdated log stats. Current version is ${VERSION} but got ${parsed.version}`,
                 parsed
             )
@@ -118,6 +120,7 @@ export class SummaryDb {
 
 export interface LogSummary {
     id: LogId
+    start: string
     completionType: "finish" | "flee" | "die" | null
     battleType:
         | null

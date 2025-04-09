@@ -1,4 +1,4 @@
-import { CompleteLog } from "@/lib/logDb"
+import { LogId } from "@/lib/logDb"
 import {
     Table,
     TableBody,
@@ -8,17 +8,16 @@ import {
     TableRow,
 } from "@/lib/ui/shadcn/table"
 import { cn } from "@/lib/utils/shadcnUtils"
-import React, { useEffect, useState } from "react"
+import React, { ReactNode, useEffect, useMemo, useState } from "react"
 import { LogSummaryColumn, S_COLS } from "./cols"
 
 export function LogSummaryTable(props: {
-    onClick?: (log: CompleteLog) => void
+    onClick?: (logId: LogId) => void
 
     selectionIdx: number
-    logs: CompleteLog[]
-    loading: boolean
+    logs: LogId[]
 }) {
-    const cols = Object.values(S_COLS)
+    const cols = useMemo(() => Object.values(S_COLS), [])
 
     const now = useNow()
 
@@ -28,18 +27,23 @@ export function LogSummaryTable(props: {
         </TableHead>
     ))
 
-    const bodyRows = props.logs.map((log, idx) => (
-        <LogRow
-            key={log.id}
-            log={log}
-            now={now}
-            {...log}
-            idx={idx}
-            selectionIdx={props.selectionIdx}
-            onClick={props.onClick}
-            cols={cols}
-        />
-    ))
+    const bodyRows = props.logs.map((id, idx) => {
+        const isSelected = idx === props.selectionIdx
+        const isNextSelected = idx === props.selectionIdx - 1
+
+        return (
+            <LogRow
+                key={id}
+                logId={id}
+                now={now}
+                idx={idx}
+                isSelected={isSelected}
+                isNextSelected={isNextSelected}
+                onClick={props.onClick}
+                cols={cols}
+            />
+        )
+    })
 
     const headerSelected =
         props.selectionIdx === 0 ? " selected-next" : ""
@@ -61,44 +65,61 @@ export function LogSummaryTable(props: {
 const LogRow = React.memo(
     (props: {
         cols: LogSummaryColumn[]
-        log: CompleteLog
+        logId: LogId
         now: Date
         idx: number
-        selectionIdx: number
-        onClick?: (log: CompleteLog) => void
+        isSelected: boolean
+        isNextSelected: boolean
+        onClick?: (logId: LogId) => void
     }) => {
-        const isSelected = props.idx === props.selectionIdx
-        const isNextSelected = props.idx === props.selectionIdx - 1
         // prettier-ignore
         const selectedClass = 
-            isSelected ? " selected" :
-            isNextSelected ? " selected-next" :
+            props.isSelected ? " selected" :
+            props.isNextSelected ? " selected-next" :
             ""
 
         const cells = props.cols.map((col, idx) => {
-            const cell = col.cell(props.log, props.now)
+            const cell = col.cell({
+                logId: props.logId,
+                now: props.now,
+            })
             return (
-                <TableCell
+                <LogCell
                     key={idx}
                     className={cn(col.align, cell.className)}
                     title={cell.title}
-                >
-                    {cell.content}
-                </TableCell>
+                    content={cell.content}
+                />
             )
         })
 
         return (
             <TableRow
-                key={props.log.id}
+                key={props.logId}
                 className={"py-2" + selectedClass}
-                data-id={props.log.id}
-                onClick={() => props.onClick?.(props.log)}
+                data-id={props.logId}
+                onClick={() => props.onClick?.(props.logId)}
             >
                 {...cells}
             </TableRow>
         )
     }
+)
+
+const LogCell = React.memo(
+    ({
+        className,
+        title,
+        content,
+    }: {
+        className: string
+        title?: string
+        content: ReactNode
+    }) => (
+        <TableCell className={className} title={title}>
+            {content}
+        </TableCell>
+    )
 )
 
 function useNow(refreshDelay = 3000) {

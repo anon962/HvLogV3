@@ -265,6 +265,10 @@ export class LogDb {
             yield idx
         }
     }
+
+    async getLogIds() {
+        return await this.db.getAllKeys(COMPLETE_STORE)
+    }
 }
 
 export interface LogDbSchema extends idb.DBSchema {

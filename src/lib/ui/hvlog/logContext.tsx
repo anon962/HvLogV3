@@ -1,6 +1,12 @@
 import { sleep } from "radash"
-import { createContext, useContext, useEffect, useState } from "react"
-import { CompleteLog } from "../../logDb"
+import {
+    createContext,
+    useContext,
+    useEffect,
+    useRef,
+    useState,
+} from "react"
+import { CompleteLog, LogDb, LogId } from "../../logDb"
 import { ContextProviderProps } from "../../utils/typeUtils"
 import { useAppContext } from "../appContext"
 
@@ -22,28 +28,18 @@ export function LogContextProvider({
 
 function initContext(refreshDelay = 5000) {
     const app = useAppContext()
-    const [logs, setLogs] = useState<CompleteLog[]>([])
-    const [loading, setLoading] = useState(true)
+    const [logIds, setLogIds] = useState<Set<LogId>>(new Set())
+
+    const cache = useRef<Record<LogId, Promise<CompleteLog>>>({})
 
     useEffect(() => {
-        const result: CompleteLog[] = []
-        const seen = new Set<string>()
-
         async function load() {
-            const iter = app.db.iterArchive()
-
-            for await (const log of iter) {
-                if (seen.has(log.id)) {
-                    continue
-                }
-
-                seen.add(log.id)
-
-                result.push(log)
-                setLogs([...result])
+            const update = new Set(await app.db.getLogIds())
+            const diff = update.difference(logIds)
+            if (!!diff.size) {
+                setLogIds(logIds.union(diff))
             }
 
-            setLoading(false)
             await sleep(refreshDelay)
             load()
         }
@@ -53,5 +49,53 @@ function initContext(refreshDelay = 5000) {
         return () => {}
     }, [])
 
-    return { logs, loading }
+    return {
+        logIds,
+        useLogFetch: (id: LogId | null = null) =>
+            useLogFetch(id, cache.current, app.db),
+    }
+}
+
+function useLogFetch(
+    id: LogId | null,
+    cache: Record<LogId, Promise<CompleteLog>>,
+    db: LogDb
+) {
+    const [logId, setLogId] = useState(id)
+    const [log, setLog] = useState<CompleteLog | null>(null)
+    const [loading, setLoading] = useState(false)
+
+    useEffect(() => {
+        setLoading(true)
+        let isCancelled = false
+
+        async function load() {
+            if (logId === null) {
+                setLoading(true)
+                return
+            }
+
+            if (!(logId in cache)) {
+                cache[logId] = db.get("complete", logId)
+            }
+
+            const data = await cache[logId]
+
+            if (isCancelled) {
+                return
+            }
+
+            setLog(data)
+        }
+
+        load().then(() => {
+            setLoading(false)
+        })
+
+        return () => {
+            isCancelled = true
+        }
+    }, [logId])
+
+    return { log, logId, setLogId, loading }
 }

@@ -1,4 +1,4 @@
-import { createContext, useContext } from "react"
+import { createContext, useContext, useEffect } from "react"
 import { CompleteLog, LogId } from "../../logDb"
 import {
     CombatSummary,
@@ -18,6 +18,7 @@ import {
 import { LogSummary, SummaryDb } from "../../summaryDb"
 import { ContextProviderProps } from "../../utils/typeUtils"
 import { useAppContext } from "../appContext"
+import { useLogContext } from "./logContext"
 import { useSummaryDbContext } from "./summaryDbContext"
 
 const ctx = createContext<ReturnType<typeof initContext>>(null as any)
@@ -32,13 +33,13 @@ export function LogStatsProvider({ children }: ContextProviderProps) {
     return <ctx.Provider value={value}>{children}</ctx.Provider>
 }
 
-function initContext(db: SummaryDb) {
+function initContext(summaryDb: SummaryDb) {
     const app = useAppContext()
 
-    const getSummary = (log: CompleteLog) => db.get(log)
+    const getSummary = (log: CompleteLog) => summaryDb.get(log)
 
     const { get: getIndexMap } = useCache((log) => {
-        const { roundIndexes, turnIndexes } = db.get(log)
+        const { roundIndexes, turnIndexes } = summaryDb.get(log)
         return new IndexMap(
             turnIndexes,
             roundIndexes,
@@ -65,6 +66,7 @@ function initContext(db: SummaryDb) {
     })
 
     return {
+        summaryDb,
         getSummary,
         getIndexMap,
         getItemDrops,
@@ -134,4 +136,69 @@ export function useStats<T extends UseStatsOptions>(
             : undefined,
         finances: opts.finances ? ctx.getMoney(log) : undefined,
     } as UseStatsReturn<T>
+}
+
+// prettier-ignore
+export type UseStatsMaybeReturn<Opts extends UseStatsOptions> = {
+    [K in keyof Opts]:  
+        K extends 'summary' ? Opts[K] extends true ?
+            LogSummary | null : undefined :
+        K extends 'indexMap' ? Opts[K] extends true ?
+            IndexMap | null : undefined :
+        K extends 'itemDrop' ? Opts[K] extends true ?
+            DropSummary | null : undefined :
+        K extends 'itemUsage' ? Opts[K] extends true ?
+            ItemUsageSummary | null : undefined :
+        K extends 'combatUsage' ? Opts[K] extends true ?
+            CombatSummary | null : undefined :
+        K extends 'finances' ? Opts[K] extends true ?
+            FinanceSummary | null : undefined :
+        never
+}
+
+export function useStatsMaybe<T extends UseStatsOptions>(
+    id: LogId,
+    opts: T
+): UseStatsMaybeReturn<T> {
+    const ctx = useLogStatsContext()
+
+    const { useLogFetch } = useLogContext()
+    const fetcher = useLogFetch(null)
+
+    const result = {} as any
+    if (opts.summary) {
+        result.summary = ctx.summaryDb.getMaybe(id) ?? null
+    }
+    if (opts.indexMap) {
+        result.indexMap = fetcher.log
+            ? ctx.getIndexMap(fetcher.log)
+            : null
+        useEffect(() => fetcher.setLogId(id), [id])
+    }
+    if (opts.itemDrops) {
+        result.itemDrops = fetcher.log
+            ? ctx.getItemDrops(fetcher.log)
+            : null
+        useEffect(() => fetcher.setLogId(id), [id])
+    }
+    if (opts.itemUsage) {
+        result.itemUsage = fetcher.log
+            ? ctx.getItemUsage(fetcher.log)
+            : null
+        useEffect(() => fetcher.setLogId(id), [id])
+    }
+    if (opts.combatUsage) {
+        result.combatUsage = fetcher.log
+            ? ctx.getCombatUsage(fetcher.log)
+            : null
+        useEffect(() => fetcher.setLogId(id), [id])
+    }
+    if (opts.finances) {
+        result.finances = fetcher.log
+            ? ctx.getMoney(fetcher.log)
+            : null
+        useEffect(() => fetcher.setLogId(id), [id])
+    }
+
+    return result
 }
