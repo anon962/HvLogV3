@@ -7,42 +7,85 @@ import {
     TableHeader,
     TableRow,
 } from "@/lib/ui/shadcn/table"
+import { indexes } from "@/lib/utils/miscUtils"
 import { cn } from "@/lib/utils/shadcnUtils"
-import React, { ReactNode, useMemo } from "react"
+import { mapEntries } from "radash"
+import React, { ReactNode, useMemo, useState } from "react"
 import { LogSummaryColumn, S_COLS } from "./cols"
 
 export function LogSummaryTable(props: {
     onClick?: (logId: LogId) => void
-    selectionIdx: number
-    logs: LogId[]
+    selectionId: LogId
+    logIds: LogId[]
 }) {
-    const cols = useMemo(() => Object.values(S_COLS), [])
+    const colIds = useMemo(() => [...Object.keys(S_COLS)], [])
 
-    const headerRow = cols.map((col) => (
-        <TableHead className={cn(col.align, col.header.className)}>
-            {col.header.content}
-        </TableHead>
-    ))
+    const headerRow = colIds.map((cid) => {
+        const col = S_COLS[cid]
+        return (
+            <TableHead
+                className={cn(col.align, col.header.className)}
+            >
+                {col.header.content}
+            </TableHead>
+        )
+    })
 
-    const bodyRows = props.logs.map((id, idx) => {
-        const isSelected = idx === props.selectionIdx
-        const isNextSelected = idx === props.selectionIdx - 1
+    const colData = mapEntries(S_COLS, (cid, col) => {
+        // const d = useMemo(() => {
+        //     const isEnabled = !!colIds.find((id) => id === cid)
+        //     return col.preprocess(isEnabled ? props.logIds : [])
+        // }, [props.logIds, colIds])
+        const isEnabled = !!colIds.find((id) => id === cid)
+        const d = col.preprocess(isEnabled ? props.logIds : [])
+        return [cid, d]
+    })
+
+    const [sortCriteria, setSortCriteria] = useState({
+        colId: "date",
+        order: "desc" as "desc" | "desc",
+    })
+
+    const sortOn = S_COLS[sortCriteria.colId]
+    let sortOrder = indexes(props.logIds)
+    if (sortOn?.sort) {
+        const sortData = colData[sortCriteria.colId]
+        sortOrder = sortOn?.sort(sortData)
+        if (sortCriteria.order === "desc") {
+            sortOrder.reverse()
+        }
+    }
+
+    const cols = colIds.map((cid) => S_COLS[cid])
+
+    const bodyRows = sortOrder.map((sortIdx, idx) => {
+        const currentId = props.logIds[sortIdx]
+
+        const nextSortIdx = sortOrder[idx + 1]
+        const nextId = props.logIds[nextSortIdx]
+
+        const isSelected = currentId === props.selectionId
+        const isNextSelected = nextId === props.selectionId
+
+        const values = colIds.map((cid) => colData[cid][sortIdx])
 
         return (
             <LogRow
-                key={id}
-                logId={id}
-                idx={idx}
+                key={currentId}
+                logId={currentId}
                 isSelected={isSelected}
                 isNextSelected={isNextSelected}
                 onClick={props.onClick}
+                values={values}
                 cols={cols}
             />
         )
     })
 
     const headerSelected =
-        props.selectionIdx === 0 ? " selected-next" : ""
+        props.selectionId === props.logIds[sortOrder[0]]
+            ? " selected-next"
+            : ""
 
     return (
         <div className="log-table-container overflow-auto pb-0!">
@@ -60,9 +103,9 @@ export function LogSummaryTable(props: {
 
 const LogRow = React.memo(
     (props: {
+        values: any[]
         cols: LogSummaryColumn[]
         logId: LogId
-        idx: number
         isSelected: boolean
         isNextSelected: boolean
         onClick?: (logId: LogId) => void
@@ -73,10 +116,8 @@ const LogRow = React.memo(
             props.isNextSelected ? " selected-next" :
             ""
 
-        const cells = props.cols.map((col, idx) => {
-            const value = col.preprocess({
-                logId: props.logId,
-            })
+        const cells = props.values.map((value, idx) => {
+            const col = props.cols[idx]
             const cell = col.cell({ logId: props.logId, value })
             return (
                 <LogCell

@@ -6,7 +6,7 @@ import {
     ResizablePanel,
     ResizablePanelGroup,
 } from "@/lib/ui/shadcn/resizable"
-import { StrictMode, useCallback, useEffect } from "react"
+import { StrictMode, useCallback, useMemo } from "react"
 import { AppContextProvider } from "../appContext"
 import { Sidebar } from "../sidebar"
 import { useLocalJsonState } from "./hooks"
@@ -42,14 +42,9 @@ function HvLogInner() {
 
     const { logIds, useLogFetch } = useLogContext()
 
-    const logsSorted = [...logIds.values()]
+    const logsSorted = useMemo(() => [...logIds.values()], [logIds])
 
-    const selectionIdx = logsSorted.findIndex(
-        (id) => id === selectedLogId
-    )
-
-    const fetcher = useLogFetch(selectedLogId)
-    useEffect(() => fetcher.setLogId(selectedLogId), [selectedLogId])
+    const fetcher = useLogFetch([selectedLogId])
 
     const onClick = useCallback(
         (id: LogId) => setSelectedLogId(id),
@@ -68,8 +63,8 @@ function HvLogInner() {
                 >
                     <LogSummaryTable
                         onClick={onClick}
-                        selectionIdx={selectionIdx}
-                        logs={logsSorted}
+                        selectionId={selectedLogId}
+                        logIds={logsSorted}
                     />
 
                     {logsSorted.length === 0 ? (
@@ -83,8 +78,8 @@ function HvLogInner() {
             <ResizableHandle withHandle />
 
             <ResizablePanel className="flex justify-center">
-                {fetcher.log ? (
-                    <LogDetailsPane log={fetcher.log} />
+                {fetcher.logs[0] ? (
+                    <LogDetailsPane log={fetcher.logs[0]} />
                 ) : (
                     "Loading..."
                 )}

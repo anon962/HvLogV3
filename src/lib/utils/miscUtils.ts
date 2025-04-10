@@ -246,3 +246,7 @@ export function avg(xs: number[]) {
 
     return sum(xs) / xs.length
 }
+
+export function indexes(xs: any[]): number[] {
+    return [...range(xs.length - 1)]
+}

@@ -1,11 +1,5 @@
-import { sleep } from "radash"
-import {
-    createContext,
-    useContext,
-    useEffect,
-    useRef,
-    useState,
-} from "react"
+import { isPromise, sleep } from "radash"
+import { createContext, useContext, useEffect, useState } from "react"
 import { CompleteLog, LogDb, LogId } from "../../logDb"
 import { ContextProviderProps } from "../../utils/typeUtils"
 import { useAppContext } from "../appContext"
@@ -30,7 +24,7 @@ function initContext(refreshDelay = 5000) {
     const app = useAppContext()
     const [logIds, setLogIds] = useState<Set<LogId>>(new Set())
 
-    const cache = useRef<Record<LogId, Promise<CompleteLog>>>({})
+    const [cache, setCache] = useState({} as LogCache)
 
     useEffect(() => {
         async function load() {
@@ -51,53 +45,45 @@ function initContext(refreshDelay = 5000) {
 
     return {
         logIds,
-        useLogFetch: (id: LogId | null = null) =>
-            useLogFetch(id, cache.current, app.db),
+        useLogFetch: (ids: LogId[] = []) =>
+            useLogFetch(ids, cache, setCache, app.db),
     }
 }
 
 function useLogFetch(
-    id: LogId | null,
-    cache: Record<LogId, Promise<CompleteLog>>,
+    logIds: LogId[],
+    cache: LogCache,
+    setCache: React.Dispatch<React.SetStateAction<LogCache>>,
     db: LogDb
 ) {
-    const [logId, setLogId] = useState(id)
-    const [log, setLog] = useState<CompleteLog | null>(null)
-    const [loading, setLoading] = useState(false)
+    const logs = logIds.map((id) =>
+        cache[id] && !isPromise(cache[id]) ? cache[id] : null
+    )
 
     useEffect(() => {
-        setLoading(true)
-        let isCancelled = false
-
         async function load() {
-            if (logId === null) {
-                setLoading(true)
-                return
+            for (const id of logIds) {
+                if (!(id in cache)) {
+                    // Cache misses are sloooow >300ms
+                    console.debug("fetching", id)
+                    const promise = db.get("complete", id).then((d) =>
+                        setCache((cache) => ({
+                            ...cache,
+                            [id]: d,
+                        }))
+                    )
+                    setCache((cache) => ({
+                        ...cache,
+                        [id]: promise,
+                    }))
+                }
             }
-
-            if (!(logId in cache)) {
-                // Cache misses are sloooow >300ms
-                console.debug("fetching", logId)
-                cache[logId] = db.get("complete", logId)
-            }
-
-            const data = await cache[logId]
-
-            if (isCancelled) {
-                return
-            }
-
-            setLog(data)
         }
 
-        load().then(() => {
-            setLoading(false)
-        })
+        load()
+    }, [logIds])
 
-        return () => {
-            isCancelled = true
-        }
-    }, [logId])
-
-    return { log, logId, setLogId, loading }
+    return { logs }
 }
+
+type LogCache = Record<LogId, Promise<void> | CompleteLog>

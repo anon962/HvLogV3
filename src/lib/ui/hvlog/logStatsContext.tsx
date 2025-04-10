@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect } from "react"
+import { createContext, useContext } from "react"
 import { CompleteLog, LogId } from "../../logDb"
 import {
     CombatSummary,
@@ -220,45 +220,52 @@ export type UseStatsMaybeReturn<Opts extends UseStatsOptions> = {
 }
 
 export function useStatsMaybe<T extends UseStatsOptions>(
-    id: LogId,
+    ids: LogId[],
     opts: T
-): UseStatsMaybeReturn<T> {
+) {
     const ctx = useLogStatsContext()
 
     const { useLogFetch } = useLogContext()
-    const fetcher = useLogFetch(null)
 
-    const result = {} as any
-    let needsFetch = false
-    if (opts.summary) {
-        result.summary = ctx.summaryDb.getMaybe(id) ?? null
-    }
-    if (opts.indexMap) {
-        result.indexMap = ctx.getIndexMapMaybe(id)
-        if (!result.indexMap) needsFetch = true
-    }
-    if (opts.itemDrops) {
-        result.itemDrops = ctx.getItemDropsMaybe(id)
-        if (!result.itemDrops) needsFetch = true
-    }
-    if (opts.itemUsage) {
-        result.itemUsage = ctx.getItemUsageMaybe(id)
-        if (!result.itemUsage) needsFetch = true
-    }
-    if (opts.combatUsage) {
-        result.combatUsage = ctx.getCombatUsageMaybe(id)
-        if (!result.combatUsage) needsFetch = true
-    }
-    if (opts.finances) {
-        result.finances = ctx.getFinancesMaybe(id)
-        if (!result.finances) needsFetch = true
-    }
+    const stats: Array<UseStatsMaybeReturn<T>> = []
+    const toFetch: LogId[] = []
 
-    useEffect(() => {
-        if (needsFetch) {
-            fetcher.setLogId(id)
+    for (const id of ids) {
+        const d = {} as any
+        let needsFetch = false
+
+        if (opts.summary) {
+            d.summary = ctx.summaryDb.getMaybe(id) ?? null
         }
-    }, [needsFetch])
+        if (opts.indexMap) {
+            d.indexMap = ctx.getIndexMapMaybe(id)
+            if (!d.indexMap) needsFetch = true
+        }
+        if (opts.itemDrops) {
+            d.itemDrops = ctx.getItemDropsMaybe(id)
+            if (!d.itemDrops) needsFetch = true
+        }
+        if (opts.itemUsage) {
+            d.itemUsage = ctx.getItemUsageMaybe(id)
+            if (!d.itemUsage) needsFetch = true
+        }
+        if (opts.combatUsage) {
+            d.combatUsage = ctx.getCombatUsageMaybe(id)
+            if (!d.combatUsage) needsFetch = true
+        }
+        if (opts.finances) {
+            d.finances = ctx.getFinancesMaybe(id)
+            if (!d.finances) needsFetch = true
+        }
 
-    return result
+        if (needsFetch) {
+            toFetch.push(id)
+        }
+
+        stats.push(d)
+    }
+
+    const fetcher = useLogFetch(toFetch)
+
+    return { stats, ids }
 }
