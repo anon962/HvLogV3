@@ -76,6 +76,8 @@ function useLogFetch(
             }
 
             if (!(logId in cache)) {
+                // Cache misses are sloooow >300ms
+                console.debug("fetching", logId)
                 cache[logId] = db.get("complete", logId)
             }
 

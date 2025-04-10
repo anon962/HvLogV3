@@ -74,9 +74,10 @@ const LogRow = React.memo(
             ""
 
         const cells = props.cols.map((col, idx) => {
-            const cell = col.cell({
+            const value = col.preprocess({
                 logId: props.logId,
             })
+            const cell = col.cell({ logId: props.logId, value })
             return (
                 <LogCell
                     key={idx}

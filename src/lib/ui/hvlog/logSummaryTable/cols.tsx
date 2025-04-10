@@ -1,12 +1,13 @@
 import { LogId } from "@/lib/logDb"
 import { cn } from "@/lib/utils/shadcnUtils"
+import { alphabetical, sort } from "radash"
 import { ReactNode, useEffect, useState } from "react"
 import { RunIcon, Skull2Icon } from "../../icons/misc"
 import { CheckIcon } from "../../icons/tailwind"
 import { useLogContext } from "../logContext"
-import { useStatsMaybe } from "../logStatsContext"
+import { useLogStatsContext, useStatsMaybe } from "../logStatsContext"
 
-export interface LogSummaryColumn {
+export interface LogSummaryColumn<TValue = any> {
     align?: "text-left" | "text-right" | "text-center"
 
     header: {
@@ -14,52 +15,58 @@ export interface LogSummaryColumn {
         className?: string
     }
 
-    cell: (opts: { logId: LogId }) => {
+    preprocess: (opts: { logId: LogId }) => TValue
+
+    cell: (opts: { logId: LogId; value: TValue }) => {
         content: ReactNode
         className?: string
         title?: string
     }
+
+    sortBy?: (values: TValue[]) => TValue[]
 }
 
 const COLS = {
     type: {
         header: { content: "Type", className: "w-[6rem]" },
         align: "text-left",
-        cell: ({ logId }) => ({
-            ...formatBattleType(logId),
-        }),
-    } as LogSummaryColumn,
+        preprocess: ({ logId }) => formatBattleType(logId),
+        cell: ({ value }) => value,
+        sortBy: (values) => alphabetical(values, (v) => v.content),
+    } as LogSummaryColumn<ReturnType<typeof formatBattleType>>,
     turns: {
         header: { content: "Turns" },
-        cell: ({ logId }) => ({
-            content: formatTurns(logId),
-        }),
-    } as LogSummaryColumn,
+        preprocess: ({ logId }) => formatTurns(logId),
+        cell: ({ value }) => value.cell,
+        sortBy: (values) => sort(values, (v) => v.sortValue),
+    } as LogSummaryColumn<ReturnType<typeof formatTurns>>,
     duration: {
         header: { content: "Duration" },
-        cell: ({ logId }) => ({
-            content: formatDuration(logId),
-        }),
-    } as LogSummaryColumn,
+        preprocess: ({ logId }) => formatDuration(logId),
+        cell: ({ value }) => value.cell,
+        sortBy: (values) => sort(values, (v) => v.sortValue),
+    } satisfies LogSummaryColumn<ReturnType<typeof formatDuration>>,
     profit: {
         header: { content: "Profit" },
-        cell: ({ logId }) => ({
-            ...formatProfit(logId),
-        }),
-    } as LogSummaryColumn,
+        preprocess: ({ logId }) => formatProfit(logId),
+        cell: ({ value }) => value.cell,
+        sortBy: (values) => sort(values, (v) => v.sortValue),
+    } satisfies LogSummaryColumn<ReturnType<typeof formatProfit>>,
     date: {
         header: { content: "Start Date" },
-        cell: ({ logId }) => ({
-            ...formatStartDate(logId),
-        }),
-    } as LogSummaryColumn,
+        preprocess: ({ logId }) => formatStartDate(logId),
+        cell: ({ value }) => value,
+        sortBy: (values) => alphabetical(values, (v) => v.content),
+    } satisfies LogSummaryColumn<ReturnType<typeof formatStartDate>>,
     status: {
         header: { content: "Status" },
         align: "text-center",
-        cell: ({ logId }) => ({
-            ...formatCompletionType(logId),
-        }),
-    } as LogSummaryColumn,
+        preprocess: ({ logId }) => formatCompletionType(logId),
+        cell: ({ value }) => value.cell,
+        sortBy: (values) => alphabetical(values, (v) => v.sortValue),
+    } satisfies LogSummaryColumn<
+        ReturnType<typeof formatCompletionType>
+    >,
 } as const
 
 export const S_COLS = COLS as Record<
@@ -149,39 +156,58 @@ function formatTurns(logId: LogId) {
         indexMap: true,
     })
 
+    let content, sortValue
     if (indexMap) {
-        return `${indexMap.turnIndexes.length} turns`
+        content = `${indexMap.turnIndexes.length} turns`
+        sortValue = indexMap.turnIndexes.length
     } else {
-        return "-"
+        content = "-"
+        sortValue = Number.POSITIVE_INFINITY
+    }
+
+    return {
+        cell: {
+            content,
+        },
+        sortValue,
     }
 }
 
 function formatDuration(logId: string) {
-    const { useLogFetch } = useLogContext()
-    const { log } = useLogFetch(logId)
-    if (!log) {
-        return "-"
+    const summary = useSummaryMaybe(logId)
+
+    let elapsed, content
+    if (summary) {
+        const end = new Date(summary.lastUpdate)
+        const start = new Date(summary.start)
+
+        elapsed = end.getTime() - start.getTime()
+        const seconds = elapsed / 1000
+
+        const ss = Math.trunc(seconds % 60)
+            .toString()
+            .padStart(2, "0")
+        const mm = Math.trunc(seconds / 60).toString()
+
+        const mmClassName = seconds < 60 ? "mm" : ""
+
+        content = (
+            <span>
+                <span className={mmClassName}>{mm}m </span>
+                <span>{ss}s</span>
+            </span>
+        )
+    } else {
+        content = "-"
+        elapsed = Number.POSITIVE_INFINITY
     }
 
-    const end = new Date(log.meta.lastUpdate)
-    const start = new Date(log.meta.start)
-
-    const elapsed = end.getTime() - start.getTime()
-    const seconds = elapsed / 1000
-
-    const ss = Math.trunc(seconds % 60)
-        .toString()
-        .padStart(2, "0")
-    const mm = Math.trunc(seconds / 60).toString()
-
-    const mmClassName = seconds < 60 ? "mm" : ""
-
-    return (
-        <span>
-            <span className={mmClassName}>{mm}m </span>
-            <span>{ss}s</span>
-        </span>
-    )
+    return {
+        cell: {
+            content,
+        },
+        sortValue: elapsed,
+    }
 }
 
 function formatProfit(logId: LogId) {
@@ -189,23 +215,31 @@ function formatProfit(logId: LogId) {
         finances: true,
     })
 
-    if (!finances) {
-        return { content: "-" }
-    }
+    let profit, className, content
+    if (finances) {
+        ;({ profit } = finances)
 
-    const { profit } = finances
-
-    const className = cn(
-        "profit text-right",
-        // prettier-ignore
-        profit > 10_000 ? "positive" :
+        className = cn(
+            "profit text-right",
+            // prettier-ignore
+            profit > 10_000 ? "positive" :
         profit < -10_000 ? "negative" :
         ""
-    )
+        )
 
-    const content = `${(profit / 1000).toFixed(0)}k`
+        content = `${(profit / 1000).toFixed(0)}k`
+    } else {
+        content = "-"
+        profit = Number.NEGATIVE_INFINITY
+    }
 
-    return { className, content }
+    return {
+        cell: {
+            className,
+            content,
+        },
+        sortValue: profit,
+    }
 }
 
 function formatStartDate(
@@ -216,24 +250,24 @@ function formatStartDate(
         // threshDays?: number
     } = {}
 ) {
-    const { useLogFetch } = useLogContext()
-    const { log } = useLogFetch(logId)
+    const summary = useSummaryMaybe(logId)
 
-    const [result, setResult] = useState<
-        ReturnType<LogSummaryColumn["cell"]>
-    >({
+    const [result, setResult] = useState<{
+        content: string
+        title?: string
+    }>({
         content: "-",
     })
 
     useEffect(() => {
         function load() {
-            if (!log) {
+            if (!summary) {
                 return
             }
 
             const now = new Date()
 
-            const d = new Date(log.meta.start)
+            const d = new Date(summary.start)
 
             const elapsed = now.getTime() - d.getTime()
 
@@ -265,82 +299,108 @@ function formatStartDate(
 
             setResult({
                 content,
-                title: log.meta.start,
+                title: summary.start,
             })
         }
 
+        load()
         const timerId = setInterval(() => load(), 3000)
         return () => clearInterval(timerId)
-    }, [log])
+    }, [summary?.start])
 
     return result
 }
 
 function formatCompletionType(logId: LogId) {
-    const { summary } = useStatsMaybe(logId, {
+    const summary = useSummaryMaybe(logId)
+
+    let status, title, sortValue
+    if (summary) {
+        let round
+        if (summary.completionType !== "finish" && summary.round) {
+            round = (
+                <span>
+                    {summary.round.end} / {summary.round.max}
+                </span>
+            )
+
+            if (summary.completionType === "die") {
+                title = `Died on round ${summary.round.end} / ${summary.round.max}`
+            } else if (summary.completionType === "flee") {
+                title = `Flee on round ${summary.round.end} / ${summary.round.max}`
+            }
+        }
+
+        switch (summary.completionType) {
+            case "finish":
+                status = (
+                    <span className="finish flex justify-center">
+                        <CheckIcon className="flex" />
+                    </span>
+                )
+                sortValue = "9_done"
+                break
+            case "die":
+                status = (
+                    <span className="die flex justify-center gap-1">
+                        <span className="w-5">
+                            <Skull2Icon />
+                        </span>
+
+                        {round}
+                    </span>
+                )
+                sortValue = "1_die"
+                break
+            case "flee":
+                status = (
+                    <span className="flee flex justify-center gap-1">
+                        <span className="w-6">
+                            <RunIcon />
+                        </span>
+
+                        {round}
+                    </span>
+                )
+                sortValue = "2_flee"
+                break
+            default:
+                status = (
+                    <span className="flex justify-center gap-1">
+                        <span className="">???</span>
+
+                        {round}
+                    </span>
+                )
+                sortValue = "3_unknown"
+                break
+        }
+    } else {
+        status = "-"
+        sortValue = "9_done"
+    }
+
+    return {
+        cell: {
+            content: status,
+            title,
+        },
+        sortValue,
+    }
+}
+
+function useSummaryMaybe(logId: LogId) {
+    let { summary } = useStatsMaybe(logId, {
         summary: true,
     })
 
-    if (!summary) {
-        return { content: "-" }
+    const { useLogFetch } = useLogContext()
+    const { log } = useLogFetch(summary ? null : logId)
+
+    const { getSummary } = useLogStatsContext()
+    if (!summary && log) {
+        summary = getSummary(log)
     }
 
-    let round, title
-    if (summary.completionType !== "finish" && summary.round) {
-        round = (
-            <span>
-                {summary.round.end} / {summary.round.max}
-            </span>
-        )
-
-        if (summary.completionType === "die") {
-            title = `Died on round ${summary.round.end} / ${summary.round.max}`
-        } else if (summary.completionType === "flee") {
-            title = `Flee on round ${summary.round.end} / ${summary.round.max}`
-        }
-    }
-
-    let status
-    switch (summary.completionType) {
-        case "finish":
-            status = (
-                <span className="finish flex justify-center">
-                    <CheckIcon className="flex" />
-                </span>
-            )
-            break
-        case "die":
-            status = (
-                <span className="die flex justify-center gap-1">
-                    <span className="w-5">
-                        <Skull2Icon />
-                    </span>
-
-                    {round}
-                </span>
-            )
-            break
-        case "flee":
-            status = (
-                <span className="flee flex justify-center gap-1">
-                    <span className="w-6">
-                        <RunIcon />
-                    </span>
-
-                    {round}
-                </span>
-            )
-            break
-        default:
-            status = (
-                <span className="flex justify-center gap-1">
-                    <span className="">???</span>
-
-                    {round}
-                </span>
-            )
-            break
-    }
-
-    return { content: status, title }
+    return summary
 }

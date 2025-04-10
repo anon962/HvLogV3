@@ -61,11 +61,13 @@ export class SummaryDb {
         const analysis = {
             id: log.id,
             start: log.meta.start,
+            lastUpdate: log.meta.lastUpdate,
             completionType,
             battleType,
             round,
             turnIndexes,
             roundIndexes,
+            numEvents: log.entries.length,
             errors: {
                 parsing: hasParseError,
                 inconsistentBattleTypes,
@@ -121,6 +123,7 @@ export class SummaryDb {
 export interface LogSummary {
     id: LogId
     start: string
+    lastUpdate: string
     completionType: "finish" | "flee" | "die" | null
     battleType:
         | null
@@ -141,6 +144,7 @@ export interface LogSummary {
     } | null
     turnIndexes: number[]
     roundIndexes: Record<number, number>
+    numEvents: number
     errors: {
         parsing: boolean
         inconsistentBattleTypes: boolean

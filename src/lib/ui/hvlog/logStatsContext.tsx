@@ -23,6 +23,8 @@ import { useSummaryDbContext } from "./summaryDbContext"
 
 const ctx = createContext<ReturnType<typeof initContext>>(null as any)
 
+const CACHE_VERSION = 1
+
 export function useLogStatsContext() {
     return useContext(ctx)
 }
@@ -38,59 +40,120 @@ function initContext(summaryDb: SummaryDb) {
 
     const getSummary = (log: CompleteLog) => summaryDb.get(log)
 
-    const { get: getIndexMap } = useCache((log) => {
-        const { roundIndexes, turnIndexes } = summaryDb.get(log)
+    const indexMap = useCache((log) => {
+        const summary = summaryDb.get(log)
         return new IndexMap(
-            turnIndexes,
-            roundIndexes,
-            log.entries.length
+            summary.turnIndexes,
+            summary.roundIndexes,
+            summary.numEvents
         )
     })
 
-    const { get: getItemDrops } = useCache((log) =>
-        summarizeItemDrops(app, log)
-    )
-    const { get: getItemUsage } = useCache((log) =>
-        summarizeItemUsage(app, log)
-    )
-    const { get: getCombatUsage } = useCache((log) =>
-        summarizeCombatUsage(log)
-    )
-    const { get: getMoney } = useCache((log) => {
+    const getIndexMapMaybe = (logId: LogId) => {
+        if (indexMap.cache.has(logId)) {
+            return indexMap.cache.get(logId)!
+        }
+
+        const summary = summaryDb.getMaybe(logId)
+        if (!summary) return null
+
+        const result = new IndexMap(
+            summary.turnIndexes,
+            summary.roundIndexes,
+            summary.numEvents
+        )
+        indexMap.cache.set(logId, result)
+        return result
+    }
+
+    const itemDrops = useCache((log) => summarizeItemDrops(app, log))
+
+    const itemUsage = useCache((log) => summarizeItemUsage(app, log))
+
+    const combatUsage = useCache((log) => summarizeCombatUsage(log))
+
+    const money = useCache((log) => {
         return summarizeFinances(
             getSummary(log),
-            getItemDrops(log),
-            getItemUsage(log),
+            itemDrops.get(log),
+            itemUsage.get(log),
             app
         )
-    })
+    }, "hvlog_stats_finances")
+
+    function maybeGetter<T extends ReturnType<typeof useCache>>(
+        cache: T
+    ) {
+        return (logId: LogId) => cache.cache.get(logId) ?? null
+    }
 
     return {
         summaryDb,
         getSummary,
-        getIndexMap,
-        getItemDrops,
-        getItemUsage,
-        getCombatUsage,
-        getMoney,
+        getIndexMap: indexMap.get,
+        getIndexMapMaybe,
+        getItemDrops: itemDrops.get,
+        getItemDropsMaybe: maybeGetter(itemDrops),
+        getItemUsage: itemUsage.get,
+        getItemUsageMaybe: maybeGetter(itemUsage),
+        getCombatUsage: combatUsage.get,
+        getCombatUsageMaybe: maybeGetter(combatUsage),
+        getFinances: money.get,
+        getFinancesMaybe: maybeGetter(money),
     }
 }
 
-function useCache<T>(generate: (log: CompleteLog) => T): {
+function useCache<T>(
+    generate: (log: CompleteLog) => T,
+    storageKey: string | null = null
+): {
     cache: Map<LogId, T>
     get: (log: CompleteLog) => T
 } {
-    const cache = new Map<LogId, T>()
+    const cache: Map<LogId, T> = storageKey
+        ? load(storageKey) ?? new Map()
+        : new Map()
 
     const get = (log: CompleteLog) => {
         if (!cache.has(log.id)) {
             cache.set(log.id, generate(log))
+
+            if (storageKey) {
+                save(storageKey, cache)
+            }
         }
 
         return cache.get(log.id)!
     }
 
     return { cache, get }
+
+    function load(storageKey: string) {
+        const raw = localStorage.getItem(storageKey)
+        if (!raw) {
+            return
+        }
+
+        const data = JSON.parse(raw)
+        if (data.version !== CACHE_VERSION) {
+            return
+        }
+
+        const cache = new Map<LogId, T>()
+        for (const [k, v] of Object.entries(data.cache)) {
+            cache.set(k, v as any)
+        }
+
+        return cache
+    }
+
+    function save(storageKey: string, cache: Map<LogId, T>) {
+        const data = {
+            version: CACHE_VERSION,
+            cache: Object.fromEntries(cache.entries()),
+        }
+        localStorage.setItem(storageKey, JSON.stringify(data))
+    }
 }
 
 export interface UseStatsOptions {
@@ -134,7 +197,7 @@ export function useStats<T extends UseStatsOptions>(
         combatUsage: opts.combatUsage
             ? ctx.getCombatUsage(log)
             : undefined,
-        finances: opts.finances ? ctx.getMoney(log) : undefined,
+        finances: opts.finances ? ctx.getFinances(log) : undefined,
     } as UseStatsReturn<T>
 }
 
@@ -166,39 +229,36 @@ export function useStatsMaybe<T extends UseStatsOptions>(
     const fetcher = useLogFetch(null)
 
     const result = {} as any
+    let needsFetch = false
     if (opts.summary) {
         result.summary = ctx.summaryDb.getMaybe(id) ?? null
     }
     if (opts.indexMap) {
-        result.indexMap = fetcher.log
-            ? ctx.getIndexMap(fetcher.log)
-            : null
-        useEffect(() => fetcher.setLogId(id), [id])
+        result.indexMap = ctx.getIndexMapMaybe(id)
+        if (!result.indexMap) needsFetch = true
     }
     if (opts.itemDrops) {
-        result.itemDrops = fetcher.log
-            ? ctx.getItemDrops(fetcher.log)
-            : null
-        useEffect(() => fetcher.setLogId(id), [id])
+        result.itemDrops = ctx.getItemDropsMaybe(id)
+        if (!result.itemDrops) needsFetch = true
     }
     if (opts.itemUsage) {
-        result.itemUsage = fetcher.log
-            ? ctx.getItemUsage(fetcher.log)
-            : null
-        useEffect(() => fetcher.setLogId(id), [id])
+        result.itemUsage = ctx.getItemUsageMaybe(id)
+        if (!result.itemUsage) needsFetch = true
     }
     if (opts.combatUsage) {
-        result.combatUsage = fetcher.log
-            ? ctx.getCombatUsage(fetcher.log)
-            : null
-        useEffect(() => fetcher.setLogId(id), [id])
+        result.combatUsage = ctx.getCombatUsageMaybe(id)
+        if (!result.combatUsage) needsFetch = true
     }
     if (opts.finances) {
-        result.finances = fetcher.log
-            ? ctx.getMoney(fetcher.log)
-            : null
-        useEffect(() => fetcher.setLogId(id), [id])
+        result.finances = ctx.getFinancesMaybe(id)
+        if (!result.finances) needsFetch = true
     }
+
+    useEffect(() => {
+        if (needsFetch) {
+            fetcher.setLogId(id)
+        }
+    }, [needsFetch])
 
     return result
 }
