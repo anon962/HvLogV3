@@ -65,8 +65,9 @@ export class LogDb {
 
         const txn = db.transaction(db.objectStoreNames, "readwrite")
         try {
-            document.body.textContent = "Migrating logs..."
-            await migrateData(db, txn)
+            for (const version in migrateData(db, txn)) {
+                document.body.textContent = `Migrating logs (v${version} / v${db.version})...`
+            }
             txn.commit()
         } catch (e) {
             txn.abort()
@@ -292,7 +293,7 @@ export class LogDb {
 
         for (let idx = 0; idx < logs.length; idx++) {
             const log = logs[idx]
-            await this.db.add(COMPLETE_STORE, log)
+            await txn.store.add(log)
             yield idx
         }
     }

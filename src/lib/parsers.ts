@@ -543,7 +543,7 @@ export const PARSERS = {
     ),
     ENCHANT_GAIN: new EventParser(
         "ENCHANT_GAIN",
-        `Unlocked innate potential ${Words("value")}!`,
+        `Unlocked innate potential: ${Words("value")}!`,
         {
             value: t("string"),
         }

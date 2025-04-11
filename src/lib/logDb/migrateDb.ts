@@ -32,7 +32,7 @@ export function migrateSchema(db: Db, oldVersion: number) {
     }
 }
 
-export async function migrateData(db: Db, txn: Txn) {
+export async function* migrateData(db: Db, txn: Txn) {
     const currentVersions = new Set(db.objectStoreNames)
 
     let oldVersion = 1
@@ -48,6 +48,7 @@ export async function migrateData(db: Db, txn: Txn) {
 
             switch (oldVersion) {
                 case 1:
+                    yield oldVersion
                     const oldTxn = txn as Txn<v1.LogDbSchema>
                     const newTxn = txn as Txn<latest.LogDbSchema>
                     putAll(
