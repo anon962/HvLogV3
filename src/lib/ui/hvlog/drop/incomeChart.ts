@@ -1,6 +1,6 @@
 import { AppConfig } from "@/lib/app/app"
 import { DataSeries } from "@/lib/charts/dataSeries"
-import { CompleteLog, LogEntry } from "@/lib/logDb"
+import { CompleteLog, LogEntry } from "@/lib/logDb/logDb"
 import { HvEventMap } from "@/lib/parsers"
 import { DropSummary } from "@/lib/stats/dropStats"
 import { ItemUsageSummary } from "@/lib/stats/itemUsageStats"

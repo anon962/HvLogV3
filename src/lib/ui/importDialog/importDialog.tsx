@@ -1,5 +1,6 @@
 import { App } from "@/lib/app/app"
-import { LogDb, LogDbBackup } from "@/lib/logDb"
+import { LogDb, LogDbBackup } from "@/lib/logDb/logDb"
+import { migrateCompleteLogs } from "@/lib/logDb/migrateLogs"
 import "@/lib/ui/global.css"
 import { FC, FormEvent, useRef, useState } from "react"
 import { AppContextProvider } from "../appContext"
@@ -186,35 +187,30 @@ function useImporter() {
         try {
             const persistentDb = await LogDb.ainit("persistent")
             const isekaiDb = await LogDb.ainit("isekai")
-            if (
-                persistentDb.db.version !== isekaiDb.db.version ||
-                isekaiDb.db.version !== backup.version
-            ) {
-                setStatus({
-                    type: "error",
-                    detail: `Unable to import backup for version ${backup.version} when current version is ${persistentDb.db.version} / ${isekaiDb.db.version}`,
-                })
-                return
+
+            let { version, persistent: pl, isekai: il } = backup
+            while (version !== persistentDb.db.version) {
+                pl = migrateCompleteLogs(pl, version)
+                il = migrateCompleteLogs(il, version)
+                version += 1
             }
 
-            const persistentIter = persistentDb.replaceLogs(
-                backup.persistent
-            )
+            const persistentIter = persistentDb.replaceLogs(pl)
             for await (const idx of persistentIter) {
                 setStatus({
                     type: "loading",
                     detail: `Importing persistent logs (${
                         idx + 1
-                    } / ${backup.persistent.length}) ...`,
+                    } / ${pl.length}) ...`,
                 })
             }
 
-            const isekaiIter = isekaiDb.replaceLogs(backup.isekai)
+            const isekaiIter = isekaiDb.replaceLogs(il)
             for await (const idx of isekaiIter) {
                 setStatus({
                     type: "loading",
                     detail: `Importing isekai logs (${idx + 1} / ${
-                        backup.isekai.length
+                        il.length
                     }) ...`,
                 })
             }

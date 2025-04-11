@@ -1,6 +1,6 @@
 import { enumerate } from "@/lib/utils/miscUtils"
-import { createContext, useContext } from "react"
-import { CompleteLog, LogId } from "../../logDb"
+import { createContext, useContext, useMemo } from "react"
+import { CompleteLog, LogId } from "../../logDb/logDb"
 import {
     CombatSummary,
     summarizeCombatUsage,
@@ -23,8 +23,6 @@ import { useLogContext } from "./logContext"
 import { useSummaryDbContext } from "./summaryDbContext"
 
 const ctx = createContext<ReturnType<typeof initContext>>(null as any)
-
-const CACHE_VERSION = 1
 
 export function useLogStatsContext() {
     return useContext(ctx)
@@ -73,14 +71,21 @@ function initContext(summaryDb: SummaryDb) {
 
     const combatUsage = useCache((log) => summarizeCombatUsage(log))
 
-    const money = useCache((log) => {
-        return summarizeFinances(
-            getSummary(log),
-            itemDrops.get(log),
-            itemUsage.get(log),
-            app
-        )
-    }, "hvlog_stats_finances")
+    const priceHash = useMemo(
+        () => JSON.stringify(app.config.prices),
+        [app]
+    )
+    const money = useCache(
+        (log) => {
+            return summarizeFinances(
+                getSummary(log),
+                itemDrops.get(log),
+                itemUsage.get(log),
+                app
+            )
+        },
+        { key: "hvlog_stats_finances", hash: priceHash }
+    )
 
     function maybeGetter<T extends ReturnType<typeof useCache>>(
         cache: T
@@ -104,23 +109,28 @@ function initContext(summaryDb: SummaryDb) {
     }
 }
 
+interface StorageMeta {
+    key: string
+    hash?: string
+}
+
 function useCache<T>(
     generate: (log: CompleteLog) => T,
-    storageKey: string | null = null
+    storage?: StorageMeta
 ): {
     cache: Map<LogId, T>
     get: (log: CompleteLog) => T
 } {
-    const cache: Map<LogId, T> = storageKey
-        ? load(storageKey) ?? new Map()
+    const cache: Map<LogId, T> = storage
+        ? load(storage) ?? new Map()
         : new Map()
 
     const get = (log: CompleteLog) => {
         if (!cache.has(log.id)) {
             cache.set(log.id, generate(log))
 
-            if (storageKey) {
-                save(storageKey, cache)
+            if (storage) {
+                save(storage, cache)
             }
         }
 
@@ -129,14 +139,14 @@ function useCache<T>(
 
     return { cache, get }
 
-    function load(storageKey: string) {
-        const raw = localStorage.getItem(storageKey)
+    function load(storage: StorageMeta) {
+        const raw = localStorage.getItem(storage.key)
         if (!raw) {
             return
         }
 
         const data = JSON.parse(raw)
-        if (data.version !== CACHE_VERSION) {
+        if (data.hash !== storage.hash) {
             return
         }
 
@@ -148,12 +158,12 @@ function useCache<T>(
         return cache
     }
 
-    function save(storageKey: string, cache: Map<LogId, T>) {
+    function save(storage: StorageMeta, cache: Map<LogId, T>) {
         const data = {
-            version: CACHE_VERSION,
+            hash: storage.hash,
             cache: Object.fromEntries(cache.entries()),
         }
-        localStorage.setItem(storageKey, JSON.stringify(data))
+        localStorage.setItem(storage.key, JSON.stringify(data))
     }
 }
 

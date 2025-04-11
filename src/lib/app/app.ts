@@ -1,5 +1,5 @@
 import { clone } from "radash"
-import { LogDb } from "../logDb"
+import { LogDb } from "../logDb/logDb"
 import { DEFAULT_CONFIG } from "../ui/constants"
 import { BattleLogger } from "./battleLogger"
 

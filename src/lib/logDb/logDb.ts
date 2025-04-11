@@ -1,10 +1,10 @@
 import * as idb from "idb"
 import { isEqual } from "radash"
-import { migrateLogDb } from "./migrateLogDb"
-import { HvEvent } from "./parsers"
-import { uuidWithFallback } from "./utils/miscUtils"
-import { ValueOf } from "./utils/typeUtils"
-import { readUrlPath } from "./utils/userscriptUtils"
+import { HvEvent } from "../parsers"
+import { decompressGzip, uuidWithFallback } from "../utils/miscUtils"
+import { ValueOf } from "../utils/typeUtils"
+import { readUrlPath } from "../utils/userscriptUtils"
+import { migrateData, migrateSchema } from "./migrateDb"
 
 const COMPLETE_STORE = "complete"
 const LIVE_STORE = "live"
@@ -13,6 +13,8 @@ const LIVE_HASH_STORE = "live_hash"
 
 const STORAGE_KEY_PERSISTENT = "HvLog"
 const STORAGE_KEY_ISEKAI = "HvLog_isekai"
+
+export const LOG_DB_VERSION = 2
 
 export class LogDb {
     constructor(public db: idb.IDBPDatabase<LogDbSchema>) {}
@@ -33,29 +35,35 @@ export class LogDb {
         }
 
         let isNewDb = false
-        const db = await idb.openDB<LogDbSchema>(key, 1, {
-            upgrade: (db, oldVersion, newVersion, txn) => {
-                console.debug(
-                    "Initializing log db",
-                    oldVersion,
-                    newVersion
-                )
+        const db = await idb.openDB<LogDbSchema>(
+            key,
+            LOG_DB_VERSION,
+            {
+                upgrade: (db, oldVersion, newVersion, txn) => {
+                    console.debug(
+                        "Initializing log db",
+                        oldVersion,
+                        newVersion
+                    )
 
-                isNewDb = oldVersion === 0
-                if (isNewDb) {
-                    db.createObjectStore(COMPLETE_STORE, {
-                        keyPath: "id",
-                    })
-                    db.createObjectStore(LIVE_STORE, {
-                        autoIncrement: true,
-                    })
-                    db.createObjectStore(LIVE_META_STORE)
-                    db.createObjectStore(LIVE_HASH_STORE)
-                } else {
-                    migrateLogDb(db, oldVersion, txn)
-                }
-            },
-        })
+                    isNewDb = oldVersion === 0
+                    if (isNewDb) {
+                        db.createObjectStore(COMPLETE_STORE, {
+                            keyPath: "id",
+                        })
+                        db.createObjectStore(LIVE_STORE, {
+                            autoIncrement: true,
+                        })
+                        db.createObjectStore(LIVE_META_STORE)
+                        db.createObjectStore(LIVE_HASH_STORE)
+                    } else {
+                        migrateSchema(db, oldVersion)
+                    }
+                },
+            }
+        )
+
+        await migrateData(db)
 
         const logDb = new LogDb(db)
         if (isNewDb) {
@@ -111,6 +119,7 @@ export class LogDb {
         const log: CompleteLog = {
             id: uuidWithFallback(),
             meta,
+            compressed: false,
             entries: [],
         }
 
@@ -221,7 +230,20 @@ export class LogDb {
         }
 
         for await (const cursor of iter) {
-            yield cursor.value
+            const log = cursor.value
+
+            if (log.compressed) {
+                const entries = JSON.parse(
+                    await decompressGzip(log.entries)
+                )
+                yield {
+                    ...log,
+                    compressed: false,
+                    entries,
+                }
+            } else {
+                yield log
+            }
         }
 
         return iter
@@ -274,7 +296,7 @@ export class LogDb {
 export interface LogDbSchema extends idb.DBSchema {
     complete: {
         key: LogId
-        value: CompleteLog
+        value: CompleteLog | CompressedLog
     }
     live: {
         key: number
@@ -304,9 +326,17 @@ export interface LogHash {
     maxRound: number
 }
 
+interface CompressedLog {
+    id: LogId
+    meta: LogMeta
+    compressed: true
+    entries: Array<Uint8Array>
+}
+
 export interface CompleteLog {
     id: LogId
     meta: LogMeta
+    compressed: false
     entries: LogEntry[]
 }
 

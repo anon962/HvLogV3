@@ -1,5 +1,5 @@
 import { App } from "../app/app"
-import { CompleteLog } from "../logDb"
+import { CompleteLog } from "../logDb/logDb"
 import {
     BUBBLE_VASE,
     HEALTH_ITEMS,

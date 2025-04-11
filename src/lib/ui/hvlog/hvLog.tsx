@@ -1,5 +1,5 @@
 import { App } from "@/lib/app/app"
-import { LogId } from "@/lib/logDb"
+import { LogId } from "@/lib/logDb/logDb"
 import "@/lib/ui/global.css"
 import {
     ResizableHandle,

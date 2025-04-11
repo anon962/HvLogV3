@@ -1,6 +1,6 @@
 import { range, sum } from "radash"
 import { EventGrammar, takeEvents } from "../eventGrammar"
-import { CompleteLog, LogEntry } from "../logDb"
+import { CompleteLog, LogEntry } from "../logDb/logDb"
 import { HvEvent, HvEventMap } from "../parsers"
 import {
     EventSummary,

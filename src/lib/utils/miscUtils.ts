@@ -250,3 +250,73 @@ export function avg(xs: number[]) {
 export function indexes(xs: any[]): number[] {
     return [...range(xs.length - 1)]
 }
+
+export async function comopressGzip(
+    text: string
+): Promise<Array<Uint8Array>> {
+    const asBytes = new TextEncoder().encode(text)
+    const asStream = new ReadableStream({
+        start(controller) {
+            controller.enqueue(asBytes)
+            controller.close()
+        },
+    })
+        .pipeThrough(new CompressionStream("gzip"))
+        .getReader()
+
+    const asCompressed: Array<Uint8Array> = []
+    while (true) {
+        const { done, value } = (await asStream.read()) as {
+            done: boolean
+            value: Uint8Array
+        }
+
+        if (done) {
+            break
+        } else {
+            asCompressed.push(value)
+        }
+    }
+
+    return asCompressed
+}
+
+export async function decompressGzip(
+    data: Array<Uint8Array>
+): Promise<string> {
+    const asStream = new ReadableStream({
+        start(controller) {
+            for (const arr of data) {
+                controller.enqueue(arr)
+            }
+            controller.close()
+        },
+    })
+        .pipeThrough(new DecompressionStream("gzip"))
+        .getReader()
+
+    const textDecoder = new TextDecoder()
+    let asStr = ""
+    while (true) {
+        const { done, value } = (await asStream.read()) as {
+            done: boolean
+            value: Uint8Array
+        }
+        asStr += textDecoder.decode(value)
+        if (done) {
+            break
+        }
+    }
+
+    return asStr
+}
+
+export async function consumeAsync<T = any>(
+    iter: AsyncGenerator<T>
+): Promise<T[]> {
+    const result: T[] = []
+    for await (const x of iter) {
+        result.push(x)
+    }
+    return result
+}

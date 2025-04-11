@@ -1,4 +1,4 @@
-import { CompleteLog, LogId } from "./logDb"
+import { CompleteLog, LogId } from "./logDb/logDb"
 import {
     extractBattleType,
     extractCompletionType,

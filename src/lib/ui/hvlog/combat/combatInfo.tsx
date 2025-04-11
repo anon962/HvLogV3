@@ -1,4 +1,4 @@
-import { CompleteLog } from "@/lib/logDb"
+import { CompleteLog } from "@/lib/logDb/logDb"
 import { CombatSummary } from "@/lib/stats/combatStats"
 import { LogSummary } from "@/lib/summaryDb"
 import {

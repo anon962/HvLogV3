@@ -1,6 +1,6 @@
 import { isPromise, sleep } from "radash"
 import { createContext, useContext, useEffect, useState } from "react"
-import { CompleteLog, LogDb, LogId } from "../../logDb"
+import { CompleteLog, LogDb, LogId } from "../../logDb/logDb"
 import { ContextProviderProps } from "../../utils/typeUtils"
 import { useAppContext } from "../appContext"
 

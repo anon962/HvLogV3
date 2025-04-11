@@ -1,4 +1,4 @@
-import { CompleteLog, LogEntry } from "@/lib/logDb"
+import { CompleteLog, LogEntry } from "@/lib/logDb/logDb"
 import { HvEventMap } from "@/lib/parsers"
 import { enumerate } from "@/lib/utils/miscUtils"
 import JsonView from "@uiw/react-json-view"

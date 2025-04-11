@@ -1,6 +1,6 @@
 import { sum } from "radash"
 import { App } from "../app/app"
-import { CompleteLog } from "../logDb"
+import { CompleteLog } from "../logDb/logDb"
 import { LogSummary } from "../summaryDb"
 import {
     ARTIFACTS,

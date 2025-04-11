@@ -1,5 +1,5 @@
 import { last } from "radash"
-import { CompleteLog } from "../logDb"
+import { CompleteLog } from "../logDb/logDb"
 import { HvEvent, HvEventMap } from "../parsers"
 import { LogSummary } from "../summaryDb"
 import { findNext } from "../utils/miscUtils"

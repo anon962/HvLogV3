@@ -1,4 +1,4 @@
-import { LogEntry } from "@/lib/logDb"
+import { LogEntry } from "@/lib/logDb/logDb"
 import { parseLine } from "@/lib/parsers"
 import { extractTurnIndexes } from "@/lib/stats/summaryStats"
 import { expect, it } from "vitest"

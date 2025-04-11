@@ -1,4 +1,4 @@
-import { CompleteLog } from "@/lib/logDb"
+import { CompleteLog } from "@/lib/logDb/logDb"
 import { Card, CardContent } from "../shadcn/card"
 import {
     Tabs,

@@ -1,4 +1,4 @@
-import { CompleteLog } from "./logDb"
+import { CompleteLog } from "./logDb/logDb"
 import { HvEvent, HvEventMap } from "./parsers"
 
 // @todo: Replace with https://chevrotain.io/docs/tutorial/step2_parsing.html#complete-parser

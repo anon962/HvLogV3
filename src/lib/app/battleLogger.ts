@@ -1,6 +1,6 @@
 import { last, sort } from "radash"
 import { ChartManager } from "../charts/chartManager"
-import { LogDb, LogEntry, LogHash } from "../logDb"
+import { LogDb, LogEntry, LogHash } from "../logDb/logDb"
 import { isEventFrom, parseLine, PARSERS } from "../parsers"
 import { sleepWithRegistration } from "../utils/userscriptUtils"
 

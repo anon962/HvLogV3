@@ -1,5 +1,5 @@
 import { App } from "@/lib/app/app"
-import { LogDb, LogDbBackup } from "@/lib/logDb"
+import { LogDb, LogDbBackup } from "@/lib/logDb/logDb"
 import "@/lib/ui/global.css"
 import { FC, useEffect, useRef, useState } from "react"
 import { AppContextProvider } from "../appContext"

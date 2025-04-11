@@ -1,4 +1,4 @@
-import { LogId } from "@/lib/logDb"
+import { LogId } from "@/lib/logDb/logDb"
 import {
     Table,
     TableBody,

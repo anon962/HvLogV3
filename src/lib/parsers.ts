@@ -2,7 +2,8 @@ import { BaseHvEvent, ParserSchema, t } from "./parserSchema"
 import { Result, ValueOf } from "./utils/typeUtils"
 
 export function parseLine(
-    line: string
+    line: string,
+    parsers = ALL_PARSERS
 ): Result<ValueOf<HvEventMap>, string[]> {
     const errors: string[] = []
 
@@ -527,10 +528,24 @@ export const PARSERS = {
         }
     ),
     MASTERY_GAIN: new EventParser(
-        "LEVEL_UP",
+        "MASTERY_GAIN",
         `You gain ${Words("value")} Mastery Point!`,
         {
+            value: t("string"),
+        }
+    ),
+    POTENCY_GAIN: new EventParser(
+        "POTENCY_GAIN",
+        `The equipment's potential has increased by ${Num("value")} points!`,
+        {
             value: t("number"),
+        }
+    ),
+    ENCHANT_GAIN: new EventParser(
+        "ENCHANT_GAIN",
+        `Unlocked innate potential ${Words("value")}!`,
+        {
+            value: t("string"),
         }
     ),
 

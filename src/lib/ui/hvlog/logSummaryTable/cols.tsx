@@ -1,4 +1,4 @@
-import { LogId } from "@/lib/logDb"
+import { LogId } from "@/lib/logDb/logDb"
 import { enumerate, indexes } from "@/lib/utils/miscUtils"
 import { cn } from "@/lib/utils/shadcnUtils"
 import { alphabetical, sort, zip } from "radash"
