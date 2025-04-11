@@ -1,3 +1,4 @@
+import { enumerate } from "@/lib/utils/miscUtils"
 import { createContext, useContext } from "react"
 import { CompleteLog, LogId } from "../../logDb"
 import {
@@ -266,6 +267,35 @@ export function useStatsMaybe<T extends UseStatsOptions>(
     }
 
     const fetcher = useLogFetch(toFetch)
+    const logMap = Object.fromEntries(
+        fetcher.logs.flatMap((log) => (log ? [[log.id, log]] : []))
+    )
+
+    for (const [idx, id] of enumerate(ids)) {
+        if (!(id in logMap)) {
+            continue
+        }
+
+        const log = logMap[id]
+        stats[idx] = {
+            summary: opts.summary ? ctx.getSummary(log) : undefined,
+            indexMap: opts.indexMap
+                ? ctx.getIndexMap(log)
+                : undefined,
+            itemDrops: opts.itemDrops
+                ? ctx.getItemDrops(log)
+                : undefined,
+            itemUsage: opts.itemUsage
+                ? ctx.getItemUsage(log)
+                : undefined,
+            combatUsage: opts.combatUsage
+                ? ctx.getCombatUsage(log)
+                : undefined,
+            finances: opts.finances
+                ? ctx.getFinances(log)
+                : undefined,
+        } as UseStatsReturn<T>
+    }
 
     return { stats, ids }
 }

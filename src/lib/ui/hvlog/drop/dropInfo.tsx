@@ -285,6 +285,10 @@ function DropChart({
 }) {
     const app = useAppContext()
 
+    const { summary } = useStats(log, {
+        summary: true,
+    })
+
     const [el, setEl] = useState<Element | null>(null)
     useEffect(() => {
         setEl(
@@ -292,10 +296,11 @@ function DropChart({
                 app.config.prices,
                 log,
                 drops,
-                usage
+                usage,
+                summary.battleType?.name === "Grindfest"
             ).render()
         )
-    }, [])
+    }, [log])
 
     const container = useRef<HTMLDivElement>(null)
 

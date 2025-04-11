@@ -10,7 +10,8 @@ import {
 import { indexes } from "@/lib/utils/miscUtils"
 import { cn } from "@/lib/utils/shadcnUtils"
 import { mapEntries } from "radash"
-import React, { ReactNode, useMemo, useState } from "react"
+import React, { ReactNode, useEffect, useMemo, useState } from "react"
+import { useLogContext } from "../logContext"
 import { LogSummaryColumn, S_COLS } from "./cols"
 
 export function LogSummaryTable(props: {
@@ -129,12 +130,21 @@ const LogRow = React.memo(
             )
         })
 
+        const [enter, setEnter] = useState(0)
+        const [exit, setExit] = useState(0)
+        const [needsPrefetch, setNeedsPrefetch] = useState(false)
+        const { useLogFetch } = useLogContext()
+        useLogFetch(needsPrefetch ? [props.logId] : [])
+        useEffect(() => setNeedsPrefetch(enter - exit > 100))
+
         return (
             <TableRow
                 key={props.logId}
                 className={"py-2" + selectedClass}
                 data-id={props.logId}
                 onClick={() => props.onClick?.(props.logId)}
+                onMouseEnter={() => setEnter(new Date().getTime())}
+                onMouseLeave={() => setExit(new Date().getTime())}
             >
                 {...cells}
             </TableRow>

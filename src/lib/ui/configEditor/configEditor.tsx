@@ -296,6 +296,15 @@ function Prices() {
         ([label, default_]) => {
             const curr = settings.prices[label]
 
+            // prettier-ignore
+            const step =
+                default_ > 100_000 ? 1000 :
+                default_ > 10_000 ? 1000 :
+                default_ > 1_000 ? 100 :
+                default_ > 10 ? 1 :
+                default_ > 2 ? 0.1 :
+                0.01
+
             return (
                 <TableRow key={label}>
                     <TableCell className="pr-4 text-right">
@@ -306,6 +315,7 @@ function Prices() {
                             onInput={(ev) => onInput(ev, label)}
                             className="px-2"
                             type="number"
+                            step={step}
                             placeholder={default_.toString()}
                             defaultValue={curr}
                         />

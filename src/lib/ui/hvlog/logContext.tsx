@@ -65,13 +65,14 @@ function useLogFetch(
             for (const id of logIds) {
                 if (!(id in cache)) {
                     // Cache misses are sloooow >300ms
-                    console.debug("fetching", id)
-                    const promise = db.get("complete", id).then((d) =>
-                        setCache((cache) => ({
-                            ...cache,
-                            [id]: d,
-                        }))
-                    )
+                    const promise = db
+                        .get("complete", id)
+                        .then((d) => {
+                            setCache((cache) => ({
+                                ...cache,
+                                [id]: d,
+                            }))
+                        })
                     setCache((cache) => ({
                         ...cache,
                         [id]: promise,

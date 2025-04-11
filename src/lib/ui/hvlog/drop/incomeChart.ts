@@ -37,7 +37,8 @@ export class IncomeChart {
         public prices: AppConfig["prices"],
         public log: CompleteLog,
         public dropSummary: DropSummary,
-        public usageSummary: ItemUsageSummary
+        public usageSummary: ItemUsageSummary,
+        public isGrindfest: boolean
     ) {
         let toPush: Record<
             string,
@@ -106,9 +107,14 @@ export class IncomeChart {
         const usageExpenses = Object.values(usageSummary.data)
             .flatMap((xs) => xs)
             .map((x) => summaryToPoint(x, log))
+
+        const entryCost = this.isGrindfest
+            ? this.prices["Energy Drink"] / 10
+            : 0
+        const roundCost = this.prices["Energy Drink"] / (10 * 50)
         const staminaExpenses = [...range(1, this.endRound)].map(
             (idx) => ({
-                value: this.prices["Energy Drink"] / (10 * 50),
+                value: idx === 1 ? entryCost + roundCost : roundCost,
                 roundIdx: idx,
             })
         )
