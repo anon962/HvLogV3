@@ -14,7 +14,7 @@ type Txn<
 >
 
 export function migrateSchema(db: Db, oldVersion: number) {
-    while (oldVersion !== latest.LOG_DB_VERSION) {
+    while (oldVersion !== db.version) {
         if (oldVersion === 1) {
             s_1_2(db)
         } else {
@@ -32,30 +32,18 @@ export function migrateSchema(db: Db, oldVersion: number) {
     }
 }
 
-export async function migrateData(db: Db) {
-    const txn = db.transaction(db.objectStoreNames, "readwrite")
-    try {
-        await migrateDataInner(db, txn)
-        txn.commit()
-    } catch (e) {
-        txn.abort()
-        alert("HvLog: database migration failed")
-        throw e
-    }
-}
-
-async function migrateDataInner(db: Db, txn: Txn) {
+export async function migrateData(db: Db, txn: Txn) {
     const currentVersions = new Set(db.objectStoreNames)
 
     let oldVersion = 1
-    while (oldVersion < latest.LOG_DB_VERSION) {
-        const key = migrationKey(oldVersion)
+    while (oldVersion < db.version) {
+        const mkey = migrationKey(oldVersion)
 
         const needsMigration =
-            currentVersions.has(key) &&
-            (await txn.objectStore(key).count()) > 0
+            currentVersions.has(mkey) &&
+            (await txn.objectStore(mkey).count()) === 0
         if (needsMigration) {
-            txn.objectStore(key).add("")
+            txn.objectStore(mkey).add("", "done")
             console.debug(`Migrating data from version ${oldVersion}`)
 
             switch (oldVersion) {
