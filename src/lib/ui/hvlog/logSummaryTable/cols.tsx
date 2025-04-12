@@ -189,18 +189,18 @@ function formatBattleType(ids: LogId[]) {
 
 function formatTurns(ids: LogId[]) {
     const { stats } = useStatsMaybe(ids, {
-        indexMap: true,
+        summary: true,
     })
 
     const result = []
 
     for (const s of stats) {
-        const { indexMap } = s ?? {}
+        const { summary } = s ?? {}
 
         let content, sortValue
-        if (indexMap) {
-            content = `${indexMap.turnIndexes.length} turns`
-            sortValue = indexMap.turnIndexes.length
+        if (summary) {
+            content = `${summary.numTurns} turns`
+            sortValue = summary.numTurns
         } else {
             content = "-"
             sortValue = Number.POSITIVE_INFINITY

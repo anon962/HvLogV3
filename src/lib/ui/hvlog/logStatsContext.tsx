@@ -1,3 +1,7 @@
+import {
+    extractRoundIndexes,
+    extractTurnIndexes,
+} from "@/lib/stats/summaryStats"
 import { enumerate } from "@/lib/utils/miscUtils"
 import { createContext, useContext, useMemo } from "react"
 import { CompleteLog, LogId } from "../../logDb/logDb"
@@ -41,29 +45,16 @@ function initContext(summaryDb: SummaryDb) {
 
     const indexMap = useCache((log) => {
         const summary = summaryDb.get(log)
+
+        const turnIndexes = extractTurnIndexes(log)
+        const roundIndexes = extractRoundIndexes(log)
+
         return new IndexMap(
-            summary.turnIndexes,
-            summary.roundIndexes,
+            turnIndexes,
+            roundIndexes,
             summary.numEvents
         )
     })
-
-    const getIndexMapMaybe = (logId: LogId) => {
-        if (indexMap.cache.has(logId)) {
-            return indexMap.cache.get(logId)!
-        }
-
-        const summary = summaryDb.getMaybe(logId)
-        if (!summary) return null
-
-        const result = new IndexMap(
-            summary.turnIndexes,
-            summary.roundIndexes,
-            summary.numEvents
-        )
-        indexMap.cache.set(logId, result)
-        return result
-    }
 
     const itemDrops = useCache((log) => summarizeItemDrops(app, log))
 
@@ -97,7 +88,6 @@ function initContext(summaryDb: SummaryDb) {
         summaryDb,
         getSummary,
         getIndexMap: indexMap.get,
-        getIndexMapMaybe,
         getItemDrops: itemDrops.get,
         getItemDropsMaybe: maybeGetter(itemDrops),
         getItemUsage: itemUsage.get,
@@ -247,10 +237,11 @@ export function useStatsMaybe<T extends UseStatsOptions>(
 
         if (opts.summary) {
             d.summary = ctx.summaryDb.getMaybe(id) ?? null
+            if (!d.summary) needsFetch = true
         }
         if (opts.indexMap) {
-            d.indexMap = ctx.getIndexMapMaybe(id)
-            if (!d.indexMap) needsFetch = true
+            d.indexMap = null
+            needsFetch = true
         }
         if (opts.itemDrops) {
             d.itemDrops = ctx.getItemDropsMaybe(id)

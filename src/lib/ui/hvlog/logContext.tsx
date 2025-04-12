@@ -64,6 +64,7 @@ function useLogFetch(
         async function load() {
             for (const id of logIds) {
                 if (!(id in cache)) {
+                    console.debug("Fetching log", id, cache)
                     // Cache misses are sloooow >300ms
                     const promise = db.getLog(id).then(async (d) => {
                         setCache((cache) => ({

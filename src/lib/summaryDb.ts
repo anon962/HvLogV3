@@ -2,7 +2,6 @@ import { CompleteLog, LogId } from "./logDb/logDb"
 import {
     extractBattleType,
     extractCompletionType,
-    extractRoundIndexes,
     extractTurnIndexes,
 } from "./stats/summaryStats"
 
@@ -42,7 +41,6 @@ export class SummaryDb {
         const missingStart = !!round && round.end !== startCount
 
         const turnIndexes = extractTurnIndexes(log)
-        const roundIndexes = extractRoundIndexes(log)
 
         const hasParseError = log.entries.some(
             (entry) => entry.type === "error"
@@ -65,8 +63,7 @@ export class SummaryDb {
             completionType,
             battleType,
             round,
-            turnIndexes,
-            roundIndexes,
+            numTurns: turnIndexes.length,
             numEvents: log.entries.length,
             errors: {
                 parsing: hasParseError,
@@ -139,8 +136,7 @@ export interface LogSummary {
         end: number
         max: number
     } | null
-    turnIndexes: number[]
-    roundIndexes: Record<number, number>
+    numTurns: number
     numEvents: number
     errors: {
         parsing: boolean
