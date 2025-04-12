@@ -113,10 +113,7 @@ export class SummaryDb {
     }
 
     public save() {
-        localStorage.setItem(
-            STORAGE_KEY,
-            JSON.stringify(this.data, null, 2)
-        )
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(this.data))
     }
 }
 

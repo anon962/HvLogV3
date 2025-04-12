@@ -51,8 +51,7 @@ async function main() {
 
 async function runLogCompression(app: App) {
     while (true) {
-        for await (const _ of app.db.compressLogs()) {
-        }
+        app.db.compressLogs()
         await sleep(30 * 60_000)
     }
 }

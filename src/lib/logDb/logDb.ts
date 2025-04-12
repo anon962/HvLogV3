@@ -5,6 +5,7 @@ import {
     compressGzip,
     concatArrays,
     decompressGzip,
+    enumerate,
     uuidWithFallback,
 } from "../utils/miscUtils"
 import { ValueOf } from "../utils/typeUtils"
@@ -257,6 +258,26 @@ export class LogDb {
         return iter
     }
 
+    private async fetchAllLogs(): Promise<
+        Array<CompleteLog | CompressedLog>
+    > {
+        const iter = await this.db
+            .transaction(COMPLETE_STORE)
+            .store.openCursor()
+
+        if (!iter) {
+            return []
+        }
+
+        const result = []
+        for await (const cursor of iter) {
+            const log = cursor.value
+            result.push(log)
+        }
+
+        return result
+    }
+
     async getLog(id: LogId): Promise<CompleteLog> {
         const log = (await this.db.get(COMPLETE_STORE, id))!
         return log.compressed ? decompressLog(log) : log
@@ -311,21 +332,19 @@ export class LogDb {
     }
 
     async *compressLogs() {
-        const total = await this.count(COMPLETE_STORE)
+        const logs = await this.fetchAllLogs()
 
-        let idx = 0
-        yield { total, idx }
+        for (const [idx, log] of enumerate(logs)) {
+            if (log.compressed) continue
 
-        for await (const log of this.iterLogs()) {
-            if (!log.compressed) {
-                console.debug("Compressing", log.id, log.meta)
-                const compressed = await compressLog(log)
-                console.debug("wtf", compressed)
-                await this.put(COMPLETE_STORE, log.id, compressed)
-            }
+            console.debug("Compressing", log.id, log.meta)
+            const compressed = await compressLog(log)
 
-            idx += 1
-            yield { total, idx }
+            const txn = this.db.transaction(
+                COMPLETE_STORE,
+                "readwrite"
+            )
+            await txn.store.put(compressed)
         }
     }
 }
