@@ -172,7 +172,6 @@ function useImporter() {
                 detail: "Reading file...",
             })
             backup = await readFile(file)
-            console.log("Read backup", backup)
         } catch (e) {
             console.error(e)
             setStatus({
