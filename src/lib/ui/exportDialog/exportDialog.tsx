@@ -2,6 +2,7 @@ import { App } from "@/lib/app/app"
 import { LogDb, LogDbBackup } from "@/lib/logDb"
 import "@/lib/ui/global.css"
 import { compressGzip } from "@/lib/utils/miscUtils"
+import { sleep } from "radash"
 import { FC, useEffect, useRef, useState } from "react"
 import { AppContextProvider } from "../appContext"
 import { LogContextProvider } from "../hvlog/logContext"
@@ -100,7 +101,7 @@ function useDownloader() {
         version: number
     ) {
         const now = new Date().toISOString()
-        const asStr = backup.join("\n")
+        const asStr = backup.map((x) => JSON.stringify(x)).join("\n")
         const asCompressed = await compressGzip(asStr)
         const asBlob = new Blob(asCompressed, {
             type: "application/octet-stream",
@@ -108,7 +109,7 @@ function useDownloader() {
         anchorEl.href = URL.createObjectURL(asBlob)
         anchorEl.download = `hvlog_${now}_${version
             .toString()
-            .padStart(4, "0")}.json.gz`
+            .padStart(4, "0")}.jsonl.gz`
         anchorEl.click()
     }
 
@@ -125,7 +126,7 @@ function useDownloader() {
         }
 
         const backup: LogDbBackup = [
-            { version: persistentDb.db.version },
+            { type: "meta", version: persistentDb.db.version },
         ]
 
         const total =
@@ -172,6 +173,7 @@ function useDownloader() {
                 type: "loading",
                 detail: `Generating download ...`,
             })
+            await sleep(10)
             await download(backup, anchorEl, version)
 
             setStatus({

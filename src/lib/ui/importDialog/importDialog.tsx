@@ -1,6 +1,7 @@
 import { App } from "@/lib/app/app"
-import { LogDb, LogDbBackup } from "@/lib/logDb"
+import { CompleteLog, LogDb, LogDbBackup } from "@/lib/logDb"
 import "@/lib/ui/global.css"
+import { last, sleep } from "radash"
 import { FC, FormEvent, useRef, useState } from "react"
 import { AppContextProvider } from "../appContext"
 import { LogContextProvider } from "../hvlog/logContext"
@@ -37,10 +38,7 @@ function ImportDialogInner() {
         case "result":
             statusEl = (
                 <span>
-                    Done! Imported{" "}
-                    {status.backup.persistent.length +
-                        status.backup.isekai.length}{" "}
-                    logs.
+                    Done! Imported {status.backup.length - 1} logs.
                 </span>
             )
             break
@@ -174,6 +172,7 @@ function useImporter() {
                 detail: "Reading file...",
             })
             backup = await readFile(file)
+            console.log("Read backup", backup)
         } catch (e) {
             console.error(e)
             setStatus({
@@ -186,35 +185,42 @@ function useImporter() {
         try {
             const persistentDb = await LogDb.ainit("persistent")
             const isekaiDb = await LogDb.ainit("isekai")
+            const backupVersion = backup[0].version
             if (
                 persistentDb.db.version !== isekaiDb.db.version ||
-                isekaiDb.db.version !== backup.version
+                isekaiDb.db.version !== backupVersion
             ) {
                 setStatus({
                     type: "error",
-                    detail: `Unable to import backup for version ${backup.version} when current version is ${persistentDb.db.version} / ${isekaiDb.db.version}`,
+                    detail: `Unable to import backup for version ${backupVersion} when current version is ${persistentDb.db.version} / ${isekaiDb.db.version}`,
                 })
                 return
             }
 
-            const persistentIter = persistentDb.replaceLogs(
-                backup.persistent
+            const persistentBackup = backup.flatMap(
+                (x): CompleteLog[] =>
+                    x.type === "persistent" ? [x.log] : []
             )
+            const persistentIter =
+                persistentDb.replaceLogs(persistentBackup)
             for await (const idx of persistentIter) {
                 setStatus({
                     type: "loading",
                     detail: `Importing persistent logs (${
                         idx + 1
-                    } / ${backup.persistent.length}) ...`,
+                    } / ${persistentBackup.length}) ...`,
                 })
             }
 
-            const isekaiIter = isekaiDb.replaceLogs(backup.isekai)
+            const isekaiBackup = backup.flatMap((x): CompleteLog[] =>
+                x.type === "isekai" ? [x.log] : []
+            )
+            const isekaiIter = isekaiDb.replaceLogs(isekaiBackup)
             for await (const idx of isekaiIter) {
                 setStatus({
                     type: "loading",
                     detail: `Importing isekai logs (${idx + 1} / ${
-                        backup.isekai.length
+                        isekaiBackup.length
                     }) ...`,
                 })
             }
@@ -253,21 +259,49 @@ function useImporter() {
             .pipeThrough(new DecompressionStream("gzip"))
             .getReader()
 
+        let lines = []
+        let buffer = ""
         const textDecoder = new TextDecoder()
-        let asStr = ""
         while (true) {
             const { done, value } = (await asStream.read()) as {
                 done: boolean
                 value: Uint8Array
             }
-            asStr += textDecoder.decode(value)
+
             if (done) {
                 break
             }
+
+            buffer += textDecoder.decode(value)
+
+            const parts = buffer.split("\n")
+            for (let idx = 0; idx < parts.length - 1; idx++) {
+                lines.push(JSON.parse(parts[idx]))
+
+                setStatus({
+                    type: "loading",
+                    detail: `Reading file (line ${lines.length}) ...`,
+                })
+                await sleep(1)
+                if (lines.length === 1) {
+                    if (lines[0].type !== "meta") {
+                        console.error(
+                            "First entry in backup is not metadata",
+                            buffer
+                        )
+                        throw new Error("Invalid backup file")
+                    }
+                }
+            }
+
+            buffer = last(parts)!
         }
 
-        const backup = JSON.parse(asStr)
-        return backup
+        if (buffer.length) {
+            lines.push(JSON.parse(buffer))
+        }
+
+        return lines as LogDbBackup
     }
 
     return {

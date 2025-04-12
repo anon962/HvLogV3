@@ -258,7 +258,7 @@ export class LogDb {
 
         for (let idx = 0; idx < logs.length; idx++) {
             const log = logs[idx]
-            await this.db.add(COMPLETE_STORE, log)
+            await txn.store.add(log)
             yield idx
         }
     }
@@ -313,6 +313,6 @@ type LogDbStore<
 > = idb.IDBPObjectStore<LogDbSchema, any, TStore, TMode>
 
 export type LogDbBackup = [
-    { version: number },
+    { type: "meta"; version: number },
     ...Array<{ type: "persistent" | "isekai"; log: CompleteLog }>
 ]

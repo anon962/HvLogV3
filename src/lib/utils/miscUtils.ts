@@ -282,7 +282,7 @@ export async function compressGzip(
 }
 
 export async function decompressGzip(
-    data: Array<Uint8Array>
+    data: Array<Uint8Array> | Array<ArrayBuffer>
 ): Promise<string> {
     const asStream = new ReadableStream({
         start(controller) {
