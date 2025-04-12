@@ -312,8 +312,7 @@ type LogDbStore<
     TMode extends IDBTransactionMode = "readonly"
 > = idb.IDBPObjectStore<LogDbSchema, any, TStore, TMode>
 
-export interface LogDbBackup {
-    version: number
-    persistent: CompleteLog[]
-    isekai: CompleteLog[]
-}
+export type LogDbBackup = [
+    { version: number },
+    ...Array<{ type: "persistent" | "isekai"; log: CompleteLog }>
+]

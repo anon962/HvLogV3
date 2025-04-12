@@ -1,6 +1,7 @@
 import { App } from "@/lib/app/app"
 import { LogDb, LogDbBackup } from "@/lib/logDb"
 import "@/lib/ui/global.css"
+import { compressGzip } from "@/lib/utils/miscUtils"
 import { FC, useEffect, useRef, useState } from "react"
 import { AppContextProvider } from "../appContext"
 import { LogContextProvider } from "../hvlog/logContext"
@@ -95,39 +96,19 @@ function useDownloader() {
 
     async function download(
         backup: LogDbBackup,
-        anchorEl: HTMLAnchorElement
+        anchorEl: HTMLAnchorElement,
+        version: number
     ) {
         const now = new Date().toISOString()
-        const asStr = JSON.stringify(backup)
-        const asBytes = new TextEncoder().encode(asStr)
-        const asStream = new ReadableStream({
-            start(controller) {
-                controller.enqueue(asBytes)
-                controller.close()
-            },
-        })
-            .pipeThrough(new CompressionStream("gzip"))
-            .getReader()
-
-        const asCompressed: Array<Uint8Array> = []
-        while (true) {
-            const { done, value } = (await asStream.read()) as {
-                done: boolean
-                value: Uint8Array
-            }
-
-            if (done) {
-                break
-            } else {
-                asCompressed.push(value)
-            }
-        }
-
+        const asStr = backup.join("\n")
+        const asCompressed = await compressGzip(asStr)
         const asBlob = new Blob(asCompressed, {
             type: "application/octet-stream",
         })
         anchorEl.href = URL.createObjectURL(asBlob)
-        anchorEl.download = `hvlog_${now}.json.gz`
+        anchorEl.download = `hvlog_${now}_${version
+            .toString()
+            .padStart(4, "0")}.json.gz`
         anchorEl.click()
     }
 
@@ -143,11 +124,9 @@ function useDownloader() {
             throw new Error()
         }
 
-        const backup: LogDbBackup = {
-            version: persistentDb.db.version,
-            persistent: [],
-            isekai: [],
-        }
+        const backup: LogDbBackup = [
+            { version: persistentDb.db.version },
+        ]
 
         const total =
             (await persistentDb.count("complete")) +
@@ -157,7 +136,7 @@ function useDownloader() {
 
         for await (const log of persistentDb.iterArchive()) {
             idx += 1
-            backup.persistent.push(log)
+            backup.push({ type: "persistent", log })
             setStatus({
                 type: "loading",
                 detail: `Exporting logs (${idx} / ${total}) ...`,
@@ -166,14 +145,14 @@ function useDownloader() {
 
         for await (const log of isekaiDb.iterArchive()) {
             idx += 1
-            backup.isekai.push(log)
+            backup.push({ type: "isekai", log })
             setStatus({
                 type: "loading",
                 detail: `Exporting logs (${idx} / ${total}) ...`,
             })
         }
 
-        return { backup, total }
+        return { backup, total, version: persistentDb.db.version }
     }
 
     return {
@@ -187,13 +166,13 @@ function useDownloader() {
                 type: "loading",
                 detail: "Exporting logs ...",
             })
-            const { backup, total } = await buildBackup()
+            const { backup, total, version } = await buildBackup()
 
             setStatus({
                 type: "loading",
                 detail: `Generating download ...`,
             })
-            await download(backup, anchorEl)
+            await download(backup, anchorEl, version)
 
             setStatus({
                 type: "done",
