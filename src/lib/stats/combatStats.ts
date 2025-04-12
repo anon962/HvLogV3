@@ -457,7 +457,6 @@ function takeEntriesWithRoot(
     }
 
     const [cast, ...firstEffects] = evs
-    console.log(startIdx, cast, firstEffects)
     if (!firstEffects.length) {
         return null
     }

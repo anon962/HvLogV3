@@ -109,21 +109,26 @@ export function LogSummaryTable(props: {
 
     // Sort by user choice
     // Otherwise select default (by date or first column)
-    let sortedIndexes = indexes(props.logIds)
-    const sortOn = S_COLS[sortCriteria.colId]
-    if (sortOn?.sort) {
-        if (sortCriteria.order !== null) {
-            const sortData = colData[sortCriteria.colId]
-            sortedIndexes = sortOn?.sort(sortData)
+    const sortedIndexes = useMemo(() => {
+        let result = indexes(props.logIds)
 
-            if (sortCriteria.order === "desc") {
-                sortedIndexes.reverse()
+        const col = S_COLS[sortCriteria.colId]
+        const crit =
+            sortCriteria.order !== null
+                ? sortCriteria
+                : defaultSortCriteria
+
+        if (col?.sort) {
+            const sortData = colData[crit.colId]
+            result = col?.sort(sortData)
+
+            if (crit.order === "desc") {
+                result.reverse()
             }
-        } else {
-            const sortData = colData[defaultSortCriteria.colId]
-            sortedIndexes = sortOn?.sort(sortData) ?? sortedIndexes
         }
-    }
+
+        return result
+    }, [sortCriteria, props.logIds])
 
     const cols = colIds.map((cid) => S_COLS[cid])
 

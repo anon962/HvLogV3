@@ -1,5 +1,6 @@
 import { CompleteLog } from "@/lib/logDb/logDb"
 import { CombatSummary } from "@/lib/stats/combatStats"
+import { IndexMap } from "@/lib/stats/indexMap"
 import { LogSummary } from "@/lib/summaryDb"
 import {
     avg,
@@ -15,9 +16,14 @@ import { CastChart } from "./castChart"
 import { HealChart } from "./healChart"
 
 export function CombatInfo({ log }: { log: CompleteLog }) {
-    const { combatUsage: usage, summary } = useStats(log, {
+    const {
+        combatUsage: usage,
+        summary,
+        indexMap,
+    } = useStats(log, {
         combatUsage: true,
         summary: true,
+        indexMap: true,
     })
     console.log(usage)
 
@@ -25,7 +31,7 @@ export function CombatInfo({ log }: { log: CompleteLog }) {
         <div className="combat-info p-8 overflow-auto h-full flex flex-col gap-12">
             <div className="flex gap-8">
                 {CastTable(usage)}
-                {MiscTable(summary, log)}
+                {MiscTable(summary, indexMap, log)}
             </div>
 
             {OffensiveTable(usage)}
@@ -503,7 +509,11 @@ type MiscTableData = TallyTableProps<{
     value: string
 }>
 
-function MiscTable(summary: LogSummary, log: CompleteLog) {
+function MiscTable(
+    summary: LogSummary,
+    indexMap: IndexMap,
+    log: CompleteLog
+) {
     const sparks = log.entries.filter(
         (entry) =>
             entry.type === "event" &&
@@ -533,7 +543,7 @@ function MiscTable(summary: LogSummary, log: CompleteLog) {
         {
             label: "Turns",
             value: {
-                value: formatNumber(summary.turnIndexes.length),
+                value: formatNumber(indexMap.turnIndexes.length),
             },
         },
         {
