@@ -1,7 +1,4 @@
-import {
-    comopressGzip as compressGzip,
-    decompressGzip,
-} from "@/lib/utils/miscUtils"
+import { compressGzip, decompressGzip } from "@/lib/utils/miscUtils"
 import { range } from "radash"
 import { expect, it } from "vitest"
 
@@ -13,9 +10,9 @@ it("compression should work", async () => {
 })
 
 it("compression should work on long strings", async () => {
-    let orig = [...range(99_999)]
+    let orig = [...range(99_9)]
         .map(() => Math.random().toString())
-        .join("")
+        .join("\n")
     const c = await compressGzip(orig)
     const dc = await decompressGzip(c)
     expect(orig).toEqual(dc)

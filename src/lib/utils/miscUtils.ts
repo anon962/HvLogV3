@@ -19,7 +19,7 @@ export function split<T, TPass extends T = T, TFail extends T = T>(
     return [pass, fail]
 }
 
-export function splitMap<T, TPass extends T = T, TFail extends T = T>(
+export function splitMap<T, TPass = T, TFail = T>(
     xs: T[],
     fn: (
         x: T
@@ -251,7 +251,7 @@ export function indexes(xs: any[]): number[] {
     return [...range(xs.length - 1)]
 }
 
-export async function comopressGzip(
+export async function compressGzip(
     text: string
 ): Promise<Array<Uint8Array>> {
     const asBytes = new TextEncoder().encode(text)
@@ -282,7 +282,7 @@ export async function comopressGzip(
 }
 
 export async function decompressGzip(
-    data: Array<Uint8Array>
+    data: Array<Uint8Array> | Array<ArrayBuffer>
 ): Promise<string> {
     const asStream = new ReadableStream({
         start(controller) {
@@ -295,20 +295,23 @@ export async function decompressGzip(
         .pipeThrough(new DecompressionStream("gzip"))
         .getReader()
 
-    const textDecoder = new TextDecoder()
-    let asStr = ""
+    let parts: string[] = []
+    const decoder = new TextDecoder()
     while (true) {
         const { done, value } = (await asStream.read()) as {
             done: boolean
             value: Uint8Array
         }
-        asStr += textDecoder.decode(value)
         if (done) {
             break
+        } else {
+            console.log(parts.length, value.length)
+            parts.push(decoder.decode(value, { stream: true }))
         }
     }
 
-    return asStr
+    parts.push(decoder.decode())
+    return parts.join("")
 }
 
 export async function consumeAsync<T = any>(
@@ -319,4 +322,17 @@ export async function consumeAsync<T = any>(
         result.push(x)
     }
     return result
+}
+
+export function concatArrays(xs: Uint8Array[]) {
+    const totalSize = sum(xs, (x) => x.length)
+    const total = new Uint8Array(totalSize)
+
+    let start = 0
+    for (const arr of xs) {
+        total.set(arr, start)
+        start += arr.length
+    }
+
+    return total
 }

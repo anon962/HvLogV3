@@ -1,7 +1,12 @@
 import * as idb from "idb"
 import { isEqual } from "radash"
 import { HvEvent } from "../parsers"
-import { decompressGzip, uuidWithFallback } from "../utils/miscUtils"
+import {
+    compressGzip,
+    concatArrays,
+    decompressGzip,
+    uuidWithFallback,
+} from "../utils/miscUtils"
 import { ValueOf } from "../utils/typeUtils"
 import { readUrlPath } from "../utils/userscriptUtils"
 import { migrateData, migrateSchema } from "./migrateDb"
@@ -230,7 +235,7 @@ export class LogDb {
         await this.put(store, "currentRound", hash.currentRound)
     }
 
-    async *iterArchive(): AsyncIterable<CompleteLog> {
+    async *iterLogs(): AsyncIterable<CompleteLog> {
         const iter = await this.db
             .transaction(COMPLETE_STORE)
             .store.openCursor()
@@ -243,20 +248,18 @@ export class LogDb {
             const log = cursor.value
 
             if (log.compressed) {
-                const entries = JSON.parse(
-                    await decompressGzip(log.entries)
-                )
-                yield {
-                    ...log,
-                    compressed: false,
-                    entries,
-                }
+                yield await decompressLog(log)
             } else {
                 yield log
             }
         }
 
         return iter
+    }
+
+    async getLog(id: LogId): Promise<CompleteLog> {
+        const log = (await this.db.get(COMPLETE_STORE, id))!
+        return log.compressed ? decompressLog(log) : log
     }
 
     async get<TStore extends idb.StoreNames<LogDbSchema>>(
@@ -301,12 +304,54 @@ export class LogDb {
     async getLogIds() {
         return await this.db.getAllKeys(COMPLETE_STORE)
     }
+
+    async *compressLogs() {
+        const total = await this.count(COMPLETE_STORE)
+
+        let idx = 0
+        yield { total, idx }
+
+        for await (const log of this.iterLogs()) {
+            if (!log.compressed) {
+                console.debug("Compressing", log.id, log.meta)
+                const compressed = await compressLog(log)
+                console.debug("wtf", compressed)
+                await this.put(COMPLETE_STORE, log.id, compressed)
+            }
+
+            idx += 1
+            yield { total, idx }
+        }
+    }
+}
+
+async function decompressLog(
+    log: CompressedLog
+): Promise<CompleteLog> {
+    const entries = JSON.parse(await decompressGzip([log.entries]))
+    return {
+        ...log,
+        compressed: false,
+        entries,
+    }
+}
+
+async function compressLog(log: CompleteLog): Promise<CompressedLog> {
+    const asStr = JSON.stringify(log.entries)
+    const asArrays = await compressGzip(asStr)
+    const asSingleArray = concatArrays(asArrays)
+
+    return {
+        ...log,
+        compressed: true,
+        entries: asSingleArray,
+    }
 }
 
 export interface LogDbSchema extends idb.DBSchema {
     complete: {
         key: LogId
-        value: CompleteLog | CompressedLog
+        value: DbLog
     }
     live: {
         key: number
@@ -340,7 +385,7 @@ interface CompressedLog {
     id: LogId
     meta: LogMeta
     compressed: true
-    entries: Array<Uint8Array>
+    entries: Uint8Array
 }
 
 export interface CompleteLog {
@@ -359,8 +404,9 @@ type LogDbStore<
     TMode extends IDBTransactionMode = "readonly"
 > = idb.IDBPObjectStore<LogDbSchema, any, TStore, TMode>
 
-export interface LogDbBackup {
-    version: number
-    persistent: CompleteLog[]
-    isekai: CompleteLog[]
-}
+type DbLog = CompleteLog | CompressedLog
+
+export type LogDbBackup = [
+    { version: number },
+    ...Array<{ type: "persistent" | "isekai"; log: CompleteLog }>
+]

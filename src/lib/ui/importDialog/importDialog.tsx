@@ -2,6 +2,7 @@ import { App } from "@/lib/app/app"
 import { LogDb, LogDbBackup } from "@/lib/logDb/logDb"
 import { migrateCompleteLogs } from "@/lib/logDb/migrateLogs"
 import "@/lib/ui/global.css"
+import { decompressGzip, splitMap } from "@/lib/utils/miscUtils"
 import { FC, FormEvent, useRef, useState } from "react"
 import { AppContextProvider } from "../appContext"
 import { LogContextProvider } from "../hvlog/logContext"
@@ -38,10 +39,7 @@ function ImportDialogInner() {
         case "result":
             statusEl = (
                 <span>
-                    Done! Imported{" "}
-                    {status.backup.persistent.length +
-                        status.backup.isekai.length}{" "}
-                    logs.
+                    Done! Imported {status.backup.length - 1} logs.
                 </span>
             )
             break
@@ -188,7 +186,12 @@ function useImporter() {
             const persistentDb = await LogDb.ainit("persistent")
             const isekaiDb = await LogDb.ainit("isekai")
 
-            let { version, persistent: pl, isekai: il } = backup
+            let [{ version }, ...logs] = backup
+            let [pl, il] = splitMap(logs, ({ type, log }) => ({
+                type: type === "persistent" ? "pass" : "fail",
+                value: log,
+            }))
+
             while (version !== persistentDb.db.version) {
                 pl = migrateCompleteLogs(pl, version)
                 il = migrateCompleteLogs(il, version)
@@ -240,27 +243,7 @@ function useImporter() {
         fr.readAsArrayBuffer(file)
 
         const asCompressedBytes = await frPromise
-        const asStream = new ReadableStream({
-            start(controller) {
-                controller.enqueue(asCompressedBytes)
-                controller.close()
-            },
-        })
-            .pipeThrough(new DecompressionStream("gzip"))
-            .getReader()
-
-        const textDecoder = new TextDecoder()
-        let asStr = ""
-        while (true) {
-            const { done, value } = (await asStream.read()) as {
-                done: boolean
-                value: Uint8Array
-            }
-            asStr += textDecoder.decode(value)
-            if (done) {
-                break
-            }
-        }
+        const asStr = await decompressGzip([asCompressedBytes])
 
         const backup = JSON.parse(asStr)
         return backup

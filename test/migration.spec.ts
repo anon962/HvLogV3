@@ -32,7 +32,7 @@ describe("migrating logs from v1 to v2", () => {
                 },
                 {
                     type: "error",
-                    detail: `No matching parser for Unlocked innate potential Blah 2!`,
+                    detail: `No matching parser for Unlocked innate potential: Blah 2`,
                 },
             ],
         }

@@ -1,4 +1,4 @@
-import { isEqual } from "radash"
+import { isEqual, sleep } from "radash"
 import { unsafeWindow } from "vite-plugin-monkey/dist/client/index"
 import { App } from "./lib/app/app"
 import { registerClearCache } from "./lib/app/registerClearCache.ts"
@@ -39,11 +39,21 @@ async function main() {
     const path = readUrlPath().parts
 
     if (isEqual(path, ["hvlog", "logs"])) {
+        runLogCompression(app)
         return mountReact(HvLog, app)
     } else if (isEqual(path, ["hvlog", "config"])) {
+        runLogCompression(app)
         return mountReact(ConfigEditor, app)
     } else {
         await app.runLogger()
+    }
+}
+
+async function runLogCompression(app: App) {
+    while (true) {
+        for await (const _ of app.db.compressLogs()) {
+        }
+        await sleep(30 * 60_000)
     }
 }
 

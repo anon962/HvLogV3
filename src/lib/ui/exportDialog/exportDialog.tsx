@@ -1,6 +1,7 @@
 import { App } from "@/lib/app/app"
 import { LogDb, LogDbBackup } from "@/lib/logDb/logDb"
 import "@/lib/ui/global.css"
+import { compressGzip } from "@/lib/utils/miscUtils"
 import { FC, useEffect, useRef, useState } from "react"
 import { AppContextProvider } from "../appContext"
 import { LogContextProvider } from "../hvlog/logContext"
@@ -99,31 +100,8 @@ function useDownloader() {
         version: number
     ) {
         const now = new Date().toISOString()
-        const asStr = JSON.stringify(backup)
-        const asBytes = new TextEncoder().encode(asStr)
-        const asStream = new ReadableStream({
-            start(controller) {
-                controller.enqueue(asBytes)
-                controller.close()
-            },
-        })
-            .pipeThrough(new CompressionStream("gzip"))
-            .getReader()
-
-        const asCompressed: Array<Uint8Array> = []
-        while (true) {
-            const { done, value } = (await asStream.read()) as {
-                done: boolean
-                value: Uint8Array
-            }
-
-            if (done) {
-                break
-            } else {
-                asCompressed.push(value)
-            }
-        }
-
+        const asStr = backup.join("\n")
+        const asCompressed = await compressGzip(asStr)
         const asBlob = new Blob(asCompressed, {
             type: "application/octet-stream",
         })
@@ -146,11 +124,9 @@ function useDownloader() {
             throw new Error()
         }
 
-        const backup: LogDbBackup = {
-            version: persistentDb.db.version,
-            persistent: [],
-            isekai: [],
-        }
+        const backup: LogDbBackup = [
+            { version: persistentDb.db.version },
+        ]
 
         const total =
             (await persistentDb.count("complete")) +
@@ -158,18 +134,18 @@ function useDownloader() {
 
         let idx = 0
 
-        for await (const log of persistentDb.iterArchive()) {
+        for await (const log of persistentDb.iterLogs()) {
             idx += 1
-            backup.persistent.push(log)
+            backup.push({ type: "persistent", log })
             setStatus({
                 type: "loading",
                 detail: `Exporting logs (${idx} / ${total}) ...`,
             })
         }
 
-        for await (const log of isekaiDb.iterArchive()) {
+        for await (const log of isekaiDb.iterLogs()) {
             idx += 1
-            backup.isekai.push(log)
+            backup.push({ type: "isekai", log })
             setStatus({
                 type: "loading",
                 detail: `Exporting logs (${idx} / ${total}) ...`,
