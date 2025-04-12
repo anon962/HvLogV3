@@ -2,7 +2,8 @@ import { App } from "@/lib/app/app"
 import { LogDb, LogDbBackup } from "@/lib/logDb/logDb"
 import { migrateCompleteLogs } from "@/lib/logDb/migrateLogs"
 import "@/lib/ui/global.css"
-import { decompressGzip, splitMap } from "@/lib/utils/miscUtils"
+import { splitMap } from "@/lib/utils/miscUtils"
+import { last, sleep } from "radash"
 import { FC, FormEvent, useRef, useState } from "react"
 import { AppContextProvider } from "../appContext"
 import { LogContextProvider } from "../hvlog/logContext"
@@ -243,10 +244,58 @@ function useImporter() {
         fr.readAsArrayBuffer(file)
 
         const asCompressedBytes = await frPromise
-        const asStr = await decompressGzip([asCompressedBytes])
+        const asStream = new ReadableStream({
+            start(controller) {
+                controller.enqueue(asCompressedBytes)
+                controller.close()
+            },
+        })
+            .pipeThrough(new DecompressionStream("gzip"))
+            .getReader()
 
-        const backup = JSON.parse(asStr)
-        return backup
+        let lines = []
+        let buffer = ""
+        const textDecoder = new TextDecoder()
+        while (true) {
+            const { done, value } = (await asStream.read()) as {
+                done: boolean
+                value: Uint8Array
+            }
+
+            if (done) {
+                break
+            }
+
+            buffer += textDecoder.decode(value)
+
+            const parts = buffer.split("\n")
+            for (let idx = 0; idx < parts.length - 1; idx++) {
+                lines.push(JSON.parse(parts[idx]))
+
+                setStatus({
+                    type: "loading",
+                    detail: `Reading file (line ${lines.length}) ...`,
+                })
+                await sleep(1)
+                if (lines.length === 1) {
+                    if (lines[0].type !== "meta") {
+                        console.error(
+                            "First entry in backup is not metadata",
+                            buffer
+                        )
+                        throw new Error("Invalid backup file")
+                    }
+                }
+            }
+
+            buffer = last(parts)!
+        }
+
+        if (buffer.length) {
+            lines.push(JSON.parse(buffer))
+        }
+
+        return lines as LogDbBackup
     }
 
     return {

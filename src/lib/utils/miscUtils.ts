@@ -305,7 +305,6 @@ export async function decompressGzip(
         if (done) {
             break
         } else {
-            console.log(parts.length, value.length)
             parts.push(decoder.decode(value, { stream: true }))
         }
     }

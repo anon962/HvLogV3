@@ -289,14 +289,19 @@ export class LogDb {
         return await this.db.count(key)
     }
 
-    async *replaceLogs(logs: CompleteLog[]): AsyncIterable<number> {
+    async *replaceLogs(
+        logs: CompleteLog[],
+        compress = true
+    ): AsyncIterable<number> {
         const txn = this.db.transaction(COMPLETE_STORE, "readwrite")
 
         await txn.store.clear()
 
         for (let idx = 0; idx < logs.length; idx++) {
             const log = logs[idx]
-            await txn.store.add(log)
+            await txn.store.add(
+                compress ? await compressLog(log) : log
+            )
             yield idx
         }
     }
@@ -407,6 +412,6 @@ type LogDbStore<
 type DbLog = CompleteLog | CompressedLog
 
 export type LogDbBackup = [
-    { version: number },
+    { type: "meta"; version: number },
     ...Array<{ type: "persistent" | "isekai"; log: CompleteLog }>
 ]
