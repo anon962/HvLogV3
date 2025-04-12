@@ -11,6 +11,10 @@ import { indexes } from "@/lib/utils/miscUtils"
 import { cn } from "@/lib/utils/shadcnUtils"
 import { mapEntries } from "radash"
 import React, { ReactNode, useEffect, useMemo, useState } from "react"
+import {
+    ArrowLongDownIcon,
+    ArrowLongUpIcon,
+} from "../../icons/tailwind"
 import { useLogContext } from "../logContext"
 import { LogSummaryColumn, S_COLS } from "./cols"
 
@@ -21,13 +25,74 @@ export function LogSummaryTable(props: {
 }) {
     const colIds = useMemo(() => [...Object.keys(S_COLS)], [])
 
+    const [sortCriteria, setSortCriteria] = useState({
+        colId: "date",
+        order: null as "asc" | "desc" | null,
+    })
+
+    const defaultSortCriteria: typeof sortCriteria = useMemo(
+        () =>
+            colIds.includes("date")
+                ? {
+                      colId: "date",
+                      order: "desc",
+                  }
+                : {
+                      colId: colIds[0],
+                      order: "desc",
+                  },
+        [colIds]
+    )
+
     const headerRow = colIds.map((cid) => {
         const col = S_COLS[cid]
+
+        let icon = null as ReactNode
+        let onClick = () => {}
+        if (col.sort) {
+            const isActive =
+                col.id === sortCriteria.colId &&
+                sortCriteria.order !== null
+
+            let component
+            const className = ["sort-icon"]
+            let nextOrder = "desc" as (typeof sortCriteria)["order"]
+            if (isActive) {
+                className.push("active")
+
+                if (sortCriteria.order === "desc") {
+                    component = ArrowLongDownIcon
+                    nextOrder = "asc"
+                } else {
+                    component = ArrowLongUpIcon
+                    nextOrder = null
+                }
+            } else {
+                component = ArrowLongDownIcon
+                nextOrder = "desc"
+            }
+
+            icon = React.createElement(component, {
+                className: className.join(" "),
+            })
+            onClick = () =>
+                setSortCriteria({
+                    colId: col.id,
+                    order: nextOrder,
+                })
+        }
+
         return (
             <TableHead
                 className={cn(col.align, col.header.className)}
             >
-                {col.header.content}
+                <div
+                    onClick={onClick}
+                    className="flex items-center cursor-pointer"
+                >
+                    {col.header.content}
+                    {icon}
+                </div>
             </TableHead>
         )
     })
@@ -42,27 +107,30 @@ export function LogSummaryTable(props: {
         return [cid, d]
     })
 
-    const [sortCriteria, setSortCriteria] = useState({
-        colId: "date",
-        order: "desc" as "desc" | "desc",
-    })
-
+    // Sort by user choice
+    // Otherwise select default (by date or first column)
+    let sortedIndexes = indexes(props.logIds)
     const sortOn = S_COLS[sortCriteria.colId]
-    let sortOrder = indexes(props.logIds)
     if (sortOn?.sort) {
-        const sortData = colData[sortCriteria.colId]
-        sortOrder = sortOn?.sort(sortData)
-        if (sortCriteria.order === "desc") {
-            sortOrder.reverse()
+        if (sortCriteria.order !== null) {
+            const sortData = colData[sortCriteria.colId]
+            sortedIndexes = sortOn?.sort(sortData)
+
+            if (sortCriteria.order === "desc") {
+                sortedIndexes.reverse()
+            }
+        } else {
+            const sortData = colData[defaultSortCriteria.colId]
+            sortedIndexes = sortOn?.sort(sortData) ?? sortedIndexes
         }
     }
 
     const cols = colIds.map((cid) => S_COLS[cid])
 
-    const bodyRows = sortOrder.map((sortIdx, idx) => {
+    const bodyRows = sortedIndexes.map((sortIdx, idx) => {
         const currentId = props.logIds[sortIdx]
 
-        const nextSortIdx = sortOrder[idx + 1]
+        const nextSortIdx = sortedIndexes[idx + 1]
         const nextId = props.logIds[nextSortIdx]
 
         const isSelected = currentId === props.selectionId
@@ -84,7 +152,7 @@ export function LogSummaryTable(props: {
     })
 
     const headerSelected =
-        props.selectionId === props.logIds[sortOrder[0]]
+        props.selectionId === props.logIds[sortedIndexes[0]]
             ? " selected-next"
             : ""
 

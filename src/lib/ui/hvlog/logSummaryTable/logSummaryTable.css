@@ -90,6 +90,16 @@
             }
         }
     }
+
+    .sort-icon {
+        opacity: 0.25;
+    }
+    .sort-icon:hover:not(.active) {
+        opacity: 0.66;
+    }
+    .sort-icon.active {
+        opacity: 0.9;
+    }
 }
 
 @container (width > 50rem) {

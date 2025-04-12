@@ -28,6 +28,7 @@ SOFTWARE.
 
 **/
 
+import { cn } from "@/lib/utils/shadcnUtils"
 import { HTMLAttributes } from "react"
 
 export interface IconProps {
@@ -42,7 +43,7 @@ export function EyeIcon({ className }: IconProps) {
             viewBox="0 0 24 24"
             strokeWidth={1.5}
             stroke="currentColor"
-            className={"size-6 " + className}
+            className={cn("size-6", className)}
         >
             <path
                 strokeLinecap="round"
@@ -66,7 +67,7 @@ export function CheckIcon({ className }: IconProps) {
             viewBox="0 0 24 24"
             strokeWidth="1.5"
             stroke="currentColor"
-            className={"size-6 " + className}
+            className={cn("size-6", className)}
         >
             <path
                 strokeLinecap="round"
@@ -85,7 +86,7 @@ export function ExclamationTriangleIcon({ className }: IconProps) {
             viewBox="0 0 24 24"
             strokeWidth="1.5"
             stroke="currentColor"
-            className={"size-6 " + className}
+            className={cn("size-6", className)}
         >
             <path
                 strokeLinecap="round"
@@ -104,7 +105,7 @@ export function ArrowRightIcon({ className }: IconProps) {
             viewBox="0 0 24 24"
             strokeWidth={1.5}
             stroke="currentColor"
-            className={"size-6 " + className}
+            className={cn("size-6", className)}
         >
             <path
                 strokeLinecap="round"
@@ -123,7 +124,7 @@ export function EyeSlashIcon({ className }: IconProps) {
             viewBox="0 0 24 24"
             strokeWidth="1.5"
             stroke="currentColor"
-            className={"size-6 " + className}
+            className={cn("size-6", className)}
         >
             <path
                 strokeLinecap="round"
@@ -142,7 +143,7 @@ export function XIcon({ className }: IconProps) {
             viewBox="0 0 24 24"
             strokeWidth="1.5"
             stroke="currentColor"
-            className={"size-6 " + className}
+            className={cn("size-6", className)}
         >
             <path
                 strokeLinecap="round"
@@ -161,7 +162,7 @@ export function Cog6Icon({ className }: IconProps) {
             viewBox="0 0 24 24"
             strokeWidth={1.5}
             stroke="currentColor"
-            className={"size-6 " + className}
+            className={cn("size-6", className)}
         >
             <path
                 strokeLinecap="round"
@@ -172,6 +173,44 @@ export function Cog6Icon({ className }: IconProps) {
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
+            />
+        </svg>
+    )
+}
+
+export function ArrowLongDownIcon({ className }: IconProps) {
+    return (
+        <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={1.5}
+            stroke="currentColor"
+            className={cn("size-6", className)}
+        >
+            <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M15.75 17.25 12 21m0 0-3.75-3.75M12 21V3"
+            />
+        </svg>
+    )
+}
+
+export function ArrowLongUpIcon({ className }: IconProps) {
+    return (
+        <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={1.5}
+            stroke="currentColor"
+            className={cn("size-6", className)}
+        >
+            <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M8.25 6.75 12 3m0 0 3.75 3.75M12 3v18"
             />
         </svg>
     )
