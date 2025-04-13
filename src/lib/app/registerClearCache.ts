@@ -9,6 +9,14 @@ export function registerClearCache(app: App) {
         "Clear cache",
         () => {
             unsafeWindow.localStorage.removeItem("hvlog_stats")
+            unsafeWindow.localStorage.removeItem("hvlog_charts")
+            unsafeWindow.localStorage.removeItem(
+                "hvlog_stats_finance"
+            )
+            unsafeWindow.localStorage.removeItem(
+                "react-resizable-panels:hvlog_detail_split"
+            )
+            unsafeWindow.localStorage.removeItem("hvlog_selected_log")
             unsafeWindow.location.href = window.location.href
         },
         {
