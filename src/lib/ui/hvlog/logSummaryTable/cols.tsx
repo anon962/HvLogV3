@@ -102,7 +102,7 @@ export const S_COLS = Object.fromEntries(
     COLS.map((c) => [c.id, c])
 ) as Record<(typeof COLS)[number]["id"], LogSummaryColumn>
 
-const arenaAliases = {
+export const ARENA_ALIASES = {
     33: "Arena - DwD",
     34: "Arena - PGC",
     35: "Arena - SPL",
@@ -154,8 +154,8 @@ function formatBattleType(ids: LogId[]) {
                     summary.battleType.id >= 100 ? "rob" : "arena"
                 )
 
-                if (arenaAliases[summary.battleType.id]) {
-                    content = arenaAliases[summary.battleType.id]
+                if (ARENA_ALIASES[summary.battleType.id]) {
+                    content = ARENA_ALIASES[summary.battleType.id]
                 } else if (summary.round?.max === 1) {
                     console.error(
                         `No alias for RoB #${summary.battleType.id}`,
@@ -263,15 +263,16 @@ function formatDuration(ids: LogId[]) {
 function formatProfit(ids: LogId[]) {
     const { stats } = useStatsMaybe(ids, {
         finances: true,
+        summary: true,
     })
 
     const result = []
 
     for (const s of stats) {
-        const { finances } = s ?? {}
+        const { finances, summary } = s ?? {}
 
         let profit, className, content
-        if (finances) {
+        if (finances && summary) {
             ;({ profit } = finances)
 
             className = cn(
@@ -283,6 +284,9 @@ function formatProfit(ids: LogId[]) {
             )
 
             content = `${(profit / 1000).toFixed(0)}k`
+            // content = `${Math.round(
+            //     profit / summary.numTurns
+            // )}c / turn`
         } else {
             content = "-"
             profit = Number.NEGATIVE_INFINITY

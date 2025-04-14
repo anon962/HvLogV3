@@ -13,13 +13,13 @@ import {
     readUrlPath,
 } from "./lib/utils/userscriptUtils.ts"
 
-// @todo: compression - 48144 turns = 599045 events = 6.7738e+7 bytes = 4089446.4 bytes compressed (5%)
-// @todo: reparse errors
-// @todo: test db migration
+// @todo: filter
+// @todo: errors
+// @todo: deletable
+// @todo: damage taken
+// @todo: aggregate drops
 // @todo: hard-coded name of melee attacks (* Strike) because these can be indistinguishable from spell hits
 
-// @todo: sort
-// @todo: filter
 // @todo: live stats
 // @todo: aggregate log stats - last 90d, last 90 arenas, etc
 // @todo: debug flag - disable localstorage reads

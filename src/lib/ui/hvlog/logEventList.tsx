@@ -345,6 +345,7 @@ const EVENT_SUMMARY_MAP = {
     DEFEAT: (ev) => ``,
     DISPEL: (ev) => `Dispelled ${ev.effect}`,
     DROP: (ev) => `Dropped ${ev.item}`,
+    DROP_EVENT: (ev) => `Dropped ${ev.item}`,
     EFFECT_RESTORE: (ev) =>
         `Healed ${ev.value} ${ev.type} from ${ev.effect}`,
     ENEMY_BASIC: (ev) => `Lost ${ev.value} health`,

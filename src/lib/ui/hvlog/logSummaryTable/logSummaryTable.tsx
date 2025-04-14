@@ -9,49 +9,139 @@ import {
 } from "@/lib/ui/shadcn/table"
 import { indexes } from "@/lib/utils/miscUtils"
 import { cn } from "@/lib/utils/shadcnUtils"
+import { readUrlPath } from "@/lib/utils/userscriptUtils"
 import { mapEntries } from "radash"
 import React, { ReactNode, useEffect, useMemo, useState } from "react"
 import {
     ArrowLongDownIcon,
     ArrowLongUpIcon,
 } from "../../icons/tailwind"
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "../../shadcn/select"
+import { useLocalJsonState } from "../hooks"
 import { useLogContext } from "../logContext"
-import { LogSummaryColumn, S_COLS } from "./cols"
+import { useStatsMaybe } from "../logStatsContext"
+import { ARENA_ALIASES, LogSummaryColumn, S_COLS } from "./cols"
+import {
+    DEFAULT_VIEWS as DEFAULT_SUMMARY_VIEWS,
+    SummaryView,
+} from "./views"
 
 export function LogSummaryTable(props: {
     onClick?: (logId: LogId) => void
     selectionId: LogId
     logIds: LogId[]
 }) {
-    const colIds = useMemo(() => [...Object.keys(S_COLS)], [])
-
-    const [sortCriteria, setSortCriteria] = useState({
-        colId: "date",
-        order: null as "asc" | "desc" | null,
-    })
-
-    const defaultSortCriteria: typeof sortCriteria = useMemo(
-        () =>
-            colIds.includes("date")
-                ? {
-                      colId: "date",
-                      order: "desc",
-                  }
-                : {
-                      colId: colIds[0],
-                      order: "desc",
-                  },
-        [colIds]
+    const [activeViewId, setActiveViewId] = useLocalJsonState(
+        DEFAULT_SUMMARY_VIEWS[0].id,
+        "hvlog_summary_view"
     )
 
-    const headerRow = colIds.map((cid) => {
+    let allViews = DEFAULT_SUMMARY_VIEWS
+    const { isIsekai } = readUrlPath()
+    if (!isIsekai) {
+        allViews = allViews.filter((v) => v.id !== "tower")
+    }
+
+    const view =
+        allViews.find((v) => v.id === activeViewId) ?? allViews[0]
+
+    const viewFilterMap = new Map(
+        view.filters.map((f) => [f.type, f])
+    )
+
+    const { stats } = useStatsMaybe(props.logIds, { summary: true })
+    const filteredIds = useMemo(() => {
+        if (!view.filters.length) {
+            return props.logIds
+        }
+
+        return stats.flatMap((s) => {
+            const { summary } = s ?? {}
+            if (!summary) {
+                return []
+            }
+
+            const id = summary.id
+
+            let filter
+            switch (summary.battleType?.name) {
+                case "Arena":
+                    const isRob =
+                        !!ARENA_ALIASES[
+                            summary.battleType.id
+                        ]?.startsWith("RoB")
+                    filter = viewFilterMap.get(
+                        isRob ? "rob" : "arena"
+                    )
+                    return filter ? [id] : []
+                case "Grindfest":
+                    filter = viewFilterMap.get("gf")
+                    return filter ? [id] : []
+                case "Item World":
+                    filter = viewFilterMap.get("iw")
+                    return filter ? [id] : []
+                case "Tower":
+                    filter = viewFilterMap.get("tower")
+                    return filter ? [id] : []
+                case "random encounter":
+                    filter = viewFilterMap.get("arena")
+                    return filter ? [id] : []
+            }
+
+            return []
+        })
+    }, [stats, view, props.logIds])
+
+    return (
+        <div className="log-table-container overflow-auto pb-0! flex flex-col">
+            <ViewPicker
+                onSelect={(v) => setActiveViewId(v.id)}
+                current={activeViewId}
+                views={DEFAULT_SUMMARY_VIEWS}
+            />
+
+            <hr className="border my-6" />
+
+            <SummaryTable
+                onClick={props.onClick}
+                selectionId={props.selectionId}
+                logIds={filteredIds}
+                view={view}
+            />
+        </div>
+    )
+}
+
+const SummaryTable = ({
+    onClick,
+    selectionId,
+    logIds,
+    view,
+}: {
+    onClick?: (logId: LogId) => void
+    selectionId: LogId
+    logIds: LogId[]
+    view: SummaryView
+}) => {
+    const [sortCriteria, setSortCriteria] = useState({
+        id: view.defaultSort.id,
+        order: view.defaultSort.order as "asc" | "desc" | null,
+    })
+
+    const headerRow = view.colIds.map((cid) => {
         const col = S_COLS[cid]
 
         let icon = null as ReactNode
         let onClick = () => {}
         if (col.sort) {
             const isActive =
-                col.id === sortCriteria.colId &&
+                col.id === sortCriteria.id &&
                 sortCriteria.order !== null
 
             let component
@@ -77,7 +167,7 @@ export function LogSummaryTable(props: {
             })
             onClick = () =>
                 setSortCriteria({
-                    colId: col.id,
+                    id: col.id,
                     order: nextOrder,
                 })
         }
@@ -98,28 +188,24 @@ export function LogSummaryTable(props: {
     })
 
     const colData = mapEntries(S_COLS, (cid, col) => {
-        // const d = useMemo(() => {
-        //     const isEnabled = !!colIds.find((id) => id === cid)
-        //     return col.preprocess(isEnabled ? props.logIds : [])
-        // }, [props.logIds, colIds])
-        const isEnabled = !!colIds.find((id) => id === cid)
-        const d = col.preprocess(isEnabled ? props.logIds : [])
+        const isEnabled = !!view.colIds.find((id) => id === cid)
+        const d = col.preprocess(isEnabled ? logIds : [])
         return [cid, d]
     })
 
     // Sort by user choice
     // Otherwise select default (by date or first column)
     const sortedIndexes = useMemo(() => {
-        let result = indexes(props.logIds)
+        let result = indexes(logIds)
 
-        const col = S_COLS[sortCriteria.colId]
+        const col = S_COLS[sortCriteria.id]
         const crit =
             sortCriteria.order !== null
                 ? sortCriteria
-                : defaultSortCriteria
+                : view.defaultSort
 
         if (col?.sort) {
-            const sortData = colData[crit.colId]
+            const sortData = colData[crit.id]
             result = col?.sort(sortData)
 
             if (crit.order === "desc") {
@@ -128,20 +214,20 @@ export function LogSummaryTable(props: {
         }
 
         return result
-    }, [sortCriteria, props.logIds])
+    }, [sortCriteria, logIds])
 
-    const cols = colIds.map((cid) => S_COLS[cid])
+    const cols = view.colIds.map((cid) => S_COLS[cid])
 
     const bodyRows = sortedIndexes.map((sortIdx, idx) => {
-        const currentId = props.logIds[sortIdx]
+        const currentId = logIds[sortIdx]
 
         const nextSortIdx = sortedIndexes[idx + 1]
-        const nextId = props.logIds[nextSortIdx]
+        const nextId = logIds[nextSortIdx]
 
-        const isSelected = currentId === props.selectionId
-        const isNextSelected = nextId === props.selectionId
+        const isSelected = currentId === selectionId
+        const isNextSelected = nextId === selectionId
 
-        const values = colIds.map((cid) => colData[cid][sortIdx])
+        const values = view.colIds.map((cid) => colData[cid][sortIdx])
 
         return (
             <LogRow
@@ -149,7 +235,7 @@ export function LogSummaryTable(props: {
                 logId={currentId}
                 isSelected={isSelected}
                 isNextSelected={isNextSelected}
-                onClick={props.onClick}
+                onClick={onClick}
                 values={values}
                 cols={cols}
             />
@@ -157,21 +243,19 @@ export function LogSummaryTable(props: {
     })
 
     const headerSelected =
-        props.selectionId === props.logIds[sortedIndexes[0]]
-            ? " selected-next"
+        selectionId === logIds[sortedIndexes[0]]
+            ? "selected-next"
             : ""
 
     return (
-        <div className="log-table-container overflow-auto pb-0!">
-            <Table className="log-table w-auto min-h-0 mb-8">
-                <TableHeader>
-                    <TableRow className={cn(headerSelected)}>
-                        {...headerRow}
-                    </TableRow>
-                </TableHeader>
-                <TableBody>{...bodyRows}</TableBody>
-            </Table>
-        </div>
+        <Table className="log-table w-auto min-h-0 mb-8">
+            <TableHeader>
+                <TableRow className={cn(headerSelected)}>
+                    {...headerRow}
+                </TableRow>
+            </TableHeader>
+            <TableBody>{...bodyRows}</TableBody>
+        </Table>
     )
 }
 
@@ -239,4 +323,46 @@ const LogCell = React.memo(
             {content}
         </TableCell>
     )
+)
+
+const ViewPicker = React.memo(
+    ({
+        views,
+        current,
+        onSelect,
+    }: {
+        views: SummaryView[]
+        current: string
+        onSelect: (view: SummaryView) => void
+    }) => {
+        const items = views.map((v) => {
+            return (
+                <SelectItem key={v.id} value={v.id}>
+                    {v.label}
+                </SelectItem>
+            )
+        })
+
+        return (
+            <div className="flex items-center justify-end">
+                <span className="pr-2 text-sm font-medium">
+                    Filter:
+                </span>
+
+                <Select
+                    onValueChange={(id) =>
+                        onSelect(views.find((v) => v.id === id)!)
+                    }
+                    value={current}
+                >
+                    <SelectTrigger className="w-[180px] text-xs">
+                        <SelectValue placeholder="Theme" />
+                    </SelectTrigger>
+                    <SelectContent className="text-xs">
+                        {...items}
+                    </SelectContent>
+                </Select>
+            </div>
+        )
+    }
 )

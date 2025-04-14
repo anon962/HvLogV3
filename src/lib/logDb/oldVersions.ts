@@ -1,5 +1,5 @@
 import * as idb from "idb"
-import { Result, ValueOf } from "./utils/typeUtils"
+import { Result, ValueOf } from "../utils/typeUtils"
 
 // @todo: make generation of this automatic
 export namespace v1 {

@@ -48,6 +48,12 @@ function extractDrops(log: CompleteLog) {
             case "CREDITS":
                 add("Credits", ev.value, idx)
                 break
+            case "DROP_EVENT":
+                {
+                    const [name, count] = extractNameCount(ev.item)
+                    add(name, count, idx)
+                }
+                break
             case "DROP":
                 {
                     const [name, count] = extractNameCount(ev.item)

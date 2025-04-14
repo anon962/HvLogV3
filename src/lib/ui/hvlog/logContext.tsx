@@ -65,7 +65,7 @@ function useLogFetch(
             for (const id of logIds) {
                 if (!(id in cache)) {
                     console.debug("Fetching log", id)
-                    // Cache misses are sloooow >300ms
+                    // IndexedDb is sloooow >300ms
                     const promise = db.getLog(id).then(async (d) => {
                         setCache((cache) => ({
                             ...cache,

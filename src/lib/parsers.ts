@@ -460,6 +460,14 @@ export const PARSERS = {
             item: t("string"),
         }
     ),
+    // Easter 2025
+    DROP_EVENT: new EventParser(
+        "DROP_EVENT",
+        `You found \\[${Group("item", ".*")}\\]`,
+        {
+            item: t("string"),
+        }
+    ),
     SOUL_FRAG_DROP: new EventParser(
         "SOUL_FRAG_DROP",
         `You obtained ${Num("count")}x \\[Soul Fragments\\]`,
