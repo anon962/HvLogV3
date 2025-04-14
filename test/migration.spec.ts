@@ -11,8 +11,9 @@ describe("migrating logs from v1 to v2", () => {
                 spell: "Ripened Soul",
                 multiplier_type: "hits",
                 monster: "a name 123 +",
-                damage_type: undefined,
+                damage_type: null,
                 value: 10201,
+                resist: null,
             },
         },
     ] as const

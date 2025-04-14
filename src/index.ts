@@ -13,11 +13,12 @@ import {
     readUrlPath,
 } from "./lib/utils/userscriptUtils.ts"
 
-// @todo: filter
-// @todo: errors
+// @todo: readme
+// @todo: updateUrl downloadUrl
 // @todo: deletable
 // @todo: damage taken
 // @todo: aggregate drops
+// @todo: display errors
 // @todo: hard-coded name of melee attacks (* Strike) because these can be indistinguishable from spell hits
 
 // @todo: live stats
@@ -26,6 +27,7 @@ import {
 // @todo: debug console
 // @todo: self-hosted ui
 // @todo: heal %maxhp
+// @todo: router
 
 async function main() {
     const app = await App.ainit()

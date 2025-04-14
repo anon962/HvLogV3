@@ -10,12 +10,21 @@ import {
 import { indexes } from "@/lib/utils/miscUtils"
 import { cn } from "@/lib/utils/shadcnUtils"
 import { readUrlPath } from "@/lib/utils/userscriptUtils"
-import { mapEntries } from "radash"
+import { mapEntries, range } from "radash"
 import React, { ReactNode, useEffect, useMemo, useState } from "react"
 import {
     ArrowLongDownIcon,
     ArrowLongUpIcon,
 } from "../../icons/tailwind"
+import {
+    Pagination,
+    PaginationContent,
+    PaginationEllipsis,
+    PaginationItem,
+    PaginationLink,
+    PaginationNext,
+    PaginationPrevious,
+} from "../../shadcn/pagination"
 import {
     Select,
     SelectContent,
@@ -98,12 +107,23 @@ export function LogSummaryTable(props: {
         })
     }, [stats, view, props.logIds])
 
+    const pageSize = 200
+    const [pageIndex, setPageIndex] = useState(0)
+    const pageIds = useMemo(() => {
+        const start = pageIndex * pageSize
+        const end = (pageIndex + 1) * pageSize
+        return filteredIds.slice(start, end)
+    }, [filteredIds, pageIndex])
+
     return (
         <div className="log-table-container overflow-auto pb-0! flex flex-col">
             <ViewPicker
-                onSelect={(v) => setActiveViewId(v.id)}
+                onSelect={(v) => {
+                    setActiveViewId(v.id)
+                    setPageIndex(0)
+                }}
                 current={activeViewId}
-                views={DEFAULT_SUMMARY_VIEWS}
+                views={allViews}
             />
 
             <hr className="border my-6" />
@@ -111,8 +131,17 @@ export function LogSummaryTable(props: {
             <SummaryTable
                 onClick={props.onClick}
                 selectionId={props.selectionId}
-                logIds={filteredIds}
+                logIds={pageIds}
                 view={view}
+            />
+
+            <hr className="border" />
+
+            <Paginator
+                onSelect={(idx) => setPageIndex(idx)}
+                total={filteredIds.length}
+                pageSize={pageSize}
+                current={pageIndex}
             />
         </div>
     )
@@ -337,7 +366,11 @@ const ViewPicker = React.memo(
     }) => {
         const items = views.map((v) => {
             return (
-                <SelectItem key={v.id} value={v.id}>
+                <SelectItem
+                    key={v.id}
+                    value={v.id}
+                    className="cursor-pointer text-xs"
+                >
                     {v.label}
                 </SelectItem>
             )
@@ -355,14 +388,110 @@ const ViewPicker = React.memo(
                     }
                     value={current}
                 >
-                    <SelectTrigger className="w-[180px] text-xs">
+                    <SelectTrigger className="w-[180px] text-xs cursor-pointer">
                         <SelectValue placeholder="Theme" />
                     </SelectTrigger>
-                    <SelectContent className="text-xs">
-                        {...items}
-                    </SelectContent>
+                    <SelectContent>{...items}</SelectContent>
                 </Select>
             </div>
+        )
+    }
+)
+
+const Paginator = React.memo(
+    ({
+        current,
+        onSelect,
+        total,
+        pageSize,
+    }: {
+        current: number
+        onSelect: (idx: number) => void
+        total: number
+        pageSize: number
+    }) => {
+        const numPages = Math.ceil(total / pageSize) || 1
+
+        const width = 1
+
+        const pages: Array<number | null> = []
+
+        // First page
+        if (current - width > 0) {
+            pages.push(0)
+        }
+        // First page ellipsis
+        if (current - width > 1) {
+            pages.push(null)
+        }
+
+        // Current page and near-current-page
+        for (const idx of range(current - width, current + width)) {
+            if (idx < 0 || idx >= numPages) {
+                continue
+            }
+            pages.push(idx)
+        }
+
+        // Last page ellipsis
+        const lastPage = numPages - 1
+        if (current + width < lastPage - 1) {
+            pages.push(null)
+        }
+        // Last page
+        if (current + width < lastPage) {
+            pages.push(lastPage)
+        }
+
+        const pageEls = pages.map((idx, j) =>
+            idx === null ? (
+                <PaginationItem key={j}>
+                    <PaginationEllipsis />
+                </PaginationItem>
+            ) : (
+                <PaginationItem
+                    key={j}
+                    onClick={() => onSelect(idx)}
+                    className="cursor-pointer"
+                >
+                    <PaginationLink isActive={idx === current}>
+                        {idx + 1}
+                    </PaginationLink>
+                </PaginationItem>
+            )
+        )
+
+        const disablePrev = current === 0
+        const disableNext = current === lastPage
+
+        return (
+            <Pagination className="p-4">
+                <PaginationContent>
+                    <PaginationItem
+                        onClick={() => onSelect(current - 1)}
+                        className={
+                            disablePrev
+                                ? "opacity-50 pointer-events-none"
+                                : cn("cursor-pointer")
+                        }
+                    >
+                        <PaginationPrevious />
+                    </PaginationItem>
+
+                    {...pageEls}
+
+                    <PaginationItem
+                        onClick={() => onSelect(current + 1)}
+                        className={
+                            disableNext
+                                ? "opacity-50 pointer-events-none"
+                                : cn("cursor-pointer")
+                        }
+                    >
+                        <PaginationNext />
+                    </PaginationItem>
+                </PaginationContent>
+            </Pagination>
         )
     }
 )
