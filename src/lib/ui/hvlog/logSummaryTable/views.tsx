@@ -1,9 +1,11 @@
+import { S_COLS } from "./cols"
+
 export interface SummaryView {
     id: string
     label: string
     colIds: string[]
     defaultSort: {
-        id: string
+        id: keyof typeof S_COLS
         order: "asc" | "desc"
     }
     filters: Array<{
@@ -88,6 +90,7 @@ export const DEFAULT_VIEWS: SummaryView[] = [
             "turns",
             "duration",
             "profit",
+            "enchants",
             "date",
             "status",
         ],

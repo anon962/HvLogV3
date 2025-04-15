@@ -43,6 +43,7 @@ const COLS = [
     {
         id: "turns",
         header: { content: "Turns" },
+        align: "text-right",
         preprocess: (ids) => formatTurns(ids),
         cell: ({ value }) => value.cell,
         sort: (values) =>
@@ -51,6 +52,7 @@ const COLS = [
     {
         id: "duration",
         header: { content: "Duration" },
+        align: "text-right",
         preprocess: (ids) => formatDuration(ids),
         cell: ({ value }) => value.cell,
         sort: (values) =>
@@ -95,6 +97,15 @@ const COLS = [
             ),
     } satisfies LogSummaryColumn<
         ReturnType<typeof formatCompletionType>[number]
+    >,
+    {
+        id: "enchants",
+        header: { content: "Enchants Unlocked", className: "pr-4" },
+        align: "text-center",
+        preprocess: (ids) => formatEnchants(ids),
+        cell: ({ value }) => value.cell,
+    } satisfies LogSummaryColumn<
+        ReturnType<typeof formatEnchants>[number]
     >,
 ]
 
@@ -458,6 +469,41 @@ function formatCompletionType(ids: LogId[]) {
     return result
 }
 
+function formatEnchants(ids: LogId[]) {
+    const summaries = useSummaryMaybe(ids)
+
+    return summaries.map((s) => {
+        let content, sortValue
+
+        if (s) {
+            content = s.enchants
+                .map((text, idx) => {
+                    text = text.replace("Level ", "")
+
+                    const isLast = idx === s.enchants.length - 1
+                    if (!isLast) {
+                        const isEven = idx % 2 === 0
+                        text += isEven ? ", " : ",\n"
+                    }
+
+                    return text
+                })
+                .join("")
+            sortValue = content
+        } else {
+            content = ""
+            sortValue = ""
+        }
+
+        return {
+            cell: {
+                content,
+                className: "max-w-60 text-wrap whitespace-pre",
+            },
+            sortValue,
+        }
+    })
+}
 function useSummaryMaybe(ids: LogId[]) {
     const { stats } = useStatsMaybe(ids, {
         summary: true,

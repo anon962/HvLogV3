@@ -35,7 +35,11 @@ function l_1_2(log: v1.CompleteLog): latest.CompleteLog {
                         const p = latestParsers.PARSERS
                         const [result, _] = latestParsers.parseLine(
                             line,
-                            [p.POTENCY_GAIN, p.ENCHANT_GAIN]
+                            [
+                                p.POTENCY_GAIN,
+                                p.ENCHANT_GAIN,
+                                p.DROP_EVENT,
+                            ]
                         )
 
                         if (result) {

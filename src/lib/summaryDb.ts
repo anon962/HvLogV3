@@ -2,6 +2,7 @@ import { CompleteLog, LogId } from "./logDb/logDb"
 import {
     extractBattleType,
     extractCompletionType,
+    extractIwEnchants,
     extractTurnIndexes,
 } from "./stats/summaryStats"
 
@@ -56,6 +57,8 @@ export class SummaryDb {
                     endCount === startCount - 1 :
             false
 
+        const enchants = extractIwEnchants(log, battleType)
+
         const analysis = {
             id: log.id,
             start: log.meta.start,
@@ -65,6 +68,7 @@ export class SummaryDb {
             round,
             numTurns: turnIndexes.length,
             numEvents: log.entries.length,
+            enchants,
             errors: {
                 parsing: hasParseError,
                 inconsistentBattleTypes,
@@ -138,6 +142,7 @@ export interface LogSummary {
     } | null
     numTurns: number
     numEvents: number
+    enchants: string[]
     errors: {
         parsing: boolean
         inconsistentBattleTypes: boolean

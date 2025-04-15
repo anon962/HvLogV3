@@ -116,7 +116,7 @@ export function LogSummaryTable(props: {
     }, [filteredIds, pageIndex])
 
     return (
-        <div className="log-table-container overflow-auto pb-0! flex flex-col">
+        <div className="log-table-container overflow-auto w-full pb-0! flex flex-col">
             <ViewPicker
                 onSelect={(v) => {
                     setActiveViewId(v.id)
@@ -201,13 +201,21 @@ const SummaryTable = ({
                 })
         }
 
+        const flexJustify = {
+            "text-center": "justify-center",
+            "text-left": "justify-start",
+            "text-right": "justify-end",
+        }
+
         return (
-            <TableHead
-                className={cn(col.align, col.header.className)}
-            >
+            <TableHead className={cn(col.header.className)}>
                 <div
                     onClick={onClick}
-                    className="flex items-center cursor-pointer"
+                    className={cn(
+                        "flex items-center",
+                        !!col.sort ? "cursor-pointer" : "",
+                        flexJustify[col.align ?? "text-center"]
+                    )}
                 >
                     {col.header.content}
                     {icon}
@@ -277,7 +285,7 @@ const SummaryTable = ({
             : ""
 
     return (
-        <Table className="log-table w-auto min-h-0 mb-8">
+        <Table className="log-table w-auto min-h-0 mb-8 mx-auto">
             <TableHeader>
                 <TableRow className={cn(headerSelected)}>
                     {...headerRow}
@@ -348,7 +356,7 @@ const LogCell = React.memo(
         title?: string
         content: ReactNode
     }) => (
-        <TableCell className={className} title={title}>
+        <TableCell className={cn(className)} title={title}>
             {content}
         </TableCell>
     )

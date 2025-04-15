@@ -171,3 +171,22 @@ export function extractCompletionType(
             return null
     }
 }
+
+export function extractIwEnchants(
+    log: CompleteLog,
+    battleType: LogSummary["battleType"]
+): LogSummary["enchants"] {
+    switch (battleType?.name) {
+        case "Item World":
+            return log.entries
+                .slice(-1000)
+                .flatMap((entry) =>
+                    entry.type === "event" ? [entry.event] : []
+                )
+                .flatMap((ev) =>
+                    ev.event_type === "ENCHANT_GAIN" ? [ev.value] : []
+                )
+    }
+
+    return []
+}
