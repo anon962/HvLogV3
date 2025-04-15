@@ -25,4 +25,17 @@
             padding-right: 0.25rem;
         }
     }
+
+    .rob {
+        color: var(--color-pink-200);
+    }
+    .gf {
+        color: var(--color-lime-100);
+    }
+    .re {
+        color: var(--color-purple-200);
+    }
+    .iw {
+        color: var(--color-blue-200);
+    }
 }
