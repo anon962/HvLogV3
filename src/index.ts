@@ -19,6 +19,8 @@ import {
 // @todo: damage taken
 // @todo: display errors
 // @todo: hard-coded name of melee attacks (* Strike) because these can be indistinguishable from spell hits
+// @todo: service worker for heavy processing
+// @todo: display page load errors
 
 // @todo: live stats
 // @todo: aggregate log stats - last 90d, last 90 arenas, etc

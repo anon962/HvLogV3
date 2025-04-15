@@ -18,3 +18,12 @@ npm run dev
 # Prod build
 npm run build
 ```
+
+## Boring stuff
+
+-   Entire battle log (after parsing via regex) is saved to IndexedDb. Any lines that failed to parse are also saved.
+    -   Logs eat up ~90 bytes per turn after compression and ~1800 bytes before compression.
+-   UI uses react and [shadcn components](https://ui.shadcn.com/) / tailwind.
+-   Userscript bundle is generated with [vite](https://vite.dev/guide/) and [vite-plugin-monkey](https://github.com/lisonge/vite-plugin-monkey/)
+-   Database can be exported in a jsonl format using the menu commands. Each line in the resulting plaintext file represents a logged battle in regular json.
+    -   Settings and any in-progress battle data is not exported. Settings can be found in localstorage and if you really need in-progress data, open the IndexedDb table in devtools.

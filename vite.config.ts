@@ -29,6 +29,7 @@ export default defineConfig((config) => {
                         "https://github.com/anon962/HvLogV3/releases/download/latest/hvlog.user.js",
                 },
                 build: {
+                    fileName: "hvlog.user.js",
                     cssSideEffects: () => {
                         return (styles) => {
                             function initCss(styles: string) {

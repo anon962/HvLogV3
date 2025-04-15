@@ -51,6 +51,8 @@ function ImportDialogInner() {
             statusEl = (
                 <span>
                     Done! Imported {status.backup.length - 1} logs.
+                    <br />
+                    Please refresh the page if any logs are missing.
                 </span>
             )
             break
@@ -87,7 +89,7 @@ function ImportDialogInner() {
                 onClick={(ev) => ev.stopPropagation()}
                 ref={dialogEl}
                 open
-                className="max-w-[30rem] max-h-[15rem] z-20 flex flex-col items-center justify-center"
+                className="max-w-[30rem] h-max! z-20 flex flex-col items-center justify-center"
             >
                 <form
                     onSubmit={(ev) => onSubmit(ev)}
@@ -110,7 +112,7 @@ function ImportDialogInner() {
                     </div>
 
                     {/* Body */}
-                    <div className="grow px-8! flex flex-col items-center">
+                    <div className="px-8! pb-6! flex flex-col items-center">
                         <span className="text-red-700 py-4!">
                             This will replace all logs!{" "}
                             <span className="font-bold">
