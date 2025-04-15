@@ -15,8 +15,6 @@ import {
     readUrl,
 } from "./lib/utils/userscriptUtils.ts"
 
-// @todo: readme
-// @todo: updateUrl downloadUrl
 // @todo: deletable
 // @todo: damage taken
 // @todo: display errors

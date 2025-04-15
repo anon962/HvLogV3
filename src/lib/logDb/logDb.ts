@@ -77,6 +77,7 @@ export class LogDb {
             }
             txn.commit()
         } catch (e) {
+            console.error(e)
             txn.abort()
             alert("HvLog: database migration failed")
             throw e
