@@ -1,4 +1,3 @@
-import { App } from "@/lib/app/app"
 import { LogId } from "@/lib/logDb/logDb"
 import "@/lib/ui/global.css"
 import {
@@ -6,8 +5,10 @@ import {
     ResizablePanel,
     ResizablePanelGroup,
 } from "@/lib/ui/shadcn/resizable"
+import { RootComponent } from "@/lib/utils/userscriptUtils"
 import { StrictMode, useCallback, useMemo } from "react"
 import { AppContextProvider } from "../appContext"
+import { DbContextProvider } from "../dbContext"
 import { Sidebar } from "../sidebar"
 import { useLocalJsonState } from "./hooks"
 import { LogContextProvider, useLogContext } from "./logContext"
@@ -16,19 +17,28 @@ import { LogStatsProvider } from "./logStatsContext"
 import { LogSummaryTable } from "./logSummaryTable/logSummaryTable"
 import { SummaryDbProvider } from "./summaryDbContext"
 
-export function HvLog(props: { app: App }) {
+export const HvLog: RootComponent = ({
+    app,
+    persistentDb,
+    isekaiDb,
+}) => {
     return (
         <StrictMode>
-            <AppContextProvider app={props.app}>
-                <LogContextProvider>
-                    <SummaryDbProvider>
-                        <LogStatsProvider>
-                            <Sidebar>
-                                <HvLogInner />
-                            </Sidebar>
-                        </LogStatsProvider>
-                    </SummaryDbProvider>
-                </LogContextProvider>
+            <AppContextProvider app={app}>
+                <DbContextProvider
+                    persistentDb={persistentDb}
+                    isekaiDb={isekaiDb}
+                >
+                    <LogContextProvider>
+                        <SummaryDbProvider>
+                            <LogStatsProvider>
+                                <Sidebar>
+                                    <HvLogInner />
+                                </Sidebar>
+                            </LogStatsProvider>
+                        </SummaryDbProvider>
+                    </LogContextProvider>
+                </DbContextProvider>
             </AppContextProvider>
         </StrictMode>
     )
@@ -42,7 +52,10 @@ function HvLogInner() {
 
     const { logIds, useLogFetch } = useLogContext()
 
-    const logsSorted = useMemo(() => [...logIds.values()], [logIds])
+    const logsSorted = useMemo(
+        () => [...logIds.values().map(({ id }) => id)],
+        [logIds]
+    )
 
     const fetcher = useLogFetch([selectedLogId])
 

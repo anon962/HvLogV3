@@ -280,7 +280,7 @@ export class LogDb {
 
     async getLog(id: LogId): Promise<CompleteLog> {
         const log = (await this.db.get(COMPLETE_STORE, id))!
-        return log.compressed ? decompressLog(log) : log
+        return log?.compressed ? decompressLog(log) : log
     }
 
     async get<TStore extends idb.StoreNames<LogDbSchema>>(
@@ -331,7 +331,7 @@ export class LogDb {
         return await this.db.getAllKeys(COMPLETE_STORE)
     }
 
-    async *compressLogs() {
+    async compressLogs() {
         const logs = await this.fetchAllLogs()
 
         for (const [idx, log] of enumerate(logs)) {

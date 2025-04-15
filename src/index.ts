@@ -5,6 +5,7 @@ import { registerClearCache } from "./lib/app/registerClearCache.ts"
 import { registerLogExport } from "./lib/app/registerLogImportExport.ts"
 import { registerViewConfig } from "./lib/app/registerViewConfig.ts"
 import { registerViewLogs } from "./lib/app/registerViewLogs"
+import { LogDb } from "./lib/logDb/logDb.ts"
 import { ConfigEditor } from "./lib/ui/configEditor/configEditor.tsx"
 import { EquipLog } from "./lib/ui/equipLog/equipLog.tsx"
 import { HvLog } from "./lib/ui/hvlog/hvLog.tsx"
@@ -42,22 +43,26 @@ async function main() {
     const path = readUrlPath().parts
 
     if (isEqual(path, ["hvlog", "logs"])) {
-        runLogCompression(app)
-        return mountReact(HvLog, app)
+        runLogCompression()
+        return await mountReact(HvLog, app)
     } else if (isEqual(path, ["hvlog", "config"])) {
-        runLogCompression(app)
-        return mountReact(ConfigEditor, app)
+        runLogCompression()
+        return await mountReact(ConfigEditor, app)
     } else if (isEqual(path, ["hvlog", "equips"])) {
-        runLogCompression(app)
-        return mountReact(EquipLog, app)
+        runLogCompression()
+        return await mountReact(EquipLog, app)
     } else {
-        await app.runLogger()
+        return await app.runLogger()
     }
 }
 
-async function runLogCompression(app: App) {
+async function runLogCompression() {
+    const persistentDb = await LogDb.ainit("persistent")
+    const isekaiDb = await LogDb.ainit("isekai")
+
     while (true) {
-        app.db.compressLogs()
+        await persistentDb.compressLogs()
+        await isekaiDb.compressLogs()
         await sleep(30 * 60_000)
     }
 }

@@ -8,20 +8,25 @@ export function registerClearCache(app: App) {
     GM_registerMenuCommand(
         "Clear cache",
         () => {
-            unsafeWindow.localStorage.removeItem("hvlog_stats")
-            unsafeWindow.localStorage.removeItem("hvlog_charts")
-            unsafeWindow.localStorage.removeItem(
-                "hvlog_stats_finance"
-            )
-            unsafeWindow.localStorage.removeItem(
-                "react-resizable-panels:hvlog_detail_split"
-            )
-            unsafeWindow.localStorage.removeItem("hvlog_selected_log")
+            const localStorageKeys = [
+                "hvlog_stats",
+                "hvlog_charts",
+                "hvlog_selected_log",
+                "hvlog_stats_finance",
+                "hvlog_summary_view",
+                "hvlog_equip_log_filter",
+                "react-resizable-panels:hvlog_detail_split",
+            ]
+
+            for (const key of localStorageKeys) {
+                window.localStorage.removeItem(key)
+            }
+
             unsafeWindow.location.href = window.location.href
         },
         {
             id: "clear_cache",
-            title: "Does NOT clear logs / config. Only clears caches used for log summary, graphs, etc. Page will be refreshed.",
+            title: "Does NOT clear logs / config. Only clears localstorage entries used for tables, graphs, etc. Page will be refreshed.",
         }
     )
 }
