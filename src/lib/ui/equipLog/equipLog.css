@@ -1,31 +1,28 @@
-.config-editor {
-    .border,
-    .border-t,
-    .divider {
-        border-color: color-mix(
-            in oklab,
-            var(--color-muted-foreground) 50%,
-            transparent
-        );
+.equip-log {
+    --odd-bg: color-mix(
+        in oklab,
+        var(--background),
+        var(--foreground) 10%
+    );
+
+    --hover: color-mix(in oklab, transparent, var(--foreground) 20%);
+
+    tbody tr:nth-child(2n + 1) {
+        background-color: var(--odd-bg);
+    }
+    tbody tr:hover {
+        background-color: var(--hover);
     }
 
-    .divider {
-        margin: 2rem;
-    }
+    td,
+    th {
+        padding: 0.5rem 0.75rem;
 
-    input:invalid {
-        color: red;
-        border-color: red;
-    }
-
-    .toaster li {
-        background-color: var(--color-pink-600);
-
-        font-size: 1rem;
-
-        div {
-            color: var(--foreground);
-            font-weight: bold !important;
+        &:first-child {
+            padding-left: 1rem;
+        }
+        &:last-child {
+            padding-right: 0.25rem;
         }
     }
 }

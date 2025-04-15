@@ -9,13 +9,14 @@ export function registerClearCache(app: App) {
         "Clear cache",
         () => {
             const localStorageKeys = [
+                "react-resizable-panels:hvlog_detail_split",
                 "hvlog_stats",
                 "hvlog_charts",
                 "hvlog_selected_log",
                 "hvlog_stats_finance",
                 "hvlog_summary_view",
                 "hvlog_equip_log_filter",
-                "react-resizable-panels:hvlog_detail_split",
+                "hvlog_stats_drops",
             ]
 
             for (const key of localStorageKeys) {

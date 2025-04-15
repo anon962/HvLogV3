@@ -1,4 +1,5 @@
 import { LogId } from "@/lib/logDb/logDb"
+import { LogSummary } from "@/lib/summaryDb"
 import { enumerate, indexes } from "@/lib/utils/miscUtils"
 import { cn } from "@/lib/utils/shadcnUtils"
 import { alphabetical, sort, zip } from "radash"
@@ -30,7 +31,7 @@ const COLS = [
         id: "type",
         header: { content: "Type", className: "w-[6rem]" },
         align: "text-left",
-        preprocess: (ids) => formatBattleType(ids),
+        preprocess: (ids) => preprocessBattleType(ids),
         cell: ({ value }) => value,
         sort: (values) =>
             alphabetical(
@@ -38,7 +39,7 @@ const COLS = [
                 (idx) => values[idx].content
             ),
     } as LogSummaryColumn<
-        ReturnType<typeof formatBattleType>[number]
+        ReturnType<typeof preprocessBattleType>[number]
     >,
     {
         id: "turns",
@@ -127,7 +128,7 @@ export const ARENA_ALIASES = {
     112: "RoB - TTT",
 } as Record<number, string>
 
-function formatBattleType(ids: LogId[]) {
+function preprocessBattleType(ids: LogId[]) {
     const { stats } = useStatsMaybe(ids, {
         summary: true,
     })
@@ -140,62 +141,78 @@ function formatBattleType(ids: LogId[]) {
 
         const { summary } = s ?? {}
 
-        switch (summary?.battleType?.name) {
-            case undefined:
-                content = "-"
-                break
-            case "Grindfest":
-                className.push("gf")
-                content = "Grindfest"
-                break
-            case "random encounter":
-                className.push("re")
-                content = "Random Encounter"
-                break
-            case "Item World":
-                className.push("iw")
-                if (summary.round) {
-                    content = `Item World - ${summary.round.max}r`
-                } else {
-                    content = `Item World`
-                }
-                break
-            case "Arena":
-                className.push(
-                    summary.battleType.id >= 100 ? "rob" : "arena"
-                )
-
-                if (ARENA_ALIASES[summary.battleType.id]) {
-                    content = ARENA_ALIASES[summary.battleType.id]
-                } else if (summary.round?.max === 1) {
-                    console.error(
-                        `No alias for RoB #${summary.battleType.id}`,
-                        summary
-                    )
-                    content = `RoB #${summary.battleType.id}`
-                } else if (summary.round) {
-                    content = `Arena - ${summary.round.max}r`
-                } else {
-                    console.error(
-                        `No round date for arena #${summary.battleType.id}`
-                    )
-                    content = `Arena`
-                }
-                break
-            case "Tower":
-                className.push("tower")
-                content = `Tower - Floor ${summary.battleType.floor}`
-                break
-            default:
-                className.push("")
-                content = "???"
-                break
+        if (!summary) {
+            content = "-"
+            break
+        } else {
+            const result = preprocessBattleTypeSingle(summary)
+            content = result.content
+            className.push(...result.className)
         }
 
         result.push({ className: className.join(" "), content })
     }
 
     return result
+}
+
+export function preprocessBattleTypeSingle(summary: LogSummary) {
+    let content
+    let className = []
+
+    switch (summary.battleType?.name) {
+        case undefined:
+            content = "-"
+            break
+        case "Grindfest":
+            className.push("gf")
+            content = "Grindfest"
+            break
+        case "random encounter":
+            className.push("re")
+            content = "Random Encounter"
+            break
+        case "Item World":
+            className.push("iw")
+            if (summary.round) {
+                content = `Item World - ${summary.round.max}r`
+            } else {
+                content = `Item World`
+            }
+            break
+        case "Arena":
+            className.push(
+                summary.battleType.id >= 100 ? "rob" : "arena"
+            )
+
+            if (ARENA_ALIASES[summary.battleType.id]) {
+                content = ARENA_ALIASES[summary.battleType.id]
+            } else if (summary.round?.max === 1) {
+                console.error(
+                    `No alias for RoB #${summary.battleType.id}`,
+                    summary
+                )
+                content = `RoB #${summary.battleType.id}`
+            } else if (summary.round) {
+                content = `Arena - ${summary.round.max}r`
+            } else {
+                console.error(
+                    `No round date for arena #${summary.battleType.id}`
+                )
+                content = `Arena`
+            }
+            break
+        case "Tower":
+            className.push("tower")
+            content = `Tower - Floor ${summary.battleType.floor}`
+            break
+        default:
+            className.push("")
+            content = "???"
+            break
+    }
+
+    return { content, className }
 }
 
 function formatTurns(ids: LogId[]) {
@@ -354,18 +371,18 @@ function formatStartDate(
             } else {
                 content =
                     [
-                        `${d.getDate().toString().padStart(2, "0")}`,
-                        `${d.getMonth().toString().padStart(2, "0")}`,
-                        `${d.getFullYear()}`,
-                    ].join("-") +
-                    " " +
-                    [
                         `${d.getHours().toString().padStart(2, "0")}`,
                         `${d
                             .getMinutes()
                             .toString()
                             .padStart(2, "0")}`,
-                    ].join(":")
+                    ].join(":") +
+                    " " +
+                    [
+                        `${d.getDate().toString().padStart(2, "0")}`,
+                        `${d.getMonth().toString().padStart(2, "0")}`,
+                        `${d.getFullYear()}`,
+                    ].join("-")
             }
 
             setResult({

@@ -1,6 +1,7 @@
 import {
     extractRoundIndexes,
     extractTurnIndexes,
+    filterEvents,
 } from "@/lib/stats/summaryStats"
 import { enumerate } from "@/lib/utils/miscUtils"
 import { createContext, useContext, useMemo } from "react"
@@ -23,6 +24,7 @@ import {
 import { LogSummary, SummaryDb } from "../../summaryDb"
 import { ContextProviderProps } from "../../utils/typeUtils"
 import { useAppContext } from "../appContext"
+import { EQUIP_PREFIXES } from "../constants"
 import { useLogContext } from "./logContext"
 import { useSummaryDbContext } from "./summaryDbContext"
 
@@ -78,6 +80,34 @@ function initContext(summaryDb: SummaryDb) {
         { key: "hvlog_stats_finances", hash: priceHash }
     )
 
+    const equipDrops = useCache(
+        (log) => {
+            const equips = filterEvents(log, [
+                "DROP",
+                "DROP_EVENT",
+                "CLEAR_BONUS",
+            ]).flatMap((ev) => {
+                const isEquip = EQUIP_PREFIXES.some((patt) =>
+                    ev.item.startsWith(patt)
+                )
+                if (!isEquip) {
+                    return []
+                }
+
+                const isClearBonus = ev.event_type === "CLEAR_BONUS"
+                return [
+                    {
+                        equip: ev.item,
+                        isClearBonus: isClearBonus,
+                    },
+                ]
+            })
+
+            return equips
+        },
+        { key: "hvlog_stats_drops" }
+    )
+
     function maybeGetter<T extends ReturnType<typeof useCache>>(
         cache: T
     ) {
@@ -90,6 +120,8 @@ function initContext(summaryDb: SummaryDb) {
         getIndexMap: indexMap.get,
         getItemDrops: itemDrops.get,
         getItemDropsMaybe: maybeGetter(itemDrops),
+        getEquipDrops: equipDrops.get,
+        getEquipDropsMaybe: maybeGetter(equipDrops),
         getItemUsage: itemUsage.get,
         getItemUsageMaybe: maybeGetter(itemUsage),
         getCombatUsage: combatUsage.get,
@@ -161,6 +193,7 @@ export interface UseStatsOptions {
     summary?: boolean
     indexMap?: boolean
     itemDrops?: boolean
+    equipDrops?: boolean
     itemUsage?: boolean
     combatUsage?: boolean
     finances?: boolean
@@ -173,8 +206,10 @@ export type UseStatsReturn<Opts extends UseStatsOptions> = {
             LogSummary : undefined :
         K extends 'indexMap' ? Opts[K] extends true ?
             IndexMap : undefined :
-        K extends 'itemDrop' ? Opts[K] extends true ?
+        K extends 'itemDrops' ? Opts[K] extends true ?
             DropSummary : undefined :
+        K extends 'equipDrops' ? Opts[K] extends true ?
+            Array<{equip: string, isClearBonus: boolean}> : undefined :
         K extends 'itemUsage' ? Opts[K] extends true ?
             ItemUsageSummary : undefined :
         K extends 'combatUsage' ? Opts[K] extends true ?
@@ -194,6 +229,9 @@ export function useStats<T extends UseStatsOptions>(
         summary: opts.summary ? ctx.getSummary(log) : undefined,
         indexMap: opts.indexMap ? ctx.getIndexMap(log) : undefined,
         itemDrops: opts.itemDrops ? ctx.getItemDrops(log) : undefined,
+        equipDrops: opts.equipDrops
+            ? ctx.getEquipDrops(log)
+            : undefined,
         itemUsage: opts.itemUsage ? ctx.getItemUsage(log) : undefined,
         combatUsage: opts.combatUsage
             ? ctx.getCombatUsage(log)
@@ -209,8 +247,10 @@ export type UseStatsMaybeReturn<Opts extends UseStatsOptions> = {
             LogSummary | null : undefined :
         K extends 'indexMap' ? Opts[K] extends true ?
             IndexMap | null : undefined :
-        K extends 'itemDrop' ? Opts[K] extends true ?
+        K extends 'itemDrops' ? Opts[K] extends true ?
             DropSummary | null : undefined :
+        K extends 'equipDrops' ? Opts[K] extends true ?
+            Array<{equip: string, isClearBonus: boolean}> | null : undefined :
         K extends 'itemUsage' ? Opts[K] extends true ?
             ItemUsageSummary | null : undefined :
         K extends 'combatUsage' ? Opts[K] extends true ?
@@ -246,6 +286,10 @@ export function useStatsMaybe<T extends UseStatsOptions>(
         if (opts.itemDrops) {
             d.itemDrops = ctx.getItemDropsMaybe(id)
             if (!d.itemDrops) needsFetch = true
+        }
+        if (opts.equipDrops) {
+            d.equipDrops = ctx.getEquipDropsMaybe(id)
+            if (!d.equipDrops) needsFetch = true
         }
         if (opts.itemUsage) {
             d.itemUsage = ctx.getItemUsageMaybe(id)
@@ -285,6 +329,9 @@ export function useStatsMaybe<T extends UseStatsOptions>(
                 : undefined,
             itemDrops: opts.itemDrops
                 ? ctx.getItemDrops(log)
+                : undefined,
+            equipDrops: opts.equipDrops
+                ? ctx.getEquipDrops(log)
                 : undefined,
             itemUsage: opts.itemUsage
                 ? ctx.getItemUsage(log)

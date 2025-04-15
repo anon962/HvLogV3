@@ -4,7 +4,7 @@ export function useLocalJsonState<T extends any>(
     init: T,
     key: string
 ) {
-    return useLocalState(
+    return useLocalState<T>(
         init,
         key,
         (x) => JSON.parse(x),
@@ -33,5 +33,5 @@ export function useLocalState<T>(
         return () => window.removeEventListener("beforeunload", cb)
     }, [state])
 
-    return [state, setState]
+    return [state, setState] as const
 }

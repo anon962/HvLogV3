@@ -106,6 +106,11 @@ function initContext(bothDbs = false, refreshDelay = 5000) {
                 isekaiDb
             )
         },
+        getLogType: (id: LogId) => {
+            return seen.current.persistent.has(id)
+                ? ("persistent" as const)
+                : ("isekai" as const)
+        },
     }
 }
 
