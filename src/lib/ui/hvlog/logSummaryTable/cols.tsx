@@ -143,7 +143,6 @@ function preprocessBattleType(ids: LogId[]) {
 
         if (!summary) {
             content = "-"
-            break
         } else {
             const result = preprocessBattleTypeSingle(summary)
             content = result.content

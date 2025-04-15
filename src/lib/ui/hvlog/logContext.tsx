@@ -93,11 +93,15 @@ function initContext(bothDbs = false, refreshDelay = 5000) {
     return {
         logIds,
         useLogFetch: (ids: LogId[] = []) => {
-            const toFetch = ids.map((id) =>
-                seen.current.persistent.has(id)
-                    ? { type: "persistent" as const, id }
-                    : { type: "isekai" as const, id }
-            )
+            const toFetch = ids.map((id) => {
+                if (seen.current.persistent.has(id)) {
+                    return { type: "persistent" as const, id }
+                } else if (seen.current.isekai.has(id)) {
+                    return { type: "isekai" as const, id }
+                } else {
+                    return { type: null, id }
+                }
+            })
             return useLogFetch(
                 toFetch,
                 cache,
@@ -111,11 +115,15 @@ function initContext(bothDbs = false, refreshDelay = 5000) {
                 ? ("persistent" as const)
                 : ("isekai" as const)
         },
+        isFetching: (id: LogId) => isPromise(cache[id]),
     }
 }
 
 function useLogFetch(
-    toFetch: Array<{ type: "persistent" | "isekai"; id: string }>,
+    toFetch: Array<{
+        type: "persistent" | "isekai" | null
+        id: string
+    }>,
     cache: LogCache,
     setCache: React.Dispatch<React.SetStateAction<LogCache>>,
     persistentDb: LogDb,
@@ -128,7 +136,7 @@ function useLogFetch(
     useEffect(() => {
         async function load() {
             for (const { type, id } of toFetch) {
-                if (!(id in cache)) {
+                if (!(id in cache) && type) {
                     const db =
                         type === "persistent"
                             ? persistentDb

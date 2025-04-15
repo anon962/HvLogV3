@@ -53,7 +53,7 @@ function HvLogInner() {
         selectionOverride ?? undefined
     )
 
-    const { logIds, useLogFetch } = useLogContext()
+    const { logIds, useLogFetch, isFetching } = useLogContext()
 
     const logsSorted = useMemo(
         () => [...logIds.values().map(({ id }) => id)],
@@ -97,7 +97,11 @@ function HvLogInner() {
                 {fetcher.logs[0] ? (
                     <LogDetailsPane log={fetcher.logs[0]} />
                 ) : (
-                    "Loading..."
+                    <div className="py-8">
+                        {isFetching(selectedLogId)
+                            ? "Loading..."
+                            : "Select a log!"}
+                    </div>
                 )}
             </ResizablePanel>
         </ResizablePanelGroup>

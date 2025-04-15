@@ -19,7 +19,6 @@ import {
 // @todo: updateUrl downloadUrl
 // @todo: deletable
 // @todo: damage taken
-// @todo: aggregate drops
 // @todo: display errors
 // @todo: hard-coded name of melee attacks (* Strike) because these can be indistinguishable from spell hits
 
