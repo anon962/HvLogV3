@@ -6,6 +6,7 @@
 
 @import "./sidebar.css";
 @import "./configEditor/configEditor.css";
+@import "./equipLog/equipLog.css";
 @import "./hvlog/logDetailsPane.css";
 @import "./hvlog/logEventList.css";
 @import "./hvlog/logSummaryTable/logSummaryTable.css";

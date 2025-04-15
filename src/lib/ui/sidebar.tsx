@@ -21,6 +21,11 @@ const ITEMS = [
         href: "/isekai/hvlog/logs",
         tooltip: "Isekai Logs",
     },
+    {
+        icon: "EQ",
+        href: "/hvlog/equips",
+        tooltip: "Equip Drops",
+    },
 ] as Array<{
     icon: ReactNode
     href: string

@@ -1,20 +1,30 @@
-import { App } from "@/lib/app/app"
-import { LogDb, LogDbBackup } from "@/lib/logDb/logDb"
+import { LogDbBackup } from "@/lib/logDb/logDb"
 import "@/lib/ui/global.css"
 import { compressGzip } from "@/lib/utils/miscUtils"
+import { RootComponent } from "@/lib/utils/userscriptUtils"
 import { sleep } from "radash"
-import { FC, useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { AppContextProvider } from "../appContext"
+import { DbContextProvider, useDbContext } from "../dbContext"
 import { LogContextProvider } from "../hvlog/logContext"
 import { XIcon } from "../icons/tailwind"
 import { Button } from "../shadcn/button"
 
-export const ExportDialog: FC<{ app: App }> = ({ app }) => {
+export const ExportDialog: RootComponent = ({
+    app,
+    persistentDb,
+    isekaiDb,
+}) => {
     return (
         <AppContextProvider app={app}>
-            <LogContextProvider>
-                <ExportDialogInner />
-            </LogContextProvider>
+            <DbContextProvider
+                persistentDb={persistentDb}
+                isekaiDb={isekaiDb}
+            >
+                <LogContextProvider>
+                    <ExportDialogInner />
+                </LogContextProvider>
+            </DbContextProvider>
         </AppContextProvider>
     )
 }
@@ -95,6 +105,8 @@ function useDownloader() {
         type: "idle",
     })
 
+    const { persistentDb, isekaiDb } = useDbContext()
+
     async function download(
         backup: LogDbBackup,
         anchorEl: HTMLAnchorElement,
@@ -114,9 +126,6 @@ function useDownloader() {
     }
 
     async function buildBackup() {
-        const persistentDb = await LogDb.ainit("persistent")
-        const isekaiDb = await LogDb.ainit("isekai")
-
         if (persistentDb.db.version !== isekaiDb.db.version) {
             setStatus({
                 type: "error",

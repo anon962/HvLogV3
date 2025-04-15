@@ -1,4 +1,3 @@
-import { App } from "@/lib/app/app"
 import "@/lib/ui/global.css"
 import {
     Table,
@@ -8,8 +7,8 @@ import {
     TableHeader,
     TableRow,
 } from "@/lib/ui/shadcn/table"
+import { RootComponent } from "@/lib/utils/userscriptUtils"
 import {
-    FC,
     FormEvent,
     ReactNode,
     useEffect,
@@ -28,7 +27,7 @@ import {
     useSettingsForm,
 } from "./settingsFormContext"
 
-export const ConfigEditor: FC<{ app: App }> = ({ app }) => {
+export const ConfigEditor: RootComponent = ({ app }) => {
     return (
         <SettingsFormProvider app={app}>
             <Sidebar>

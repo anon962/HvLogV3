@@ -1,14 +1,18 @@
-import React, { FunctionComponent } from "react"
+import React from "react"
 import { createRoot } from "react-dom/client"
 import { unsafeWindow } from "vite-plugin-monkey/dist/client"
 import { App } from "../app/app"
+import { LogDb } from "../logDb/logDb"
 
-export function mountReact(
-    component: FunctionComponent<{ app: App }>,
+export async function mountReact(
+    component: RootComponent,
     app: App,
     targetEl?: HTMLElement
 ) {
     window.HV_LOG_INIT_STYLES()
+
+    const persistentDb = await LogDb.ainit("persistent")
+    const isekaiDb = await LogDb.ainit("isekai")
 
     if (!targetEl) {
         document.body.innerHTML = `
@@ -23,6 +27,8 @@ export function mountReact(
 
     const rootComponent = React.createElement(component, {
         app,
+        persistentDb,
+        isekaiDb,
     })
     const reactEl = createRoot(targetEl)
     reactEl.render(rootComponent)
@@ -88,3 +94,9 @@ export async function sleepWithRegistration(
         ACTIVE_TIMERS.add(id)
     })
 }
+
+export type RootComponent = React.FC<{
+    app: App
+    persistentDb: LogDb
+    isekaiDb: LogDb
+}>

@@ -1,21 +1,31 @@
-import { App } from "@/lib/app/app"
-import { LogDb, LogDbBackup } from "@/lib/logDb/logDb"
+import { LogDbBackup } from "@/lib/logDb/logDb"
 import { migrateCompleteLogs } from "@/lib/logDb/migrateLogs"
 import "@/lib/ui/global.css"
 import { splitMap } from "@/lib/utils/miscUtils"
+import { RootComponent } from "@/lib/utils/userscriptUtils"
 import { last, sleep } from "radash"
-import { FC, FormEvent, useRef, useState } from "react"
+import { FormEvent, useRef, useState } from "react"
 import { AppContextProvider } from "../appContext"
+import { DbContextProvider, useDbContext } from "../dbContext"
 import { LogContextProvider } from "../hvlog/logContext"
 import { XIcon } from "../icons/tailwind"
 import { Button } from "../shadcn/button"
 
-export const ImportDialog: FC<{ app: App }> = ({ app }) => {
+export const ImportDialog: RootComponent = ({
+    app,
+    persistentDb,
+    isekaiDb,
+}) => {
     return (
         <AppContextProvider app={app}>
-            <LogContextProvider>
-                <ImportDialogInner />
-            </LogContextProvider>
+            <DbContextProvider
+                persistentDb={persistentDb}
+                isekaiDb={isekaiDb}
+            >
+                <LogContextProvider>
+                    <ImportDialogInner />
+                </LogContextProvider>
+            </DbContextProvider>
         </AppContextProvider>
     )
 }
@@ -158,6 +168,8 @@ function useImporter() {
         type: "idle",
     })
 
+    const { persistentDb, isekaiDb } = useDbContext()
+
     async function upload(file: File) {
         if (status.type === "loading") {
             return
@@ -184,9 +196,6 @@ function useImporter() {
         }
 
         try {
-            const persistentDb = await LogDb.ainit("persistent")
-            const isekaiDb = await LogDb.ainit("isekai")
-
             let [{ version }, ...logs] = backup
             let [pl, il] = splitMap(logs, ({ type, log }) => ({
                 type: type === "persistent" ? "pass" : "fail",

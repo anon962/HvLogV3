@@ -6,6 +6,7 @@ import { registerLogExport } from "./lib/app/registerLogImportExport.ts"
 import { registerViewConfig } from "./lib/app/registerViewConfig.ts"
 import { registerViewLogs } from "./lib/app/registerViewLogs"
 import { ConfigEditor } from "./lib/ui/configEditor/configEditor.tsx"
+import { EquipLog } from "./lib/ui/equipLog/equipLog.tsx"
 import { HvLog } from "./lib/ui/hvlog/hvLog.tsx"
 import {
     mountReact,
@@ -46,6 +47,9 @@ async function main() {
     } else if (isEqual(path, ["hvlog", "config"])) {
         runLogCompression(app)
         return mountReact(ConfigEditor, app)
+    } else if (isEqual(path, ["hvlog", "equips"])) {
+        runLogCompression(app)
+        return mountReact(EquipLog, app)
     } else {
         await app.runLogger()
     }
