@@ -5,7 +5,7 @@ import {
     ResizablePanel,
     ResizablePanelGroup,
 } from "@/lib/ui/shadcn/resizable"
-import { RootComponent } from "@/lib/utils/userscriptUtils"
+import { readUrl, RootComponent } from "@/lib/utils/userscriptUtils"
 import { StrictMode, useCallback, useMemo } from "react"
 import { AppContextProvider } from "../appContext"
 import { DbContextProvider } from "../dbContext"
@@ -45,9 +45,12 @@ export const HvLog: RootComponent = ({
 }
 
 function HvLogInner() {
+    const selectionOverride = readUrl().params.get("id")
+
     const [selectedLogId, setSelectedLogId] = useLocalJsonState(
         "",
-        "hvlog_selected_log"
+        "hvlog_selected_log",
+        selectionOverride ?? undefined
     )
 
     const { logIds, useLogFetch } = useLogContext()

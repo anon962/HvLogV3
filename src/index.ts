@@ -12,7 +12,7 @@ import { HvLog } from "./lib/ui/hvlog/hvLog.tsx"
 import {
     mountReact,
     patchClearInterval,
-    readUrlPath,
+    readUrl,
 } from "./lib/utils/userscriptUtils.ts"
 
 // @todo: readme
@@ -40,7 +40,7 @@ async function main() {
     registerLogExport(app)
     registerClearCache(app)
 
-    const path = readUrlPath().parts
+    const path = readUrl().parts
 
     if (isEqual(path, ["hvlog", "logs"])) {
         runLogCompression()

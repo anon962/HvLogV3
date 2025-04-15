@@ -41,7 +41,7 @@ export async function mountReact(
     return reactEl
 }
 
-export function readUrlPath(override?: string) {
+export function readUrl(override?: string) {
     const parts = (override ?? window.location.pathname)
         .split("/")
         .filter((part) => !!part.length)
@@ -53,9 +53,12 @@ export function readUrlPath(override?: string) {
         parts.shift()
     }
 
+    const url = new URL(window.location.href)
+
     return {
         isIsekai,
         parts,
+        params: url.searchParams,
     }
 }
 

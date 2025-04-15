@@ -1,7 +1,7 @@
 import { isEqual } from "radash"
 import { ReactNode } from "react"
 import { cn } from "../utils/shadcnUtils"
-import { readUrlPath } from "../utils/userscriptUtils"
+import { readUrl } from "../utils/userscriptUtils"
 import { Cog6Icon } from "./icons/tailwind"
 import { MyTooltip } from "./myTooltip"
 
@@ -33,7 +33,7 @@ const ITEMS = [
 }>
 
 export function Sidebar(props: { children: ReactNode }) {
-    const path = readUrlPath()
+    const path = readUrl()
 
     return (
         <div className="sidebar-container flex flex-row h-full">
@@ -84,10 +84,10 @@ function Link({
     target,
 }: {
     item: (typeof ITEMS)[number]
-    path: ReturnType<typeof readUrlPath>
+    path: ReturnType<typeof readUrl>
     target?: string
 }) {
-    const targetPath = readUrlPath(item.href)
+    const targetPath = readUrl(item.href)
     const isActive = isEqual(path, targetPath)
 
     return (

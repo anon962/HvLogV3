@@ -1,7 +1,7 @@
 import { createContext, useContext } from "react"
 import { LogDb } from "../logDb/logDb"
 import { ContextProviderProps } from "../utils/typeUtils"
-import { readUrlPath } from "../utils/userscriptUtils"
+import { readUrl } from "../utils/userscriptUtils"
 
 const DbContext = createContext<{
     persistentDb: LogDb
@@ -22,7 +22,7 @@ export function DbContextProvider({
     persistentDb: LogDb
     isekaiDb: LogDb
 }) {
-    const { isIsekai } = readUrlPath()
+    const { isIsekai } = readUrl()
     const activeDb = isIsekai ? isekaiDb : persistentDb
     const activeType = isIsekai ? "isekai" : "persistent"
 

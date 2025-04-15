@@ -9,7 +9,7 @@ import {
     uuidWithFallback,
 } from "../utils/miscUtils"
 import { ValueOf } from "../utils/typeUtils"
-import { readUrlPath } from "../utils/userscriptUtils"
+import { readUrl } from "../utils/userscriptUtils"
 import { migrateData, migrateSchema } from "./migrateDb"
 
 const COMPLETE_STORE = "complete"
@@ -35,7 +35,7 @@ export class LogDb {
                     ? STORAGE_KEY_ISEKAI
                     : STORAGE_KEY_PERSISTENT
         } else {
-            key = readUrlPath().isIsekai
+            key = readUrl().isIsekai
                 ? STORAGE_KEY_ISEKAI
                 : STORAGE_KEY_PERSISTENT
         }

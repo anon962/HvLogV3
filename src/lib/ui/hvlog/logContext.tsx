@@ -138,10 +138,23 @@ function useLogFetch(
 
                     // IndexedDb is sloooow >300ms
                     const promise = db.getLog(id).then(async (d) => {
-                        setCache((cache) => ({
-                            ...cache,
-                            [id]: d,
-                        }))
+                        if (d) {
+                            setCache((cache) => ({
+                                ...cache,
+                                [id]: d,
+                            }))
+                        } else {
+                            console.warn(
+                                `Fetch for ${type} log failed`,
+                                id
+                            )
+
+                            setCache((cache) => {
+                                const update = { ...cache }
+                                delete update[id]
+                                return update
+                            })
+                        }
                     })
                     setCache((cache) => ({
                         ...cache,

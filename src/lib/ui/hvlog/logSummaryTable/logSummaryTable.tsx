@@ -9,7 +9,7 @@ import {
 } from "@/lib/ui/shadcn/table"
 import { indexes } from "@/lib/utils/miscUtils"
 import { cn } from "@/lib/utils/shadcnUtils"
-import { readUrlPath } from "@/lib/utils/userscriptUtils"
+import { readUrl } from "@/lib/utils/userscriptUtils"
 import { mapEntries, range } from "radash"
 import React, { ReactNode, useEffect, useMemo, useState } from "react"
 import {
@@ -41,18 +41,23 @@ import {
     SummaryView,
 } from "./views"
 
+// @todo: less hacky way of reading id override from url
+
 export function LogSummaryTable(props: {
     onClick?: (logId: LogId) => void
     selectionId: LogId
     logIds: LogId[]
 }) {
+    const idOverride = readUrl().params.get("id")
+
     const [activeViewId, setActiveViewId] = useLocalJsonState(
         DEFAULT_SUMMARY_VIEWS[0].id,
-        "hvlog_summary_view"
+        "hvlog_summary_view",
+        idOverride ? DEFAULT_SUMMARY_VIEWS[0].id : undefined
     )
 
     let allViews = DEFAULT_SUMMARY_VIEWS
-    const { isIsekai } = readUrlPath()
+    const { isIsekai } = readUrl()
     if (!isIsekai) {
         allViews = allViews.filter((v) => v.id !== "tower")
     }
@@ -109,6 +114,14 @@ export function LogSummaryTable(props: {
 
     const pageSize = 200
     const [pageIndex, setPageIndex] = useState(0)
+
+    useEffect(() => {
+        const idx = filteredIds.findIndex((id) => id === idOverride)
+        if (idx > -1) {
+            setPageIndex(Math.floor(idx / pageSize))
+        }
+    }, [filteredIds])
+
     const pageIds = useMemo(() => {
         const start = pageIndex * pageSize
         const end = (pageIndex + 1) * pageSize
