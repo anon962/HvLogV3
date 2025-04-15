@@ -1,5 +1,5 @@
 import * as idb from "idb"
-import { isEqual, sleep } from "radash"
+import { isEqual } from "radash"
 import { HvEvent } from "../parsers"
 import {
     compressGzip,
@@ -71,11 +71,7 @@ export class LogDb {
 
         const txn = db.transaction(db.objectStoreNames, "readwrite")
         try {
-            for await (const version of migrateData(db, txn)) {
-                document.body.textContent = `Migrating logs (v${version} / v${db.version})...`
-                await sleep(10)
-            }
-            txn.commit()
+            await migrateData(db, txn)
         } catch (e) {
             console.error(e)
             txn.abort()

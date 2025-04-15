@@ -32,7 +32,7 @@ export function migrateSchema(db: Db, oldVersion: number) {
     }
 }
 
-export async function* migrateData(db: Db, txn: Txn) {
+export async function migrateData(db: Db, txn: Txn) {
     const currentVersions = new Set(db.objectStoreNames)
 
     let oldVersion = 1
@@ -43,12 +43,15 @@ export async function* migrateData(db: Db, txn: Txn) {
             currentVersions.has(mkey) &&
             (await txn.objectStore(mkey).count()) === 0
         if (needsMigration) {
+            document.body.textContent = `Migrating logs (v${oldVersion} / v${
+                oldVersion + 1
+            })...`
+
             txn.objectStore(mkey).add("", "done")
             console.debug(`Migrating data from version ${oldVersion}`)
 
             switch (oldVersion) {
                 case 1:
-                    yield oldVersion
                     const oldTxn = txn as Txn<v1.LogDbSchema>
                     const newTxn = txn as Txn<latest.LogDbSchema>
                     putAll(
