@@ -2,17 +2,17 @@ HV stats based on battle logs. Sample images can be found [here](https://github.
 
 ## Features
 
--   Battle history for both persistent and isekai, filter-able by battle type. <a src="https://raw.githubusercontent.com/anon962/HvLogV3/refs/heads/master/readme_files/samples/02.png">[1]</a>
--   Income / expenses, with per-item breakdowns <a src="https://raw.githubusercontent.com/anon962/HvLogV3/refs/heads/master/readme_files/samples/02.png">[1]</a>
--   Equip drops. <a src="https://raw.githubusercontent.com/anon962/HvLogV3/refs/heads/master/readme_files/samples/09.png">[1]</a>
--   Combat stats (spells used, damage dealt, mob resist rate, healing per item / spell, etc). <a src="https://raw.githubusercontent.com/anon962/HvLogV3/refs/heads/master/readme_files/samples/05.png">[1]</a> <a src="https://raw.githubusercontent.com/anon962/HvLogV3/refs/heads/master/readme_files/samples/06.png">[2]</a>
--   Full battle log <a src="https://raw.githubusercontent.com/anon962/HvLogV3/refs/heads/master/readme_files/samples/08.png">[1]</a>
--   Very rough overview of IW enchantment unlocks. <a src="https://raw.githubusercontent.com/anon962/HvLogV3/refs/heads/master/readme_files/samples/10.png">[1]</a>
+-   Battle history for both persistent and isekai, filter-able by battle type. <a href="https://raw.githubusercontent.com/anon962/HvLogV3/refs/heads/master/readme_files/samples/02.png">[1]</a>
+-   Income / expenses, with per-item breakdowns <a href="https://raw.githubusercontent.com/anon962/HvLogV3/refs/heads/master/readme_files/samples/02.png">[1]</a>
+-   Equip drops. <a href="https://raw.githubusercontent.com/anon962/HvLogV3/refs/heads/master/readme_files/samples/09.png">[1]</a>
+-   Combat stats (spells used, damage dealt, mob resist rate, healing per item / spell, etc). <a href="https://raw.githubusercontent.com/anon962/HvLogV3/refs/heads/master/readme_files/samples/05.png">[1]</a> <a href="https://raw.githubusercontent.com/anon962/HvLogV3/refs/heads/master/readme_files/samples/06.png">[2]</a>
+-   Full battle log <a href="https://raw.githubusercontent.com/anon962/HvLogV3/refs/heads/master/readme_files/samples/08.png">[1]</a>
+-   Very rough overview of IW enchantment unlocks. <a href="https://raw.githubusercontent.com/anon962/HvLogV3/refs/heads/master/readme_files/samples/10.png">[1]</a>
 
 ## Installing
 
 Copy the latest [hvlog.user.js file](https://github.com/anon962/HvLogV3/releases/download/latest/hvlog.user.js) from the releases section to your userscript extension.  
-After installing you can access the log history by opening your userscript extension and selecting one of the <a src="https://raw.githubusercontent.com/anon962/HvLogV3/refs/heads/master/readme_files/samples/01.png">[2]</a>.
+After installing you can access the log history by opening your userscript extension and selecting one of the <a href="https://raw.githubusercontent.com/anon962/HvLogV3/refs/heads/master/readme_files/samples/01.png">[2]</a>.
 
 ## Development
 
