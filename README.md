@@ -12,7 +12,7 @@ HV stats based on battle logs. Sample images can be found [here](https://github.
 ## Installing
 
 Copy the latest [hvlog.user.js file](https://github.com/anon962/HvLogV3/releases/download/latest/hvlog.user.js) from the releases section to your userscript extension.  
-After installing you can access the log history by opening your userscript extension and selecting one of the <a href="https://raw.githubusercontent.com/anon962/HvLogV3/refs/heads/master/readme_files/samples/01.png">[2]</a>.
+After installing you can access the log history by opening your userscript extension and selecting one of the menu options <a href="https://raw.githubusercontent.com/anon962/HvLogV3/refs/heads/master/readme_files/samples/01.png">[2]</a>.
 
 ## Development
 
