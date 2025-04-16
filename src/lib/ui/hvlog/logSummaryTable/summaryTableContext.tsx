@@ -5,7 +5,9 @@ import { mapEntries } from "radash"
 import React, {
     createContext,
     useContext,
+    useEffect,
     useMemo,
+    useRef,
     useState,
 } from "react"
 import { useLocalJsonState } from "../hooks"
@@ -64,7 +66,7 @@ function initContext() {
 
     // Apply filters
     const { stats } = useStatsMaybe(ids, { summary: true })
-    const filteredIds = useMemo(() => {
+    const idsFiltered = useMemo(() => {
         if (!view.filters.length) {
             return ids
         }
@@ -115,13 +117,13 @@ function initContext() {
     // Logs mapped to sort data
     const colData = mapEntries(S_COLS, (cid, col) => {
         const isEnabled = !!view.colIds.find((id) => id === cid)
-        const d = col.preprocess(isEnabled ? filteredIds : [])
+        const d = col.preprocess(isEnabled ? idsFiltered : [])
         return [cid, d]
     })
 
     // Apply sort criteria
     const { idsSorted, dataSorted } = useMemo(() => {
-        let sortedIndexes = indexes(filteredIds)
+        let sortedIndexes = indexes(idsFiltered)
 
         // Defaults to date (or first column) if user deactivated all sorting
         const col = S_COLS[sortCriteria.id]
@@ -140,12 +142,12 @@ function initContext() {
         }
 
         return {
-            idsSorted: sortedIndexes.map((idx) => filteredIds[idx]),
+            idsSorted: sortedIndexes.map((idx) => idsFiltered[idx]),
             dataSorted: sortedIndexes.map((idx) =>
                 view.colIds.map((cid) => colData[cid][idx])
             ),
         }
-    }, [sortCriteria, colData, filteredIds, view])
+    }, [sortCriteria, colData, idsFiltered, view])
 
     // Pagination
     const pageSize = 200
@@ -162,8 +164,34 @@ function initContext() {
         }
     }, [idsSorted, pageIndex])
 
+    // Selected row
+    const [selectedLogId, setSelectedLogId] = useLocalJsonState(
+        "",
+        "hvlog_selected_log",
+        idOverride ?? undefined
+    )
+
+    // Jump to url-provided id
+    const didOverride = useRef(false)
+    useEffect(() => {
+        if (didOverride.current) {
+            return
+        }
+
+        const idx = idsSorted.findIndex((id) => id === idOverride)
+        if (idx > -1) {
+            const pageIdx = Math.floor(idx / pageSize)
+            setPageIndex(pageIdx)
+            console.debug(
+                `Jumping to ${idOverride} on page ${pageIdx + 1}`
+            )
+            didOverride.current = true
+        }
+    }, [idsSorted])
+
     return {
         ids,
+        idsFiltered,
         idsPaginated,
         dataPaginated,
 
@@ -177,5 +205,7 @@ function initContext() {
         setActiveViewId,
         sortCriteria,
         setSortCriteria,
+        selectedLogId,
+        setSelectedLogId,
     }
 }

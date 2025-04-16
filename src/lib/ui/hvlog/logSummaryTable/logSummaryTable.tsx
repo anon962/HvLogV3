@@ -9,7 +9,12 @@ import {
 } from "@/lib/ui/shadcn/table"
 import { cn } from "@/lib/utils/shadcnUtils"
 import { range } from "radash"
-import React, { ReactNode, useEffect, useState } from "react"
+import React, {
+    ReactNode,
+    useCallback,
+    useEffect,
+    useState,
+} from "react"
 import {
     ArrowLongDownIcon,
     ArrowLongUpIcon,
@@ -37,24 +42,14 @@ import { SummaryView } from "./views"
 
 export function LogSummaryTable(props: {
     onClick?: (logId: LogId) => void
-    selectionId: LogId
 }) {
     const {
         ids,
-        pageSize,
         setActiveViewId,
-        pageIndex,
         setPageIndex,
         activeViewId,
         allViews,
     } = useSummaryTableContext()
-
-    // useEffect(() => {
-    //     const idx = filteredIds.findIndex((id) => id === idOverride)
-    //     if (idx > -1) {
-    //         setPageIndex(Math.floor(idx / pageSize))
-    //     }
-    // }, [filteredIds])
 
     if (!ids.length) {
         return <span>No battles found!</span>
@@ -73,36 +68,24 @@ export function LogSummaryTable(props: {
 
             <hr className="border my-6" />
 
-            <SummaryTable
-                onClick={props.onClick}
-                selectionId={props.selectionId}
-            />
+            <SummaryTable />
 
             <hr className="border" />
 
-            <Paginator
-                onSelect={(idx) => setPageIndex(idx)}
-                total={ids.length}
-                pageSize={pageSize}
-                current={pageIndex}
-            />
+            <Paginator />
         </div>
     )
 }
 
-const SummaryTable = ({
-    onClick,
-    selectionId,
-}: {
-    onClick?: (logId: LogId) => void
-    selectionId: LogId
-}) => {
+const SummaryTable = ({}: {}) => {
     const {
         idsPaginated,
         dataPaginated,
+        activeView,
         sortCriteria,
         setSortCriteria,
-        activeView,
+        selectedLogId,
+        setSelectedLogId,
     } = useSummaryTableContext()
 
     const headerRow = activeView.colIds.map((cid) => {
@@ -171,8 +154,8 @@ const SummaryTable = ({
     const bodyRows = idsPaginated.map((id, idx) => {
         const nextId = idsPaginated[idx + 1]
 
-        const isSelected = id === selectionId
-        const isNextSelected = nextId === selectionId
+        const isSelected = id === selectedLogId
+        const isNextSelected = nextId === selectedLogId
 
         const values = dataPaginated[idx]
 
@@ -182,7 +165,7 @@ const SummaryTable = ({
                 logId={id}
                 isSelected={isSelected}
                 isNextSelected={isNextSelected}
-                onClick={onClick}
+                onClick={(id) => setSelectedLogId(id)}
                 values={values}
                 cols={cols}
             />
@@ -190,7 +173,7 @@ const SummaryTable = ({
     })
 
     const headerSelected =
-        selectionId === idsPaginated[0] ? "selected-next" : ""
+        selectedLogId === idsPaginated[0] ? "selected-next" : ""
 
     return (
         <Table className="log-table w-auto min-h-0 mb-8 mx-auto">
@@ -314,100 +297,96 @@ const ViewPicker = React.memo(
     }
 )
 
-const Paginator = React.memo(
-    ({
-        current,
-        onSelect,
-        total,
-        pageSize,
-    }: {
-        current: number
-        onSelect: (idx: number) => void
-        total: number
-        pageSize: number
-    }) => {
-        const numPages = Math.ceil(total / pageSize) || 1
+const Paginator = React.memo(({}: {}) => {
+    const { idsFiltered, pageSize, pageIndex, setPageIndex } =
+        useSummaryTableContext()
 
-        const width = 1
+    const numPages = Math.ceil(idsFiltered.length / pageSize) || 1
 
-        const pages: Array<number | null> = []
+    const width = 1
 
-        // First page
-        if (current - width > 0) {
-            pages.push(0)
-        }
-        // First page ellipsis
-        if (current - width > 1) {
-            pages.push(null)
-        }
+    const pages: Array<number | null> = []
 
-        // Current page and near-current-page
-        for (const idx of range(current - width, current + width)) {
-            if (idx < 0 || idx >= numPages) {
-                continue
-            }
-            pages.push(idx)
-        }
-
-        // Last page ellipsis
-        const lastPage = numPages - 1
-        if (current + width < lastPage - 1) {
-            pages.push(null)
-        }
-        // Last page
-        if (current + width < lastPage) {
-            pages.push(lastPage)
-        }
-
-        const pageEls = pages.map((idx, j) =>
-            idx === null ? (
-                <PaginationItem key={j}>
-                    <PaginationEllipsis />
-                </PaginationItem>
-            ) : (
-                <PaginationItem
-                    key={j}
-                    onClick={() => onSelect(idx)}
-                    className="cursor-pointer"
-                >
-                    <PaginationLink isActive={idx === current}>
-                        {idx + 1}
-                    </PaginationLink>
-                </PaginationItem>
-            )
-        )
-
-        const disablePrev = current === 0
-        const disableNext = current === lastPage
-
-        return (
-            <Pagination className="p-4">
-                <PaginationContent>
-                    <PaginationItem
-                        onClick={() => onSelect(current - 1)}
-                        className={
-                            disablePrev
-                                ? "opacity-50 pointer-events-none"
-                                : cn("cursor-pointer")
-                        }
-                    >
-                        <PaginationPrevious />
-                    </PaginationItem>
-
-                    {...pageEls}
-
-                    <PaginationItem
-                        onClick={() => onSelect(current + 1)}
-                        className={
-                            disableNext
-                                ? "opacity-50 pointer-events-none"
-                                : cn("cursor-pointer")
-                        }
-                    >
-                        <PaginationNext />
-                    </PaginationItem>
-                </PaginationContent>
-            </Pagination>
-        )
+    // First page
+    if (pageIndex - width > 0) {
+        pages.push(0)
     }
-)
+    // First page ellipsis
+    if (pageIndex - width > 1) {
+        pages.push(null)
+    }
+
+    // Current page and near-current-page
+    for (const idx of range(pageIndex - width, pageIndex + width)) {
+        if (idx < 0 || idx >= numPages) {
+            continue
+        }
+        pages.push(idx)
+    }
+
+    // Last page ellipsis
+    const lastPage = numPages - 1
+    if (pageIndex + width < lastPage - 1) {
+        pages.push(null)
+    }
+    // Last page
+    if (pageIndex + width < lastPage) {
+        pages.push(lastPage)
+    }
+
+    const onSelect = useCallback(
+        (idx: number) => setPageIndex(idx),
+        [setPageIndex]
+    )
+
+    const pageEls = pages.map((idx, j) =>
+        idx === null ? (
+            <PaginationItem key={j}>
+                <PaginationEllipsis />
+            </PaginationItem>
+        ) : (
+            <PaginationItem
+                key={j}
+                onClick={() => onSelect(idx)}
+                className="cursor-pointer"
+            >
+                <PaginationLink isActive={idx === pageIndex}>
+                    {idx + 1}
+                </PaginationLink>
+            </PaginationItem>
+        )
+    )
+
+    const disablePrev = pageIndex === 0
+    const disableNext = pageIndex === lastPage
+
+    return (
+        <Pagination className="p-4">
+            <PaginationContent>
+                <PaginationItem
+                    onClick={() => onSelect(pageIndex - 1)}
+                    className={
+                        disablePrev
+                            ? "opacity-50 pointer-events-none"
+                            : cn("cursor-pointer")
+                    }
+                >
+                    <PaginationPrevious />
+                </PaginationItem>
+
+                {...pageEls}
+
+                <PaginationItem
+                    onClick={() => onSelect(pageIndex + 1)}
+                    className={
+                        disableNext
+                            ? "opacity-50 pointer-events-none"
+                            : cn("cursor-pointer")
+                    }
+                >
+                    <PaginationNext />
+                </PaginationItem>
+            </PaginationContent>
+        </Pagination>
+    )
+})

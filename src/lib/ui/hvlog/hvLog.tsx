@@ -1,21 +1,22 @@
-import { LogId } from "@/lib/logDb/logDb"
 import "@/lib/ui/global.css"
 import {
     ResizableHandle,
     ResizablePanel,
     ResizablePanelGroup,
 } from "@/lib/ui/shadcn/resizable"
-import { readUrl, RootComponent } from "@/lib/utils/userscriptUtils"
-import { StrictMode, useCallback } from "react"
+import { RootComponent } from "@/lib/utils/userscriptUtils"
+import { StrictMode } from "react"
 import { AppContextProvider } from "../appContext"
 import { DbContextProvider } from "../dbContext"
 import { Sidebar } from "../sidebar"
-import { useLocalJsonState } from "./hooks"
 import { LogContextProvider, useLogContext } from "./logContext"
 import { LogDetailsPane } from "./logDetailsPane"
 import { LogStatsProvider } from "./logStatsContext"
 import { LogSummaryTable } from "./logSummaryTable/logSummaryTable"
-import { SummaryTableContextProvider } from "./logSummaryTable/summaryTableContext"
+import {
+    SummaryTableContextProvider,
+    useSummaryTableContext,
+} from "./logSummaryTable/summaryTableContext"
 import { SummaryDbProvider } from "./summaryDbContext"
 
 export const HvLog: RootComponent = ({
@@ -34,7 +35,9 @@ export const HvLog: RootComponent = ({
                         <SummaryDbProvider>
                             <LogStatsProvider>
                                 <Sidebar>
-                                    <HvLogInner />
+                                    <SummaryTableContextProvider>
+                                        <HvLogInner />
+                                    </SummaryTableContextProvider>
                                 </Sidebar>
                             </LogStatsProvider>
                         </SummaryDbProvider>
@@ -46,55 +49,38 @@ export const HvLog: RootComponent = ({
 }
 
 function HvLogInner() {
-    const selectionOverride = readUrl().params.get("id")
-
-    const [selectedLogId, setSelectedLogId] = useLocalJsonState(
-        "",
-        "hvlog_selected_log",
-        selectionOverride ?? undefined
-    )
+    const { selectedLogId } = useSummaryTableContext()
 
     const { useLogFetch, isFetching } = useLogContext()
-
     const fetcher = useLogFetch([selectedLogId])
 
-    const onClick = useCallback(
-        (id: LogId) => setSelectedLogId(id),
-        [setSelectedLogId]
-    )
-
     return (
-        <SummaryTableContextProvider>
-            <ResizablePanelGroup
-                direction="horizontal"
-                autoSaveId="hvlog_detail_split"
-            >
-                <ResizablePanel className="overflow-auto!">
-                    <div
-                        className="flex flex-col items-center w-full h-full"
-                        style={{ containerType: "inline-size" }}
-                    >
-                        <LogSummaryTable
-                            onClick={onClick}
-                            selectionId={selectedLogId}
-                        />
+        <ResizablePanelGroup
+            direction="horizontal"
+            autoSaveId="hvlog_detail_split"
+        >
+            <ResizablePanel className="overflow-auto!">
+                <div
+                    className="flex flex-col items-center w-full h-full"
+                    style={{ containerType: "inline-size" }}
+                >
+                    <LogSummaryTable />
+                </div>
+            </ResizablePanel>
+
+            <ResizableHandle withHandle />
+
+            <ResizablePanel className="flex justify-center">
+                {fetcher.logs[0] ? (
+                    <LogDetailsPane log={fetcher.logs[0]} />
+                ) : (
+                    <div className="py-8">
+                        {isFetching(selectedLogId)
+                            ? "Loading..."
+                            : "Select a log!"}
                     </div>
-                </ResizablePanel>
-
-                <ResizableHandle withHandle />
-
-                <ResizablePanel className="flex justify-center">
-                    {fetcher.logs[0] ? (
-                        <LogDetailsPane log={fetcher.logs[0]} />
-                    ) : (
-                        <div className="py-8">
-                            {isFetching(selectedLogId)
-                                ? "Loading..."
-                                : "Select a log!"}
-                        </div>
-                    )}
-                </ResizablePanel>
-            </ResizablePanelGroup>
-        </SummaryTableContextProvider>
+                )}
+            </ResizablePanel>
+        </ResizablePanelGroup>
     )
 }
