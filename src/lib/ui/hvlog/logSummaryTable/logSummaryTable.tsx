@@ -51,10 +51,6 @@ export function LogSummaryTable(props: {
         allViews,
     } = useSummaryTableContext()
 
-    if (!ids.length) {
-        return <span>No battles found!</span>
-    }
-
     return (
         <div className="log-table-container overflow-auto w-full pb-0! flex flex-col">
             <ViewPicker
