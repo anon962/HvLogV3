@@ -472,7 +472,7 @@ function useTableItems() {
             }
         }
 
-        items = alphabetical(items, (it) => it.start)
+        items = alphabetical(items, (it) => it.start, "desc")
 
         return items
     }, [stats, logIds])
