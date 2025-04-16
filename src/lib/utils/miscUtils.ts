@@ -65,9 +65,10 @@ export async function sleepUntil(opts: SleepUntilOpts) {
 }
 
 export function uuidWithFallback() {
-    let randomUUID = window.crypto.randomUUID as () => string
-
-    if (randomUUID === undefined) {
+    let randomUUID
+    if (window?.crypto?.randomUUID !== undefined) {
+        randomUUID = () => window.crypto.randomUUID()
+    } else {
         const now = new Date().toISOString()
         const n = Math.random().toString()
         randomUUID = () => `${now}_${n}`
