@@ -22,7 +22,7 @@ export default defineConfig((config) => {
                         "http://alt.hentaiverse.org/*",
                     ],
                     grant: ["unsafeWindow", "GM_addStyle"],
-                    version: "2.3",
+                    version: "2.4",
                     updateURL:
                         "https://github.com/anon962/HvLogV3/releases/download/latest/hvlog.user.js",
                     downloadURL:
