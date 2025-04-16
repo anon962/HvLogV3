@@ -13,7 +13,7 @@ export interface SummaryView {
     }>
 }
 
-export const DEFAULT_VIEWS: SummaryView[] = [
+export const DEFAULT_SUMMARY_VIEWS: SummaryView[] = [
     {
         id: "default",
         label: "Default",

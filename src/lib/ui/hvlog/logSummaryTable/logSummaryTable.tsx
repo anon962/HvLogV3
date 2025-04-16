@@ -7,11 +7,9 @@ import {
     TableHeader,
     TableRow,
 } from "@/lib/ui/shadcn/table"
-import { indexes } from "@/lib/utils/miscUtils"
 import { cn } from "@/lib/utils/shadcnUtils"
-import { readUrl } from "@/lib/utils/userscriptUtils"
-import { mapEntries, range } from "radash"
-import React, { ReactNode, useEffect, useMemo, useState } from "react"
+import { range } from "radash"
+import React, { ReactNode, useEffect, useState } from "react"
 import {
     ArrowLongDownIcon,
     ArrowLongUpIcon,
@@ -32,101 +30,35 @@ import {
     SelectTrigger,
     SelectValue,
 } from "../../shadcn/select"
-import { useLocalJsonState } from "../hooks"
 import { useLogContext } from "../logContext"
-import { useStatsMaybe } from "../logStatsContext"
-import { ARENA_ALIASES, LogSummaryColumn, S_COLS } from "./cols"
-import {
-    DEFAULT_VIEWS as DEFAULT_SUMMARY_VIEWS,
-    SummaryView,
-} from "./views"
-
-// @todo: less hacky way of reading id override from url
+import { LogSummaryColumn, S_COLS } from "./cols"
+import { useSummaryTableContext } from "./summaryTableContext"
+import { SummaryView } from "./views"
 
 export function LogSummaryTable(props: {
     onClick?: (logId: LogId) => void
     selectionId: LogId
-    logIds: LogId[]
 }) {
-    const idOverride = readUrl().params.get("id")
+    const {
+        ids,
+        pageSize,
+        setActiveViewId,
+        pageIndex,
+        setPageIndex,
+        activeViewId,
+        allViews,
+    } = useSummaryTableContext()
 
-    const [activeViewId, setActiveViewId] = useLocalJsonState(
-        DEFAULT_SUMMARY_VIEWS[0].id,
-        "hvlog_summary_view",
-        idOverride ? DEFAULT_SUMMARY_VIEWS[0].id : undefined
-    )
+    // useEffect(() => {
+    //     const idx = filteredIds.findIndex((id) => id === idOverride)
+    //     if (idx > -1) {
+    //         setPageIndex(Math.floor(idx / pageSize))
+    //     }
+    // }, [filteredIds])
 
-    let allViews = DEFAULT_SUMMARY_VIEWS
-    const { isIsekai } = readUrl()
-    if (!isIsekai) {
-        allViews = allViews.filter((v) => v.id !== "tower")
+    if (!ids.length) {
+        return <span>No battles found!</span>
     }
-
-    const view =
-        allViews.find((v) => v.id === activeViewId) ?? allViews[0]
-
-    const viewFilterMap = new Map(
-        view.filters.map((f) => [f.type, f])
-    )
-
-    const { stats } = useStatsMaybe(props.logIds, { summary: true })
-    const filteredIds = useMemo(() => {
-        if (!view.filters.length) {
-            return props.logIds
-        }
-
-        return stats.flatMap((s) => {
-            const { summary } = s ?? {}
-            if (!summary) {
-                return []
-            }
-
-            const id = summary.id
-
-            let filter
-            switch (summary.battleType?.name) {
-                case "Arena":
-                    const isRob =
-                        !!ARENA_ALIASES[
-                            summary.battleType.id
-                        ]?.startsWith("RoB")
-                    filter = viewFilterMap.get(
-                        isRob ? "rob" : "arena"
-                    )
-                    return filter ? [id] : []
-                case "Grindfest":
-                    filter = viewFilterMap.get("gf")
-                    return filter ? [id] : []
-                case "Item World":
-                    filter = viewFilterMap.get("iw")
-                    return filter ? [id] : []
-                case "Tower":
-                    filter = viewFilterMap.get("tower")
-                    return filter ? [id] : []
-                case "random encounter":
-                    filter = viewFilterMap.get("arena")
-                    return filter ? [id] : []
-            }
-
-            return []
-        })
-    }, [stats, view, props.logIds])
-
-    const pageSize = 200
-    const [pageIndex, setPageIndex] = useState(0)
-
-    useEffect(() => {
-        const idx = filteredIds.findIndex((id) => id === idOverride)
-        if (idx > -1) {
-            setPageIndex(Math.floor(idx / pageSize))
-        }
-    }, [filteredIds])
-
-    const pageIds = useMemo(() => {
-        const start = pageIndex * pageSize
-        const end = (pageIndex + 1) * pageSize
-        return filteredIds.slice(start, end)
-    }, [filteredIds, pageIndex])
 
     return (
         <div className="log-table-container overflow-auto w-full pb-0! flex flex-col">
@@ -144,15 +76,13 @@ export function LogSummaryTable(props: {
             <SummaryTable
                 onClick={props.onClick}
                 selectionId={props.selectionId}
-                logIds={pageIds}
-                view={view}
             />
 
             <hr className="border" />
 
             <Paginator
                 onSelect={(idx) => setPageIndex(idx)}
-                total={filteredIds.length}
+                total={ids.length}
                 pageSize={pageSize}
                 current={pageIndex}
             />
@@ -163,20 +93,19 @@ export function LogSummaryTable(props: {
 const SummaryTable = ({
     onClick,
     selectionId,
-    logIds,
-    view,
 }: {
     onClick?: (logId: LogId) => void
     selectionId: LogId
-    logIds: LogId[]
-    view: SummaryView
 }) => {
-    const [sortCriteria, setSortCriteria] = useState({
-        id: view.defaultSort.id,
-        order: view.defaultSort.order as "asc" | "desc" | null,
-    })
+    const {
+        idsPaginated,
+        dataPaginated,
+        sortCriteria,
+        setSortCriteria,
+        activeView,
+    } = useSummaryTableContext()
 
-    const headerRow = view.colIds.map((cid) => {
+    const headerRow = activeView.colIds.map((cid) => {
         const col = S_COLS[cid]
 
         let icon = null as ReactNode
@@ -237,52 +166,20 @@ const SummaryTable = ({
         )
     })
 
-    const colData = mapEntries(S_COLS, (cid, col) => {
-        const isEnabled = !!view.colIds.find((id) => id === cid)
-        const d = col.preprocess(isEnabled ? logIds : [])
-        return [cid, d]
-    })
+    const cols = activeView.colIds.map((cid) => S_COLS[cid])
 
-    // Sort by user choice
-    // Otherwise select default (by date or first column)
-    const sortedIndexes = useMemo(() => {
-        let result = indexes(logIds)
+    const bodyRows = idsPaginated.map((id, idx) => {
+        const nextId = idsPaginated[idx + 1]
 
-        const col = S_COLS[sortCriteria.id]
-        const crit =
-            sortCriteria.order !== null
-                ? sortCriteria
-                : view.defaultSort
-
-        if (col?.sort) {
-            const sortData = colData[crit.id]
-            result = col?.sort(sortData)
-
-            if (crit.order === "desc") {
-                result.reverse()
-            }
-        }
-
-        return result
-    }, [sortCriteria, logIds])
-
-    const cols = view.colIds.map((cid) => S_COLS[cid])
-
-    const bodyRows = sortedIndexes.map((sortIdx, idx) => {
-        const currentId = logIds[sortIdx]
-
-        const nextSortIdx = sortedIndexes[idx + 1]
-        const nextId = logIds[nextSortIdx]
-
-        const isSelected = currentId === selectionId
+        const isSelected = id === selectionId
         const isNextSelected = nextId === selectionId
 
-        const values = view.colIds.map((cid) => colData[cid][sortIdx])
+        const values = dataPaginated[idx]
 
         return (
             <LogRow
-                key={currentId}
-                logId={currentId}
+                key={id}
+                logId={id}
                 isSelected={isSelected}
                 isNextSelected={isNextSelected}
                 onClick={onClick}
@@ -293,9 +190,7 @@ const SummaryTable = ({
     })
 
     const headerSelected =
-        selectionId === logIds[sortedIndexes[0]]
-            ? "selected-next"
-            : ""
+        selectionId === idsPaginated[0] ? "selected-next" : ""
 
     return (
         <Table className="log-table w-auto min-h-0 mb-8 mx-auto">
