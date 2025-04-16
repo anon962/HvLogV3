@@ -151,25 +151,37 @@ export class LogDb {
         }
 
         // Insert
-        await this.db.add(COMPLETE_STORE, log)
+        const txn = this.db.transaction(
+            [
+                COMPLETE_STORE,
+                LIVE_STORE,
+                LIVE_META_STORE,
+                LIVE_HASH_STORE,
+            ],
+            "readwrite"
+        )
+        await txn.objectStore(COMPLETE_STORE).add(log)
         console.debug(log)
 
         // Clear
-        await this.clearLiveLog(defaults)
+        await this.clearLiveLog(defaults, txn)
 
         // Done
         return log
     }
 
-    async clearLiveLog(
-        defaults?: Partial<{ hash: LogHash }>
+    async clearLiveLog<T>(
+        defaults?: Partial<{ hash: LogHash }>,
+        txn?: idb.IDBPTransaction<LogDbSchema, any, "readwrite">
     ): Promise<void> {
         console.debug("Clearing log")
 
-        const txn = this.db.transaction(
-            [LIVE_STORE, LIVE_META_STORE, LIVE_HASH_STORE],
-            "readwrite"
-        )
+        txn =
+            txn ??
+            this.db.transaction(
+                [LIVE_STORE, LIVE_META_STORE, LIVE_HASH_STORE],
+                "readwrite"
+            )
 
         // Live
         await txn.objectStore("live").clear()
