@@ -387,6 +387,15 @@ export const PARSERS = {
             monster: t("string"),
         }
     ),
+    EXPLOSION: new EventParser(
+        "EXPLOSION",
+        `${Words('explosion')} explodes for ${Num('value')} ${Word("type")} damage`,
+        {
+            explosion: t('string'),
+            value: t("number"),
+            type: t("string"),
+        }
+    ),
 
     // Info
     ROUND_START: new EventParser(

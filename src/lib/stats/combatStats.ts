@@ -308,12 +308,17 @@ export function summarizeCombatUsage(
         // Passive attacks (eg spike shield, DoTs)
         if (
             ev.event_type === "PLAYER_ATTACK" ||
-            ev.event_type === "PLAYER_SPIKE_SHIELD"
+            ev.event_type === "PLAYER_SPIKE_SHIELD" ||
+            ev.event_type === "EXPLOSION"
         ) {
-            const key =
-                ev.event_type === "PLAYER_ATTACK"
-                    ? `${ev.spell} (passive)`
-                    : "Spike Shield"
+            let key
+            if (ev.event_type === "PLAYER_ATTACK") {
+                key = `${ev.spell} (passive)`
+            } else if (ev.event_type === "EXPLOSION") {
+                key = `${ev.explosion} (explosion)`
+            } else {
+                key = "Spike Shield"
+            }
             passiveAttackKeys.add(key)
 
             let kill = false

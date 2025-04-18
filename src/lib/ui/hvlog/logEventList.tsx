@@ -359,6 +359,8 @@ const EVENT_SUMMARY_MAP = {
     ENEMY_SKILL_MISS_2: (ev) => ``,
     ENEMY_SKILL_SUCCESS: (ev) => ``,
     ENCHANT_GAIN: (ev) => `Gained enchant ${ev.value}`,
+    EXPLOSION: (ev) =>
+        `Dealt ${ev.value} ${ev.type} damage (${ev.explosion} explosion)`,
     EVENT_ITEM: (ev) => `Dropped ${ev.item}`,
     EXPERIENCE: (ev) => `Dropped ${ev.value} exp`,
     FLEE: (ev) => ``,
