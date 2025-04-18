@@ -7,7 +7,7 @@ export function parseLine(
 ): Result<ValueOf<HvEventMap>, string[]> {
     const errors: string[] = []
 
-    for (const parser of ALL_PARSERS) {
+    for (const parser of parsers) {
         const [result, err] = parser.parse(line)
         if (result !== null) {
             // console.debug(line, result)
@@ -501,7 +501,7 @@ export const PARSERS = {
     ),
     AUTO_SALVAGE: new EventParser(
         "AUTO_SALVAGE",
-        `A traveling salesmoogle salvages it into ${Num("value")}x \\[${Words("item")}\\](?: and ${Num("value2")}x \\[${Words("item2")}\\])`,
+        `A traveling salesmoogle salvages it into ${Num("value")}x \\[${Words("item")}\\](?: and ${Num("value2")}x \\[${Words("item2")}\\])?`,
         {
             value: t("number"),
             item: t("string"),

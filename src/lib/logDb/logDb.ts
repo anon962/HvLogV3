@@ -20,7 +20,7 @@ const LIVE_HASH_STORE = "live_hash"
 const STORAGE_KEY_PERSISTENT = "HvLog"
 const STORAGE_KEY_ISEKAI = "HvLog_isekai"
 
-const LOG_DB_VERSION = 2
+const LOG_DB_VERSION = 3
 
 export class LogDb {
     constructor(public db: idb.IDBPDatabase<LogDbSchema>) {}

@@ -18,7 +18,7 @@ describe("migrating logs from v1 to v2", () => {
         },
     ] as const
 
-    it("should work", () => {
+    it("should work", async () => {
         const oldLog: v1.CompleteLog = {
             id: "",
             meta: {
@@ -38,7 +38,7 @@ describe("migrating logs from v1 to v2", () => {
             ],
         }
 
-        const newLog = migrateCompleteLogs([oldLog], 1)
+        const newLog = await migrateCompleteLogs([oldLog], 1)
         expect(newLog).toEqual([
             {
                 ...oldLog,

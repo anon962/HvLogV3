@@ -205,8 +205,8 @@ function useImporter() {
             }))
 
             while (version !== persistentDb.db.version) {
-                pl = migrateCompleteLogs(pl, version)
-                il = migrateCompleteLogs(il, version)
+                pl = await migrateCompleteLogs(pl, version)
+                il = await migrateCompleteLogs(il, version)
                 version += 1
             }
 

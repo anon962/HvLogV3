@@ -1,7 +1,7 @@
 import * as idb from "idb"
 import * as latest from "./logDb"
 import { migrateCompleteLogs } from "./migrateLogs"
-import { v1 } from "./oldVersions"
+import { v1, v2 } from "./oldVersions"
 
 type Db<T = any> = idb.IDBPDatabase<T>
 type Txn<
@@ -15,7 +15,8 @@ type Txn<
 
 export function migrateSchema(db: Db, oldVersion: number) {
     while (oldVersion !== db.version) {
-        if (oldVersion === 1) {
+        if (oldVersion === 2) {
+        } else if (oldVersion === 1) {
             s_1_2(db)
         } else {
             throw new Error(
@@ -26,7 +27,11 @@ export function migrateSchema(db: Db, oldVersion: number) {
         console.log("Scheduling migration", oldVersion, [
             ...db.objectStoreNames,
         ])
-        db.deleteObjectStore(migrationKey(oldVersion)) // ???
+
+        if (db.objectStoreNames.contains(migrationKey(oldVersion))) {
+            db.deleteObjectStore(migrationKey(oldVersion)) // ???
+        }
+
         db.createObjectStore(migrationKey(oldVersion))
         oldVersion += 1
     }
@@ -51,17 +56,30 @@ export async function migrateData(db: Db, txn: Txn) {
             console.debug(`Migrating data from version ${oldVersion}`)
 
             switch (oldVersion) {
-                case 1:
-                    const oldTxn = txn as Txn<v1.LogDbSchema>
+                case 2: {
+                    const oldTxn = txn as Txn<v2.LogDbSchema>
                     const newTxn = txn as Txn<latest.LogDbSchema>
                     putAll(
                         newTxn.objectStore("complete"),
-                        migrateCompleteLogs(
+                        await migrateCompleteLogs(
                             await iterStore(oldTxn, "complete"),
                             oldVersion
                         )
                     )
                     break
+                }
+                case 1: {
+                    const oldTxn = txn as Txn<v1.LogDbSchema>
+                    const newTxn = txn as Txn<v2.LogDbSchema>
+                    putAll(
+                        newTxn.objectStore("complete"),
+                        await migrateCompleteLogs(
+                            await iterStore(oldTxn, "complete"),
+                            oldVersion
+                        )
+                    )
+                    break
+                }
                 default:
                     throw new Error(
                         `Failed to migrate data from version ${oldVersion}`

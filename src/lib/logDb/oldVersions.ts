@@ -1,7 +1,9 @@
 import * as idb from "idb"
+import { decompressGzip } from "../utils/miscUtils"
 import { Result, ValueOf } from "../utils/typeUtils"
 
 // @todo: make generation of this automatic
+
 export namespace v1 {
     export interface CompleteLog {
         id: LogId
@@ -220,18 +222,20 @@ export namespace v1 {
         detail: string
     }
 
-    const Group = (name: string, patt: string) =>
+    export const Group = (name: string, patt: string) =>
         `(?<${name}>${patt})`
-    const Float = (name: string) => Group(name, "\\d+(?:\\.\\d*)?")
-    const Mult = (...args: string[]) =>
+    export const Float = (name: string) =>
+        Group(name, "\\d+(?:\\.\\d*)?")
+    export const Mult = (...args: string[]) =>
         Group("multiplier_type", args.join("|"))
-    const Num = (name: string) => Group(name, "\\d+?")
-    const Word = (name: string) => Group(name, "[\\w\\s\\-]+")
-    const Words = (name: string) => Group(name, "[\\w\\s\\- ]+")
-    const Monster = () => Group("monster", "[\\w\\s\\-+]+") // "New Game +" is a valid monster name
+    export const Num = (name: string) => Group(name, "\\d+?")
+    export const Word = (name: string) => Group(name, "[\\w\\s\\-]+")
+    export const Words = (name: string) =>
+        Group(name, "[\\w\\s\\- ]+")
+    export const Monster = () => Group("monster", "[\\w\\s\\-+]+") // "New Game +" is a valid monster name
 
-    const Resist = "(?: \\((?<resist>\\d+)% resisted\\))?"
-    const EnemySpell = `${Monster()} ${Group(
+    export const Resist = "(?: \\((?<resist>\\d+)% resisted\\))?"
+    export const EnemySpell = `${Monster()} ${Group(
         "spell_verb",
         "casts|uses"
     )} ${Words("spell")}`
@@ -656,4 +660,97 @@ export namespace v1 {
             }
         ),
     } as const
+}
+
+export namespace v2 {
+    export const { t, EventParser, Num, Words, Group } = v1
+
+    export function parseLine(
+        line: string,
+        parsers = Object.values(PARSERS)
+    ): Result<ValueOf<HvEventMap>, string[]> {
+        const errors: string[] = []
+
+        for (const parser of parsers) {
+            const [result, err] = parser.parse(line)
+            if (result !== null) {
+                // console.debug(line, result)
+                return [result, null]
+            } else if (err) {
+                errors.push(err.detail)
+            }
+        }
+
+        return [null, errors]
+    }
+
+    export type LogDbSchema = v1.LogDbSchema
+    export type HvEvent = v1.HvEvent
+
+    export const PARSERS = {
+        ...v1.PARSERS,
+        POTENCY_GAIN: new EventParser(
+            "POTENCY_GAIN",
+            `The equipment's potential has increased by ${Num(
+                "value"
+            )} points!`,
+            {
+                value: t("number"),
+            }
+        ),
+        ENCHANT_GAIN: new EventParser(
+            "ENCHANT_GAIN",
+            `Unlocked innate potential: ${Words("value")}`,
+            {
+                value: t("string"),
+            }
+        ),
+        DROP_EVENT: new EventParser(
+            "DROP_EVENT",
+            `You found \\[${Group("item", ".*")}\\]`,
+            {
+                item: t("string"),
+            }
+        ),
+    }
+
+    type _P = typeof PARSERS
+    export type HvEventMap = {
+        [K in keyof _P]: v1.BaseHvEvent<
+            _P[K]["schema"],
+            _P[K]["name"]
+        >
+    }
+
+    export async function decompressLog(
+        log: CompressedLog
+    ): Promise<CompleteLog> {
+        const entries = JSON.parse(
+            await decompressGzip([log.entries])
+        )
+        return {
+            ...log,
+            compressed: false,
+            entries,
+        }
+    }
+
+    export type LogId = v1.LogId
+    export type LogMeta = v1.LogMeta
+    export type LogEntry<TEvent extends HvEvent = HvEvent> =
+        | { type: "event"; event: TEvent }
+        | { type: "error"; detail: string }
+    export interface CompleteLog {
+        id: LogId
+        meta: LogMeta
+        compressed: false
+        entries: LogEntry[]
+    }
+
+    export interface CompressedLog {
+        id: LogId
+        meta: LogMeta
+        compressed: true
+        entries: Uint8Array
+    }
 }
