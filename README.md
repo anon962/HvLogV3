@@ -27,6 +27,11 @@ npm run dev
 
 # Prod build
 npm run build
+
+# (optional) Automatically upload builds from disk to userscript extension
+# Afterwards, open http://localhost:5648/hvlog.user.js in the browser
+# and ViolentMonkey / Tampermonkey should show some prompt for syncing changes
+npm run serve
 ```
 
 ## Boring stuff
