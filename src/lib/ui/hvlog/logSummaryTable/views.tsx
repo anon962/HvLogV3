@@ -24,6 +24,7 @@ export const DEFAULT_SUMMARY_VIEWS: SummaryView[] = [
             "profit",
             "date",
             "status",
+            "kills",
         ],
         defaultSort: {
             id: "date",
@@ -41,6 +42,7 @@ export const DEFAULT_SUMMARY_VIEWS: SummaryView[] = [
             "profit",
             "date",
             "status",
+            "kills",
         ],
         defaultSort: {
             id: "date",
@@ -58,6 +60,7 @@ export const DEFAULT_SUMMARY_VIEWS: SummaryView[] = [
             "profit",
             "date",
             "status",
+            "kills",
         ],
         defaultSort: {
             id: "date",
@@ -75,6 +78,7 @@ export const DEFAULT_SUMMARY_VIEWS: SummaryView[] = [
             "profit",
             "date",
             "status",
+            "kills",
         ],
         defaultSort: {
             id: "date",
@@ -93,6 +97,7 @@ export const DEFAULT_SUMMARY_VIEWS: SummaryView[] = [
             "enchants",
             "date",
             "status",
+            "kills",
         ],
         defaultSort: {
             id: "date",
@@ -110,6 +115,7 @@ export const DEFAULT_SUMMARY_VIEWS: SummaryView[] = [
             "profit",
             "date",
             "status",
+            "kills",
         ],
         defaultSort: {
             id: "date",
@@ -127,6 +133,7 @@ export const DEFAULT_SUMMARY_VIEWS: SummaryView[] = [
             "profit",
             "date",
             "status",
+            "kills",
         ],
         defaultSort: {
             id: "date",
@@ -144,6 +151,7 @@ export const DEFAULT_SUMMARY_VIEWS: SummaryView[] = [
             "profit",
             "date",
             "status",
+            "kills",
         ],
         defaultSort: {
             id: "date",

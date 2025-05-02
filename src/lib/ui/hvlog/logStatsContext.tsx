@@ -80,6 +80,11 @@ function initContext(summaryDb: SummaryDb) {
         { key: "hvlog_stats_finances", hash: priceHash }
     )
 
+    const kills = useCache(
+        (log) => filterEvents(log, ["MONSTER_DEATH"]).length,
+        { key: "hvlog_stats_kills" }
+    )
+
     const equipDrops = useCache(
         (log) => {
             const equips = filterEvents(log, [
@@ -128,6 +133,8 @@ function initContext(summaryDb: SummaryDb) {
         getCombatUsageMaybe: maybeGetter(combatUsage),
         getFinances: money.get,
         getFinancesMaybe: maybeGetter(money),
+        getKills: kills.get,
+        getKillsMaybe: maybeGetter(kills),
     }
 }
 
@@ -197,6 +204,7 @@ export interface UseStatsOptions {
     itemUsage?: boolean
     combatUsage?: boolean
     finances?: boolean
+    kills?: boolean
 }
 
 // prettier-ignore
@@ -257,6 +265,8 @@ export type UseStatsMaybeReturn<Opts extends UseStatsOptions> = {
             CombatSummary | null : undefined :
         K extends 'finances' ? Opts[K] extends true ?
             FinanceSummary | null : undefined :
+        K extends 'kills' ? Opts[K] extends true ?
+            number | null : undefined :
         never
 }
 
@@ -303,6 +313,10 @@ export function useStatsMaybe<T extends UseStatsOptions>(
             d.finances = ctx.getFinancesMaybe(id)
             if (!d.finances) needsFetch = true
         }
+        if (opts.kills) {
+            d.kills = ctx.getKillsMaybe(id)
+            if (!d.kills) needsFetch = true
+        }
 
         if (needsFetch) {
             toFetch.push(id)
@@ -342,6 +356,7 @@ export function useStatsMaybe<T extends UseStatsOptions>(
             finances: opts.finances
                 ? ctx.getFinances(log)
                 : undefined,
+            kills: opts.kills ? ctx.getKills(log) : undefined,
         } as UseStatsReturn<T>
     }
 

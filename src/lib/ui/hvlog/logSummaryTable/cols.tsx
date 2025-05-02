@@ -108,6 +108,17 @@ const COLS = [
     } satisfies LogSummaryColumn<
         ReturnType<typeof formatEnchants>[number]
     >,
+    {
+        id: "kills",
+        header: { content: "Kills" },
+        align: "text-right",
+        preprocess: (ids) => formatKills(ids),
+        cell: ({ value }) => value.cell,
+        sort: (values) =>
+            sort(indexes(values), (idx) => values[idx].sortValue),
+    } satisfies LogSummaryColumn<
+        ReturnType<typeof formatKills>[number]
+    >,
 ]
 
 export const S_COLS = Object.fromEntries(
@@ -522,6 +533,7 @@ function formatEnchants(ids: LogId[]) {
         }
     })
 }
+
 function useSummaryMaybe(ids: LogId[]) {
     const { stats } = useStatsMaybe(ids, {
         summary: true,
@@ -545,6 +557,33 @@ function useSummaryMaybe(ids: LogId[]) {
         if (log) {
             result[idx] = getSummary(log)
         }
+    }
+
+    return result
+}
+
+function formatKills(ids: LogId[]) {
+    const { stats } = useStatsMaybe(ids, { kills: true })
+
+    const result = []
+    for (const s of stats) {
+        let className = ""
+        let content = ""
+        let sortValue = 0
+
+        const { kills } = s ?? {}
+        if (kills !== null) {
+            content = `${kills}`
+        }
+
+        result.push({
+            cell: {
+                content,
+                className,
+            },
+            sortValue,
+        })
+        continue
     }
 
     return result

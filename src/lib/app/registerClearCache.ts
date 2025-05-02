@@ -17,6 +17,7 @@ export function registerClearCache(app: App) {
                 "hvlog_summary_view",
                 "hvlog_equip_log_filter",
                 "hvlog_stats_drops",
+                "hvlog_stats_kills",
             ]
 
             for (const key of localStorageKeys) {
