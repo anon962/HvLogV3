@@ -47,9 +47,18 @@ export const HvLog: RootComponent = ({}) => {
             [
                 [
                     "logs/*",
-                    (parts: string[]) => <LogDetailsRoute id={parts[1]} />,
+                    (parts: string[], url: URL) => (
+                        <LogDetailsRoute id={parts[1]} />
+                    ),
                 ],
-                ["logs", () => <LogListRoute />],
+                [
+                    "logs",
+                    (parts: string[], url: URL) => {
+                        const id_user = url.searchParams.get("id_user")
+                        const key_user = url.searchParams.get("key_user")
+                        return <LogList id_user={id_user} key_user={key_user} />
+                    },
+                ],
             ] as const
         ).map((kv) => [kv[0].split("/"), kv[1]] as const),
     })
@@ -60,14 +69,6 @@ export const HvLog: RootComponent = ({}) => {
                 <Router routes={routes} />
             </LOG_SOURCE.Provider>
         </StrictMode>
-    )
-}
-
-function LogListRoute() {
-    return (
-        <>
-            <LogList />
-        </>
     )
 }
 

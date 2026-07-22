@@ -7,7 +7,10 @@ import { CheckIcon } from "../icons/tailwind"
 import { ListTable } from "../listTable"
 import { cn } from "myutils"
 
-export function LogList() {
+export function LogList(props: {
+    id_user: string | null
+    key_user: string | null
+}) {
     const logSource = LOG_SOURCE.useContext()
     const fetcher = useAsync(
         async (req) => {
@@ -16,10 +19,17 @@ export function LogList() {
             const resp = await logSource.fetchSearch({
                 page: req.pageIdx,
                 pageSize: req.pageSize,
+                idUser: req.id_user,
+                keyUser: req.key_user,
             })
             return resp
         },
-        { pageIdx: 0, pageSize: 15 },
+        {
+            pageIdx: 0,
+            pageSize: 15,
+            id_user: props.id_user,
+            key_user: props.key_user,
+        },
     )
 
     return (
@@ -40,6 +50,8 @@ export function LogList() {
                 fetcher.setRequest({
                     pageIdx: idx,
                     pageSize: fetcher.request.pageSize,
+                    id_user: props.id_user,
+                    key_user: props.key_user,
                 })
             }}
             setPageSize={{
@@ -48,6 +60,8 @@ export function LogList() {
                     fetcher.setRequest({
                         pageIdx: 0,
                         pageSize: pageSize,
+                        id_user: props.id_user,
+                        key_user: props.key_user,
                     })
                 },
             }}

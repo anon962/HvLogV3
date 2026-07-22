@@ -34,13 +34,13 @@ export async function mountReact<T extends React.JSXElementConstructor<any>>(
 }
 
 export function readUrl(override?: string) {
+    const url = new URL(window.location.href)
+
     const parts = (override ?? window.location.pathname)
         .split("/")
         .map((part) => part.trim())
         .filter((part) => !!part.length)
         .map((part) => part.toLowerCase())
-
-    const url = new URL(window.location.href)
 
     return {
         parts,

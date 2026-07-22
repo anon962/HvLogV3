@@ -3,17 +3,21 @@ import { CustomMap, range } from "myutils"
 import { ReactNode, useEffect, useState } from "react"
 
 export function Router(props: {
-    routes: CustomMap<string[], (parts: string[]) => ReactNode, string>
+    routes: CustomMap<
+        string[],
+        (parts: string[], url: URL) => ReactNode,
+        string
+    >
     defaultRoute?: () => ReactNode
 }) {
-    let parts = useUrlParts()
+    let { parts, url } = useUrl()
 
     for (const [patt, factory] of props.routes.entries()) {
         if (!isRouteMatch(patt, parts)) {
             continue
         }
 
-        return factory(parts)
+        return factory(parts, url)
     }
 
     console.error("Invalid route", parts)
@@ -26,14 +30,14 @@ export function Router(props: {
 
 const URL_CHANGE_EVENT = "urlchange"
 const URL_CHANGE_FLAG = Symbol("URL_CHANGE_FLAG")
-function useUrlParts(): string[] {
-    const [parts, setParts] = useState<string[]>(readUrl().parts)
+function useUrl(): { parts: string[]; url: URL } {
+    const [data, setData] = useState(readUrl())
 
     useEffect(() => {
         patchUrlChange()
 
         const onUrlChange = () => {
-            setParts(readUrl().parts)
+            setData(readUrl())
         }
 
         window.addEventListener("popstate", onUrlChange)
@@ -47,7 +51,7 @@ function useUrlParts(): string[] {
         }
     }, [])
 
-    return parts
+    return data
 
     function patchUrlChange() {
         const w = window as any

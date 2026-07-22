@@ -23,6 +23,8 @@ export interface LogSearchRequest {
     startDate?: string | null
     endDate?: string | null
     errors?: Record<keyof MetaSummary["errors"], boolean | null> | null
+    idUser?: string | null
+    keyUser?: string | null
 
     sort?:
         | ({
