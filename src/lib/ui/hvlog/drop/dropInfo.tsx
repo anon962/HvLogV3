@@ -1,81 +1,72 @@
-import { CompleteLog } from "@/lib/logDb/logDb"
-import { DropSummary } from "@/lib/stats/dropStats"
-import { ItemUsageSummary } from "@/lib/stats/itemUsageStats"
-import { filterEvents } from "@/lib/stats/summaryStats"
-import { formatNumber, sortBy } from "@/lib/utils/miscUtils"
-import { alphabetical, max, range, sum } from "radash"
-import { ReactNode, useEffect, useRef, useState } from "react"
-import { useAppContext } from "../../appContext"
-import { useStats } from "../logStatsContext"
-import { TallyTable, TallyTableProps } from "../tallyTable"
+import { DetailsSummary } from "@/lib/summary"
+import { formatNumber } from "@/lib/utils/miscUtils"
+import { range, sort, sum, sortBy } from "myutils"
+import { useEffect, useRef, useState } from "react"
+import { TallyTable, TallyTableProps } from "../../tallyTable"
 import { IncomeChart } from "./incomeChart"
+import { DROP_CATEGORIES } from "@/lib/stats/dropStats"
+import { ITEM_USAGE_CATEGORIES } from "@/lib/stats/itemUsageStats"
 
-export function DropInfo(props: { log: CompleteLog }) {
-    const {
-        summary,
-        itemDrops: drops,
-        itemUsage: usage,
-    } = useStats(props.log, {
-        summary: true,
-        itemDrops: true,
-        itemUsage: true,
-    })
-
-    let staminaUsage = (summary.round?.end ?? 1) / 50
-    if (summary.battleType?.name === "Grindfest") {
+export function DropInfo({
+    prices,
+    stats,
+}: {
+    stats: DetailsSummary
+    prices: Record<string, number>
+}) {
+    let staminaUsage = (stats.meta.round?.end ?? 1) / 50
+    if (stats.meta.battleType?.category === "Grindfest") {
         staminaUsage += 1
     }
 
     return (
         <div className="drop-stats h-full overflow-auto flex flex-col">
             <div className="overview">
-                <CalculationPreview log={props.log} />
-                <EquipSummary log={props.log} />
+                <CalculationPreview stats={stats} />
+                <EquipSummary stats={stats} />
             </div>
 
             <hr className="my-12" />
 
             <div className="income-expense">
-                <IncomeSummaryTable drops={drops} />
+                <IncomeSummaryTable prices={prices} stats={stats} />
                 <UsageSummaryTable
-                    usage={usage}
+                    prices={prices}
                     staminaUsage={staminaUsage}
+                    stats={stats}
                 />
             </div>
 
             <hr className="my-12" />
 
-            <DropChart log={props.log} drops={drops} usage={usage} />
+            <DropChart prices={prices} stats={stats} />
         </div>
     )
 }
 
-function CalculationPreview({ log }: { log: CompleteLog }) {
-    const {
-        finances: { income, expenses, profit },
-    } = useStats(log, { finances: true })
+function CalculationPreview({ stats }: { stats: DetailsSummary }) {
+    const { profit, income, expenses } = stats.finances
 
     const profitClass = profit > 0 ? "text-green-300" : "text-red-300"
-    const profitStr =
-        (profit > 0 ? "+" : "") + formatNumber(profit) + "c"
+    const profitStr = (profit > 0 ? "+" : "") + formatNumber(profit) + "c"
 
     const incomeStr = "+" + formatNumber(income) + "c"
     const expenseStr = "-" + formatNumber(expenses) + "c"
-    const maxLength = max([
+    const maxLength = Math.max(
         profitStr.length,
         incomeStr.length,
         expenseStr.length,
-    ])
+    )
 
     const divider =
-        [...range(maxLength - 1)].map(() => "=").join("") +
-        "==========="
+        [...range(maxLength)].map(() => "=").join("") + "==========="
 
     return (
         <pre
             className="w-max px-2 grid gap-x-4 text-right"
             style={{
                 gridTemplateColumns: "max-content max-content",
+                gridTemplateRows: "repeat(4, max-content)",
             }}
         >
             <span className="">Income:</span>
@@ -98,41 +89,57 @@ type IncomeTable = TallyTableProps<
     { count: number; value: number; label: string }
 >
 
-function IncomeSummaryTable({ drops }: { drops: ItemUsageSummary }) {
-    const acc: Record<string, IncomeTable["rows"][number]> =
-        Object.fromEntries(
-            drops.groups.map((grp) => [
-                grp.label,
-                {
-                    label: grp.label,
-                    value: {
-                        count: 0,
-                        value: 0,
-                    },
-                    subValues: [],
-                },
-            ])
-        )
+function IncomeSummaryTable({
+    prices,
+    stats: { drops },
+}: {
+    prices: Record<string, number>
+    stats: DetailsSummary
+}) {
+    const excluded = new Set(["experience"])
 
-    const rowMap = Object.values(drops.data).reduce((acc, xs) => {
-        const count = sum(xs, (x) => x.count)
-        const value = sum(xs, (x) => x.value)
+    const rowMap = Object.values(drops).reduce(
+        (acc, x) => {
+            const count = sum(x.events.count)
+            const value = prices[x.priceKey] ?? 0
 
-        const group = drops.groups.find((grp) => grp.has(xs[0].key))
-        if (!group) {
+            const category = x.category ?? "Other"
+
+            if (!excluded.has(x.key)) {
+                acc[category].value.count += count
+                acc[category].value.value += count * value
+            }
+            acc[category].subValues!.push({
+                label: x.name,
+                count,
+                value,
+            })
+
             return acc
-        }
-
-        acc[group.label].value.count += count
-        acc[group.label].value.value += value
-        acc[group.label].subValues!.push({
-            label: xs[0].key,
-            count,
-            value,
-        })
-
-        return acc
-    }, acc)
+        },
+        Object.fromEntries(
+            Object.entries({ ...DROP_CATEGORIES, Other: "Other" }).map(
+                ([k, v]) => [
+                    k,
+                    {
+                        label: v,
+                        value: {
+                            count: 0,
+                            value: 0,
+                        },
+                        subValues: [] as Array<{
+                            label: string
+                            count: number
+                            value: number
+                        }>,
+                        disabled: true,
+                        selectable: true,
+                        excludeFromTotal: false,
+                    },
+                ],
+            ),
+        ),
+    )
 
     const columns: IncomeTable["columns"] = [
         { label: "Value", get: (x) => x.value },
@@ -179,56 +186,59 @@ type UsageTable = TallyTableProps<
 >
 
 function UsageSummaryTable({
-    usage,
     staminaUsage,
+    prices,
+    stats: { usage },
 }: {
-    usage: ItemUsageSummary
     staminaUsage: number
+    prices: Record<string, number>
+    stats: DetailsSummary
 }) {
-    const app = useAppContext()
+    const rowMap = Object.values(usage).reduce(
+        (acc, x) => {
+            const count = sum(x.events.count)
+            const value = prices[x.priceKey] ?? 0
 
-    const acc: Record<string, UsageTable["rows"][number]> =
-        Object.fromEntries(
-            usage.groups.map((grp) => [
-                grp.label,
-                {
-                    label: grp.label,
-                    value: {
-                        count: 0,
-                        value: 0,
-                    },
-                    subValues: [],
-                },
-            ])
-        )
+            const category = x.category ?? "Other"
 
-    const rowMap = Object.values(usage.data).reduce((acc, xs) => {
-        const count = sum(xs, (x) => x.count)
-        const value = sum(xs, (x) => x.value)
+            acc[category].value.count += count
+            acc[category].value.value += count * value
+            acc[category].subValues!.push({
+                label: x.name,
+                count,
+                value,
+            })
 
-        const group = usage.groups.find((grp) => grp.has(xs[0].key))
-        if (!group) {
             return acc
-        }
-
-        acc[group.label].value.count += count
-        acc[group.label].value.value += value
-        acc[group.label].subValues!.push({
-            label: xs[0].key,
-            count,
-            value,
-        })
-
-        return acc
-    }, acc)
+        },
+        Object.fromEntries(
+            Object.entries({ ...ITEM_USAGE_CATEGORIES, Other: "Other" }).map(
+                ([k, v]) => [
+                    k,
+                    {
+                        label: v,
+                        value: {
+                            count: 0,
+                            value: 0,
+                        },
+                        subValues: [] as Array<{
+                            label: string
+                            count: number
+                            value: number
+                        }>,
+                        disabled: true,
+                        selectable: true,
+                    },
+                ],
+            ),
+        ),
+    )
 
     rowMap["stamina"] = {
         label: "Stamina",
         value: {
             count: staminaUsage,
-            value:
-                (staminaUsage * app.config.prices["Energy Drink"]) /
-                10,
+            value: (staminaUsage * prices["Energy Drink"]) / 10,
         },
         subValues: [],
         selectable: false,
@@ -275,32 +285,27 @@ function UsageSummaryTable({
 }
 
 function DropChart({
-    log,
-    drops,
-    usage,
+    prices,
+    stats: { meta, drops, usage, indexMap },
 }: {
-    log: CompleteLog
-    drops: DropSummary
-    usage: ItemUsageSummary
+    prices: Record<string, number>
+    stats: DetailsSummary
 }) {
-    const app = useAppContext()
-
-    const { summary } = useStats(log, {
-        summary: true,
-    })
-
     const [el, setEl] = useState<Element | null>(null)
     useEffect(() => {
         setEl(
             new IncomeChart(
-                app.config.prices,
-                log,
+                prices,
                 drops,
                 usage,
-                summary.battleType?.name === "Grindfest"
-            ).render()
+                meta.battleType?.category === "Grindfest",
+                sort(Object.entries(meta.roundIndices), (x) =>
+                    parseInt(x[0]),
+                ).map((x) => ({ logIdx: x[1], roundIdx: parseInt(x[0]) })),
+                indexMap,
+            ).render(),
         )
-    }, [log])
+    }, [])
 
     const container = useRef<HTMLDivElement>(null)
 
@@ -315,41 +320,35 @@ function DropChart({
     return <div ref={container} className="w-full flex"></div>
 }
 
-function EquipSummary({ log }: { log: CompleteLog }) {
-    const app = useAppContext()
+function EquipSummary({ stats: { drops } }: { stats: DetailsSummary }) {
+    const patts = ["(?:magnificent|legendary|peerless)"].map(
+        (patt) => new RegExp(patt, "i"),
+    )
 
-    const [els, setEls] = useState<ReactNode[]>([])
-    useEffect(() => {
-        const patts = app.config.equipFilters.map(
-            (patt) => new RegExp(patt, "i")
-        )
-
-        const evs = alphabetical(
-            filterEvents(log, [
-                "DROP",
-                "DROP_EVENT",
-                "CLEAR_BONUS",
-            ]).filter((ev) =>
-                patts.some((patt) => ev.item.match(patt))
+    const equips = sort(
+        Object.values(drops)
+            .filter((x) => x.isEquip)
+            .map((eq) => eq.name)
+            .filter((name) => patts.some((patt) => patt.test(name))),
+        (name) =>
+            ["Magnificent", "Legendary", "Peerless"].findIndex((tier) =>
+                new RegExp(tier, "i").test(name),
             ),
-            (ev) => ev.item
-        )
+        true,
+    )
 
-        setEls(
-            evs.map((ev, idx) => (
-                <li key={idx} className="list-disc">
-                    {ev.item}
-                </li>
-            ))
-        )
-    }, [log.id])
+    const els = equips.map((name, idx) => (
+        <li key={idx} className="list-disc">
+            {name}
+        </li>
+    ))
 
     return (
         <div className="equips">
             <h1 className="font-bold">Notable Equips:</h1>
 
             <ul className="pl-6 font-mono">
-                {els.length ? (
+                {equips.length ? (
                     <>{...els}</>
                 ) : (
                     <li className="list-disc">(none)</li>

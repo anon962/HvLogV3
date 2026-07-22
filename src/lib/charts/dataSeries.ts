@@ -1,4 +1,4 @@
-import { range, sort, sum } from "radash"
+import { range, sort, sum } from "myutils"
 
 export class DataSeries<T = any> {
     data: T[] = []
@@ -7,7 +7,7 @@ export class DataSeries<T = any> {
 
     constructor(
         public getter: (d: T) => { x: number; y: number },
-        public transforms: Transform[] = []
+        public transforms: Transform[] = [],
     ) {}
 
     public push(...data: T[]): this {
@@ -15,8 +15,8 @@ export class DataSeries<T = any> {
         this.points.push(
             ...sort(
                 data.map((d) => this.getter(d)),
-                (pt) => pt.x
-            )
+                (pt) => pt.x,
+            ),
         )
         this.mappedPoints = this.transform(this.points)
         return this
@@ -48,9 +48,7 @@ export class DataSeries<T = any> {
                     result = this.transformBin(result, {
                         type: "bin",
                         keyFn: (pt) =>
-                            tfm.width
-                                ? Math.trunc(pt.x / tfm.width)
-                                : pt.x,
+                            tfm.width ? Math.trunc(pt.x / tfm.width) : pt.x,
                         aggFn: (key, pts) => ({
                             x: tfm.width ? key * tfm.width : key,
                             y:
@@ -73,7 +71,7 @@ export class DataSeries<T = any> {
                         {
                             last: { x: 0, y: 0 },
                             acc: [] as Point2[],
-                        }
+                        },
                     ).acc
                     break
                 case "map":
@@ -90,10 +88,7 @@ export class DataSeries<T = any> {
         return result
     }
 
-    private transformAverage(
-        pts: Point2[],
-        tfm: AverageTransform
-    ): Point2[] {
+    private transformAverage(pts: Point2[], tfm: AverageTransform): Point2[] {
         const update: Point2[] = []
 
         const keepEdges = tfm.keepEdges ?? true
@@ -103,9 +98,9 @@ export class DataSeries<T = any> {
         for (let idx = start; idx < end; idx++) {
             const center = pts[idx]
             const a = Math.max(idx - tfm.width, 0)
-            const b = Math.min(idx + tfm.width, pts.length - 1)
+            const b = Math.min(idx + tfm.width + 1, pts.length)
 
-            const items = [idx, ...range(a, b)].map((i) => pts[i].y)
+            const items = range(a, b).map((i) => pts[i].y)
             const y = sum(items) / items.length
 
             update.push({
@@ -119,7 +114,7 @@ export class DataSeries<T = any> {
 
     private transformDownsample(
         pts: Point2[],
-        tfm: DownsampleTransform
+        tfm: DownsampleTransform,
     ): Point2[] {
         const update: Point2[] = []
         if (!pts.length) {
@@ -148,7 +143,7 @@ export class DataSeries<T = any> {
 
     private transformBin<TKey extends string | number>(
         pts: Point2[],
-        tfm: BinTransform<TKey>
+        tfm: BinTransform<TKey>,
     ): Point2[] {
         const bins = new Map<TKey, Point2[]>()
 
@@ -175,35 +170,39 @@ export class DataSeries<T = any> {
         }
 
         // Bins to points
-        const update = [...bins.entries()].map(([key, pts]) =>
-            aggFn(key, pts)
-        )
+        const update = [...bins.entries()].map(([key, pts]) => aggFn(key, pts))
 
         return update
     }
 
     private transformFill(pts: Point2[], tfm: FillTransform) {
-        if (!pts.length) {
-            return pts
-        }
-
         const step = tfm.step ?? 1
 
         pts = sort(pts, (pt) => pt.x)
 
-        let curr = tfm.start ?? { ...pts[0] }
+        let curr = tfm.start ?? {
+            x: pts[0].x,
+            y: tfm.variant === "hold" ? pts[0].y : (tfm.padValue ?? 0),
+        }
         let update: Point2[] = []
 
         for (const pt of pts) {
-            while (curr.x <= pt.x) {
+            while (curr.x < pt.x) {
                 if (pt.x - curr.x > step) {
                     curr.x += step
                     update.push({ ...curr })
                 } else {
-                    curr.y = pt.y
+                    curr.x = pt.x
+                    if (tfm.variant === "hold") {
+                        curr.y = pt.y
+                    } else {
+                        curr.y = tfm.padValue ?? 0
+                    }
                     break
                 }
             }
+
+            update.push({ ...pt })
         }
 
         while (tfm.stop !== undefined && curr.x < tfm.stop) {
@@ -271,6 +270,8 @@ interface AccumulateTransform {
 
 interface FillTransform {
     type: "fill"
+    variant: "hold" | "pad"
+    padValue?: number
     step?: number
     start?: Point2
     stop?: number

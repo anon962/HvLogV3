@@ -1,241 +1,127 @@
-import { sum } from "radash"
-import { App } from "../app/app"
-import { CompleteLog } from "../logDb/logDb"
-import { LogSummary } from "../summaryDb"
-import {
-    ARTIFACTS,
-    CONSUMABLES,
-    MATERIALS,
-    SHARDS,
-    TROPHIES,
-} from "../ui/constants"
-import { EventSummary } from "../ui/hvlog/eventSummary"
-import { enumerate } from "../utils/miscUtils"
+import { sum } from "myutils"
+import { CompleteLog } from "../logDb/schema"
+import { BaseHvEvent } from "../eventParser"
+import { MetaSummary } from "./metaStats"
+import { enumerate } from "myutils"
 import { ItemUsageSummary } from "./itemUsageStats"
 
-// Map events to items
-function extractDrops(log: CompleteLog) {
-    const drops: Record<
-        string,
-        {
-            name: string
-            entries: Array<{ logIdx: number; count: number }>
+export const DROP_CATEGORIES = {
+    Artifacts: "Artifacts",
+    Consumables: "Consumables",
+    Credits: "Credits",
+    Materials: "Materials",
+    Shards: "Shards",
+    Trophies: "Trophies",
+    Crystals: "Crystals",
+    Figurine: "Figurine",
+    Equips: "Equips",
+} as const
+type DropCategory = keyof typeof DROP_CATEGORIES
+
+type DropInfo = {
+    key: string
+    name: string
+    priceKey: string
+    isEquip: boolean
+}
+export type DropSummary = Record<
+    string,
+    DropInfo & {
+        category: DropCategory | null
+        events: {
+            logIdx: number[]
+            count: number[]
         }
-    > = {}
-
-    const add = (k: string, count: number, logIdx: number) => {
-        drops[k] = drops[k] ?? { name: k, entries: [] }
-        drops[k].entries.push({ logIdx, count })
     }
+>
 
-    for (const [idx, entry] of enumerate(log.entries)) {
+// Classify drops
+export function summarizeItemDrops<T extends BaseHvEvent>(
+    log: CompleteLog<T>,
+    count: (ev: T) => Array<{
+        key: string
+        name?: string
+        priceKey?: string
+        count: number
+        isEquip?: boolean
+    }>,
+    groups: Record<DropCategory, Set<string> | ((info: DropInfo) => boolean)>,
+): DropSummary {
+    const drops: DropSummary = {}
+
+    for (const [logIdx, entry] of enumerate(log.entries)) {
         if (entry.type !== "event") {
             continue
         }
 
         const ev = entry.event
-        switch (ev.event_type) {
-            case "AUTO_SALVAGE":
-                add(ev.item, ev.value, idx)
-                if (ev.item2) add(ev.item2, ev.value2!, idx)
-                break
-            case "AUTO_SELL":
-                add("autosell", ev.value, idx)
-                break
-            case "CLEAR_BONUS":
-                add(ev.item, 1, idx)
-                break
-            case "CREDITS":
-                add("Credits", ev.value, idx)
-                break
-            case "DROP_EVENT":
-                {
-                    const [name, count] = extractNameCount(ev.item)
-                    add(name, count, idx)
+        const countResult = count(ev)
+        if (!countResult) {
+            continue
+        }
+
+        for (const x of countResult) {
+            if (!(x.key in drops)) {
+                drops[x.key] = {
+                    key: x.key,
+                    name: x.name ?? x.key,
+                    priceKey: x.priceKey ?? x.key,
+                    isEquip: x.isEquip ?? false,
+                    category: null,
+                    events: {
+                        logIdx: [],
+                        count: [],
+                    },
                 }
-                break
-            case "DROP":
-                {
-                    const [name, count] = extractNameCount(ev.item)
-                    add(name, count, idx)
-                }
-                break
-            case "EVENT_ITEM":
-                {
-                    const [name, count] = extractNameCount(ev.item)
-                    add(name, count, idx)
-                }
-                break
-            case "EXPERIENCE":
-                add("experience", ev.value, idx)
-                break
-            case "PROFICIENCY":
-                add("proficiency", ev.value, idx)
-                break
-            case "SOUL_FRAG_DROP":
-                add("Soul Fragment", ev.count, idx)
-                break
-            case "TOKEN_BONUS":
-                add(ev.item, 1, idx)
-                break
+                const info = drops[x.key]
+
+                drops[x.key].category =
+                    ((Object.entries(groups).find(([grpKey, cond]) =>
+                        cond instanceof Set ? cond.has(info.name) : cond(info),
+                    )?.[0] as DropCategory) ||
+                        undefined) ??
+                    null
+            }
+
+            drops[x.key].events.logIdx.push(logIdx)
+            drops[x.key].events.count.push(x.count)
         }
     }
 
     return drops
-
-    function extractNameCount(text: string) {
-        let name, count
-
-        const m = text.match(/(\d+)x? (.*)/)
-        if (m) {
-            count = parseInt(m[1])
-            name = m[2]
-        } else {
-            count = 1
-            name = text
-        }
-
-        return [name, count] as [string, number]
-    }
-}
-
-// Classify drops
-export function summarizeItemDrops(
-    app: App,
-    log: CompleteLog
-): DropSummary {
-    const drops = extractDrops(log)
-
-    const summary: DropSummary = {
-        data: {},
-        groups: [
-            newDropEventGroup(
-                "Artifacts",
-                new Set(["Precursor Artifact"])
-            ),
-            newDropEventGroup("Consumables", CONSUMABLES),
-            newDropEventGroup(
-                "Credits",
-                new Set(["credits", "Credits", "autosell"])
-            ),
-            newDropEventGroup("Materials", MATERIALS),
-            newDropEventGroup("Shards", SHARDS),
-            newDropEventGroup("Trophies", TROPHIES),
-        ],
-    }
-
-    const crystalKeys = new Set<string>()
-    const figurineKeys = new Set<string>()
-    const otherKeys = new Set<string>()
-
-    const classifyDrops = (
-        key: string,
-        x: (typeof drops)[string],
-        mult: number,
-        asSingle?: boolean
-    ) =>
-        x.entries.map((entry) => {
-            if (!asSingle) {
-                return {
-                    key,
-                    count: entry.count,
-                    value: mult * entry.count,
-                    logIdx: entry.logIdx,
-                }
-            } else {
-                return {
-                    key,
-                    count: 1,
-                    value: mult * entry.count,
-                    logIdx: entry.logIdx,
-                }
-            }
-        })
-
-    for (let [key, xs] of Object.entries(drops)) {
-        const k = key as any
-        const ps = app.config.prices
-
-        if (ARTIFACTS.has(k)) {
-            summary.data[k] = classifyDrops(k, xs, ps[k])
-        } else if (CONSUMABLES.has(k)) {
-            summary.data[k] = classifyDrops(k, xs, ps[k])
-        } else if (
-            k === "autosell" ||
-            k === "credits" ||
-            k === "Credits"
-        ) {
-            summary.data[k] = classifyDrops(k, xs, 1, true)
-        } else if (key.startsWith("Crystal of ")) {
-            summary.data[k] = classifyDrops(k, xs, ps["Crystal"])
-            crystalKeys.add(k)
-        } else if (k.includes("Figurine")) {
-            summary.data[k] = classifyDrops(k, xs, ps["Figurine"])
-            figurineKeys.add(k)
-        } else if (MATERIALS.has(k)) {
-            summary.data[k] = classifyDrops(k, xs, ps[k])
-        } else if (SHARDS.has(k)) {
-            summary.data[k] = classifyDrops(k, xs, ps[k])
-        } else if (TROPHIES.has(k)) {
-            summary.data[k] = classifyDrops(k, xs, ps[k])
-        } else if (["experience", "proficiency"].includes(k)) {
-        } else {
-            summary.data[k] = classifyDrops(k, xs, ps[k] ?? 0)
-            otherKeys.add(k)
-        }
-    }
-
-    summary.groups.push(newDropEventGroup("Crystals", crystalKeys))
-    summary.groups.push(newDropEventGroup("Figurines", figurineKeys))
-    summary.groups.push(newDropEventGroup("Other", otherKeys))
-
-    return summary
 }
 
 export type FinanceSummary = ReturnType<typeof summarizeFinances>
 
 export function summarizeFinances(
-    summary: LogSummary,
+    summary: MetaSummary,
     drops: DropSummary,
     usage: ItemUsageSummary,
-    app: App
+    prices: Record<string, number>,
 ) {
     let staminaUsage = (summary.round?.end ?? 1) / 50
-    if (summary.battleType?.name === "Grindfest") {
+    if (summary.battleType?.category === "Grindfest") {
         staminaUsage += 1
     }
+    const staminaExpense = (staminaUsage * prices["Energy Drink"]) / 10
 
     const income = sum(
-        Object.values(drops.data).flatMap((xs) => xs),
-        (x) => x.value
+        Object.values(drops).map(
+            ({ priceKey, events }) =>
+                sum(events.count) * (prices[priceKey] ?? 0),
+        ),
     )
 
     const expenses =
+        staminaExpense +
         sum(
-            Object.values(usage.data).flatMap((xs) => xs),
-            (x) => x.value
-        ) +
-        (staminaUsage * app.config.prices["Energy Drink"]) / 10
+            Object.values(usage).map(
+                ({ priceKey, events }) =>
+                    sum(events.count) * (prices[priceKey] ?? 0),
+            ),
+        )
 
     const profit = income - expenses
 
     return { income, expenses, profit }
 }
-
-function newDropEventGroup<T extends string>(
-    label: string,
-    keys: Set<T>
-): DropSummary["groups"][number] {
-    return { label, has: (key) => keys.has(key as any) }
-}
-
-export type DropSummary = EventSummary<
-    {
-        count: number
-        value: number
-    },
-    Array<{
-        label: string
-        has: (key: string) => boolean
-    }>
->

@@ -7,7 +7,7 @@ export class IndexMap {
     constructor(
         public turnIndexes: number[],
         public roundIndexes: Record<number, number>,
-        public logSize: number
+        public logSize: number,
     ) {
         this.initTurnMap()
         this.initRoundMap()
@@ -33,9 +33,7 @@ export class IndexMap {
     }
 
     private initRoundMap() {
-        for (const [roundIdx, logIdx] of Object.entries(
-            this.roundIndexes
-        )) {
+        for (const [roundIdx, logIdx] of Object.entries(this.roundIndexes)) {
             this.roundToLog.set(parseInt(roundIdx), logIdx)
             this.logToRound.set(logIdx, parseInt(roundIdx))
         }
@@ -71,7 +69,7 @@ export class IndexMap {
     }
     public r2t(roundIdx: number): number | undefined {
         const logIdx = this.r2l(roundIdx)
-        if (!logIdx) {
+        if (logIdx === undefined) {
             return
         }
 

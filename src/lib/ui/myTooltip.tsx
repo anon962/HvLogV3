@@ -1,4 +1,7 @@
-import { TooltipContentProps } from "@radix-ui/react-tooltip"
+import {
+    TooltipContentProps,
+    TooltipTriggerProps,
+} from "@radix-ui/react-tooltip"
 import { ReactNode } from "react"
 import {
     Tooltip,
@@ -10,6 +13,7 @@ import {
 export function MyTooltip(props: {
     disabled?: boolean
     contentProps?: TooltipContentProps
+    triggerProps?: TooltipTriggerProps
     trigger: ReactNode
     content: ReactNode
 }) {
@@ -17,7 +21,12 @@ export function MyTooltip(props: {
         return (
             <TooltipProvider>
                 <Tooltip disableHoverableContent>
-                    <TooltipTrigger>{props.trigger}</TooltipTrigger>
+                    <TooltipTrigger
+                        {...props.triggerProps}
+                        type="button"
+                    >
+                        {props.trigger}
+                    </TooltipTrigger>
                     <TooltipContent {...props.contentProps}>
                         {props.content}
                     </TooltipContent>

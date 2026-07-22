@@ -1,133 +1,83 @@
-import { CompleteLog } from "@/lib/logDb/logDb"
 import { CombatSummary } from "@/lib/stats/combatStats"
-import { IndexMap } from "@/lib/stats/indexMap"
-import { LogSummary } from "@/lib/summaryDb"
-import {
-    avg,
-    formatNumber,
-    setDefault,
-    sortBy,
-} from "@/lib/utils/miscUtils"
-import { sort, sum } from "radash"
+import { DetailsSummary } from "@/lib/summary"
+import { formatNumber } from "@/lib/utils/miscUtils"
+import { sort, sortBy, sum } from "myutils"
 import { useEffect, useRef } from "react"
-import { useStats } from "../logStatsContext"
-import { TallyTable, TallyTableProps } from "../tallyTable"
-import { CastChart } from "./castChart"
+import { TallyTable, TallyTableProps } from "../../tallyTable"
+import { ActionChart } from "./actionChart"
 import { HealChart } from "./healChart"
 
-export function CombatInfo({ log }: { log: CompleteLog }) {
-    const {
-        combatUsage: usage,
-        summary,
-        indexMap,
-    } = useStats(log, {
-        combatUsage: true,
-        summary: true,
-        indexMap: true,
-    })
-    console.log(usage)
-
+export function CombatInfo({ stats }: { stats: DetailsSummary }) {
     return (
         <div className="combat-info p-8 overflow-auto h-full flex flex-col gap-12">
             <div className="flex gap-8">
-                {CastTable(usage)}
-                {MiscTable(summary, indexMap, log)}
+                {MiscTable(stats)}
+                {CastTable(stats)}
             </div>
 
-            {OffensiveTable(usage)}
+            {DamageTable(stats)}
 
-            {DebuffTable(usage)}
+            {stats.combat.critMults.length > 0 ? CritTable(stats) : null}
 
-            {HealTable(usage)}
+            <div className="flex gap-8">
+                {HealTable(stats)}
+                {DebuffTable(stats)}
+            </div>
 
-            <HealChartWrapper log={log} />
+            {DamageTakenTable(stats)}
 
-            <CastChartWrapper log={log} />
+            <ActionChartWrapper stats={stats} />
+            <HealChartWrapper stats={stats} />
         </div>
     )
 }
 
 type CastTableData = TallyTableProps<
-    { count: number },
-    { label: string; count: number }
+    { count: number; countRound: number },
+    { label: string; count: number; countRound: number; uptime: number }
 >
 
-function CastTable(usage: CombatSummary) {
+function CastTable({ meta, combat }: DetailsSummary) {
     let rows = [] as CastTableData["rows"]
 
-    const castsForGroup = (group: CombatSummary["groups"][number]) =>
-        Object.entries(usage.data).flatMap(([spell, allCasts]) =>
-            allCasts.length && group.has(allCasts[0])
-                ? [[spell, allCasts] as const]
-                : []
-        )
-
-    for (const group of usage.groups) {
-        if (
-            group.label === "Passive Heals" ||
-            group.label === "Times Sparked" ||
-            group.label === "Passive Attacks"
-        ) {
-            continue
-        }
-
-        let subValues = castsForGroup(group).flatMap(
-            ([spell, castsForSpell]) => {
-                const count = castsForSpell.filter((cast) => {
-                    switch (group.label) {
-                        case "Spells":
-                            return !!cast.spell
-                        case "Debuffs":
-                            return !!cast.debuff
-                        case "Heals":
-                            return !!cast.heal
-                        case "Buffs":
-                            return !!cast.buff
-                        case "Passive Heals":
-                            return !!cast.effectHeals
-                        case "Times Sparked":
-                            return !!cast.spark
-                        case "Melee Attacks":
-                            return !!cast.melee
-                        case "Passive Attacks":
-                            return !!cast.passiveAttack
-                        case "Melee Casts":
-                            return !!cast.meleeCast
-                    }
-                }).length
-
-                if (count === 0) {
-                    return []
-                }
-
-                return [
-                    {
-                        label: spell,
-                        count,
-                    },
-                ]
-            }
-        )
-
-        // if (group.label === "Times Sparked" && subRows.length) {
-        //     subRows[0].label = "Spark of Life"
-        // }
-
-        subValues = sortBy(subValues, [
-            { fn: (r) => r.count },
-            { fn: (r) => r.label, reverse: true },
-        ]).reverse()
+    for (const action of [
+        { label: "Heals", data: combat.heal, showSub: true },
+        { label: "Buffs", data: combat.buff, showSub: true },
+        { label: "Debuffs", data: combat.debuff, showSub: true },
+        { label: "Spells", data: combat.spell, showSub: true },
+        { label: "Attacks", data: combat.attack, showSub: false },
+        { label: "Skills", data: combat.skill, showSub: true },
+    ]) {
+        const binned = sortBy(
+            Object.values(action.data).map((xs) => ({
+                label: xs.key,
+                count: xs.events.logIdx.length,
+                countRound: xs.events.logIdx.length / (meta.round?.end ?? 1),
+                uptime:
+                    xs.key in combat.downtime
+                        ? ((meta.round?.end ?? 1) -
+                              (combat.downtime[xs.key] ?? 0)) /
+                          (meta.round?.end ?? 1)
+                        : -1,
+            })),
+            [{ fn: (r) => r.count }, { fn: (r) => r.label, reverse: true }],
+        ).reverse()
 
         rows.push({
-            label: group.label,
+            label: action.label,
             value: {
-                count: sum(subValues, (r) => r.count),
+                count: sum(binned.map((d) => d.count)),
+                countRound: sum(binned.map((d) => d.countRound)),
             },
-            subValues,
-            selectable: subValues.length > 0,
-            disabled: subValues.length === 0,
+            subValues: action.showSub ? binned : undefined,
+            selectable: action.showSub ? binned.length > 0 : false,
+            disabled: binned.length === 0,
         })
     }
+
+    // if (group.label === "Times Sparked" && subRows.length) {
+    //     subRows[0].label = "Spark of Life"
+    // }
 
     rows = sortBy(rows, [
         { fn: (r) => r.value.count },
@@ -136,10 +86,23 @@ function CastTable(usage: CombatSummary) {
 
     const columns: CastTableData["columns"] = [
         { label: "Turns", get: (x) => x.count },
+        { label: "Per Round", get: (x) => x.countRound },
     ]
     const subColumns: CastTableData["subColumns"] = [
         { label: "Spell", get: (x) => x.label, align: "left" },
         { label: "Turns", get: (x) => x.count },
+        { label: "Per Round", get: (x) => x.countRound },
+        {
+            label: "Uptime",
+            get: (x) => x.uptime,
+            format: ((x: number) => (x >= 0 ? fmtPercentage(x) : "-")) as any,
+            tooltip: (
+                <span>
+                    Percentage of rounds that were started with this action
+                    ready.
+                </span>
+            ),
+        },
     ]
 
     return (
@@ -154,352 +117,278 @@ function CastTable(usage: CombatSummary) {
     )
 }
 
-type OffensiveTableData = TallyTableProps<{
-    damage: number
-    damageRaw: number
-    resistRate: number
-    killRate: number
-    hitRate: number
+type DamageTableData = TallyTableProps<{
+    count: number
     hitCount: number
     hitCountAvg: number
-    castCount: number
-    critRate: number
+    damage: number
+    hitRate: number
+    critRate: number | null
+    killRate: number
+    failRate: number | null
+    resistRate: number | null
+    glanceRate: number | null
+    parryRate: number | null
 }>
 
-function OffensiveTable(combat: CombatSummary) {
-    let rows = [] as OffensiveTableData["rows"]
-
-    for (const group of combat.groups) {
-        const casts = Object.entries(combat.data).flatMap(
-            ([spell, allCasts]) =>
-                allCasts.length && group.has(allCasts[0])
-                    ? [[spell, allCasts] as const]
-                    : []
-        )
-
-        switch (group.label) {
-            case "Spells":
-                for (const [label, castsForSpell] of casts) {
-                    const hits = castsForSpell.flatMap(
-                        (cast) => cast.spell ?? []
-                    )
-
-                    const damage = avg(
-                        hits.map((effect) => effect.value)
-                    )
-
-                    const rawHits = hits
-                        .filter((hit) => !hit.kill)
-                        .map(
-                            (hit) =>
-                                hit.value *
-                                (hit.resist ? 100 / hit.resist : 1)
-                        )
-                    const damageRaw = avg(rawHits)
-
-                    const resistedHits = avg(
-                        hits.map((hit) => hit.resist)
-                    )
-
-                    const misses = hits.filter((x) => x.miss)
-
-                    const hitCountAvg = avg(
-                        castsForSpell.map(
-                            (cast) => (cast.spell ?? []).length
-                        )
-                    )
-
-                    const killCount = hits.filter(
-                        (effect) => effect.kill
-                    ).length
-
-                    const critCount = hits.filter(
-                        (hit) => hit.crit
-                    ).length
-
-                    rows.push({
-                        label,
-                        value: {
-                            damage,
-                            damageRaw,
-                            hitRate: 1 - misses.length / hits.length,
-                            resistRate: resistedHits,
-                            killRate: killCount / hits.length,
-                            hitCount: hits.length,
-                            hitCountAvg,
-                            castCount: castsForSpell.length,
-                            critRate: critCount / hits.length,
-                        },
-                    })
-                }
+function DamageTable({ combat }: DetailsSummary) {
+    const hitData = [] as Array<{
+        name: string
+        count: number
+        hitCount: number
+        damage: number
+        crits?: number
+        kills: number
+        fails: number
+        glances?: number
+        resists?: number
+        parries?: number
+    }>
+    for (const k of Object.keys(combat) as Array<keyof CombatSummary>) {
+        switch (k) {
+            case "spell": {
+                hitData.push(
+                    ...Object.values(combat.spell).map((s) => {
+                        return {
+                            name: s.key,
+                            count: s.events.logIdx.length,
+                            hitCount: sum(s.events.hitCount),
+                            damage: sum(s.events.value),
+                            crits: sum(s.events.crit),
+                            kills: sum(s.events.kill),
+                            fails:
+                                sum(s.events.miss) +
+                                sum(s.events.resist) +
+                                sum(s.events.absorb),
+                            glances: sum(s.events.glance),
+                            resists: sum(s.events.partialResist),
+                        }
+                    }),
+                )
                 break
-            case "Melee Attacks":
-                const groupedByName = {} as Record<
-                    string,
-                    Array<{
-                        value: number
-                        kill: boolean
-                        miss: boolean
-                        crit: boolean
-                    }>
-                >
-
-                const attacks = casts[0]?.[1] ?? []
-                for (const x of attacks) {
-                    const { primary, secondary } = x.melee!
-                    setDefault(groupedByName, primary.name, []).push({
-                        value: primary.value,
-                        miss: primary.miss,
-                        kill: primary.kill,
-                        crit: primary.crit,
-                    })
-
-                    for (const effect of secondary) {
-                        setDefault(
-                            groupedByName,
-                            effect.name,
-                            []
-                        ).push({
-                            value: effect.value,
-                            miss: effect.miss,
-                            kill: effect.kill,
-                            crit: effect.crit,
-                        })
-                    }
-                }
-
-                for (const [label, hits] of Object.entries(
-                    groupedByName
-                )) {
-                    const damage = avg(
-                        hits.map((effect) => effect.value)
-                    )
-
-                    const rawHits = hits
-                        .filter((hit) => !hit.kill)
-                        .map((hit) => hit.value)
-                    const damageRaw = avg(rawHits)
-
-                    const misses = hits.filter((x) => x.miss)
-
-                    const killCount = hits.filter(
-                        (effect) => effect.kill
-                    ).length
-
-                    const critCount = hits.filter(
-                        (hit) => hit.crit
-                    ).length
-
-                    rows.push({
-                        label,
-                        value: {
-                            damage,
-                            damageRaw,
-                            hitRate: 1 - misses.length / hits.length,
-                            resistRate: 0,
-                            killRate: killCount / hits.length,
-                            hitCount: 1,
-                            hitCountAvg: 1,
-                            castCount: hits.length,
-                            critRate: critCount / hits.length,
-                        },
-                    })
-                }
+            }
+            case "passiveAttack":
+                hitData.push(
+                    ...Object.values(combat.passiveAttack).map((xs) => {
+                        return {
+                            name: xs.key,
+                            count: xs.events.logIdx.length,
+                            hitCount: xs.events.logIdx.length,
+                            damage: sum(xs.events.damage),
+                            kills: sum(xs.events.kill),
+                            fails: xs.events.damage.filter((dmg) => dmg === 0)
+                                .length,
+                        }
+                    }),
+                )
                 break
-            case "Passive Attacks":
-                for (const [spell, castsForSpell] of casts) {
-                    const hits = castsForSpell.flatMap((cast) =>
-                        cast.passiveAttack ? [cast.passiveAttack] : []
-                    )
-                    if (!hits.length) {
-                        continue
-                    }
-
-                    const damage = avg(
-                        hits.map((effect) => effect.value)
-                    )
-
-                    const rawHits = hits
-                        .filter((hit) => !hit.kill)
-                        .map((hit) => hit.value)
-                    const damageRaw = avg(rawHits)
-
-                    const killCount = hits.filter(
-                        (effect) => effect.kill
-                    ).length
-
-                    rows.push({
-                        label: spell,
-                        value: {
-                            damage,
-                            damageRaw,
-                            hitRate: 1,
-                            resistRate: 0,
-                            killRate: killCount / hits.length,
-                            hitCount: 1,
-                            hitCountAvg: 1,
-                            castCount: hits.length,
-                            critRate: 0,
-                        },
-                    })
-                }
+            case "skill":
+                hitData.push(
+                    ...Object.values(combat.skill).map(({ key, events }) => {
+                        return {
+                            name: key,
+                            count: events.logIdx.length,
+                            hitCount: sum(events.hitCount),
+                            damage: sum(events.value),
+                            crits: sum(events.crit),
+                            kills: sum(events.kill),
+                            fails: 0,
+                        }
+                    }),
+                )
                 break
-            case "Melee Casts":
-                for (const [label, castsForSkill] of casts) {
-                    const hits = castsForSkill.flatMap(
-                        (cast) => cast.meleeCast ?? []
-                    )
-
-                    const damage = avg(
-                        hits.map((effect) => effect.value)
-                    )
-
-                    const rawHits = hits
-                        .filter((hit) => !hit.kill)
-                        .map((hit) => hit.value * (hit.parry ? 0 : 1))
-                    const damageRaw = avg(rawHits)
-
-                    const parryCount = hits.filter(
-                        (hit) => hit.parry
-                    ).length
-
-                    const hitCountAvg = avg(
-                        castsForSkill.map((cast) => {
-                            const { meleeCast } = cast
-                            if (!meleeCast) {
-                                return 0
-                            }
-
-                            const monsters = new Set(
-                                meleeCast.map(
-                                    (effect) => effect.monster
-                                )
-                            )
-                            return monsters.size
-                        })
-                    )
-
-                    const killCount = hits.filter(
-                        (effect) => effect.kill
-                    ).length
-
-                    const critCount = hits.filter(
-                        (hit) => hit.crit
-                    ).length
-
-                    rows.push({
-                        label,
-                        value: {
-                            damage,
-                            damageRaw,
-                            hitRate: 1,
-                            resistRate: parryCount / hits.length,
-                            killRate: killCount / hits.length,
-                            hitCount: hits.length,
-                            hitCountAvg,
-                            castCount: castsForSkill.length,
-                            critRate: critCount / hits.length,
-                        },
-                    })
-                }
+            case "attack": {
+                hitData.push(
+                    ...Object.values(combat.attack).map(({ key, events }) => {
+                        return {
+                            name: key,
+                            count: events.logIdx.length,
+                            hitCount: sum(events.hitCount),
+                            damage: sum(events.value),
+                            crits: sum(events.crit),
+                            kills: sum(events.kill),
+                            fails: sum(events.parry),
+                            glances: sum(events.glance),
+                            parries: sum(events.partialParry),
+                        }
+                    }),
+                )
                 break
+            }
         }
     }
 
-    rows = sortBy(rows, [{ fn: (r) => r.value.damage }]).reverse()
+    const rows: DamageTableData["rows"] = sort(
+        hitData.flatMap((x) => {
+            let hitRate = 1
+            hitRate -= x.fails / x.hitCount
+            if (x.fails !== undefined) {
+                hitRate -= x.fails / x.hitCount
+            }
+            if (x.glances !== undefined) {
+                hitRate -= x.glances / x.hitCount
+            }
+            if (x.resists !== undefined) {
+                hitRate -= x.resists / x.hitCount
+            }
+            if (x.parries !== undefined) {
+                hitRate -= x.parries / x.hitCount
+            }
 
-    const columns: OffensiveTableData["columns"] = [
+            // Hard to tell if a cast that was always fully resisted is a spell or debuff
+            // So just assume the more likely case of debuff when zero damage
+            if (x.damage === 0) {
+                return []
+            }
+
+            return [
+                {
+                    label: x.name,
+                    value: {
+                        count: x.count,
+                        hitCount: x.hitCount,
+                        hitCountAvg: x.hitCount / x.count,
+                        damage: x.damage / x.hitCount,
+                        hitRate,
+                        critRate:
+                            x.crits !== undefined ? x.crits / x.hitCount : null,
+                        killRate: x.kills / x.hitCount,
+                        failRate:
+                            x.fails !== undefined ? x.fails / x.hitCount : null,
+                        glanceRate:
+                            x.glances !== undefined
+                                ? x.glances / x.hitCount
+                                : null,
+                        resistRate:
+                            x.resists !== undefined
+                                ? x.resists / x.hitCount
+                                : null,
+                        parryRate:
+                            x.parries !== undefined
+                                ? x.parries / x.hitCount
+                                : null,
+                    },
+                },
+            ]
+        }),
+        (r) => r.value.damage * r.value.hitCount,
+        true,
+    )
+
+    const totalDamage = rows.reduce(
+        (acc, r) => acc + r.value.damage * r.value.hitCount,
+        0,
+    )
+
+    const hasParries = hitData.some((x) => "parries" in x)
+    const hasResists = hitData.some((x) => "resists" in x)
+
+    const columnsMaybe: Array<DamageTableData["columns"][number] | null> = [
         {
             label: "Dmg",
             get: (x) => x.damage,
             format: (x) => {
-                if (x >= 100_000) {
+                if (x >= 10_000) {
                     return `${(x / 1000).toFixed(0)}k`
-                } else if (x >= 1000) {
+                } else if (x >= 1_000) {
                     return `${(x / 1000).toFixed(1)}k`
                 } else {
                     return formatNumber(x)
                 }
             },
-            tooltip: (
-                <span>
-                    Average damage per monster hit
-                    <br />
-                    <pre>(total_damage / total_monsters_hit)</pre>
-                </span>
-            ),
+            tooltip: <span>Average damage per monster hit.</span>,
         },
-        // {
-        //     label: "Dmg Raw",
-        //     get: (x) => x.damageRaw,
-        //     format: (x) => {
-        //         if (x >= 100_000) {
-        //             return `${(x / 1000).toFixed(0)}k`
-        //         } else if (x >= 1000) {
-        //             return `${(x / 1000).toFixed(1)}k`
-        //         } else {
-        //             return formatNumber(x)
-        //         }
-        //     },
-        //     tooltip: (
-        //         <span>
-        //             Average damage per monster hit,
-        //             <br />
-        //             before resists and excluding hits that kill the
-        //             target
-        //         </span>
-        //     ),
-        // },
         {
-            label: "Casts",
-            get: (x) => x.castCount,
+            label: "Count",
+            get: (x) => x.count,
+        },
+        {
+            label: "Weight",
+            get: (x) => (x.damage * x.hitCount) / totalDamage,
+            format: fmtPercentage,
+            tooltip: <span>Percentage of total damage.</span>,
         },
         {
             label: "Target Count",
             get: (x) => x.hitCountAvg,
             format: (x) => `${x.toFixed(1)}`,
-            tooltip: (
-                <span>Average number of monsters hit per cast.</span>
-            ),
+            tooltip: <span>Average number of monsters hit per cast.</span>,
         },
         {
             label: "Kill Rate",
             get: (x) => x.killRate,
-            format: (x) => `${Math.round(x * 100)}%`,
-            tooltip: (
-                <span>
-                    Percentage of hits that killed the target.
-                </span>
-            ),
-        },
-        {
-            label: "Resist Rate",
-            get: (x) => x.resistRate,
-            format: (x) => `${x.toFixed(1)}%`,
-            tooltip: (
-                <span>
-                    Average damage reduction from resists / parries.
-                </span>
-            ),
+            format: fmtPercentage,
+            tooltip: <span>Percentage of hits that killed the target.</span>,
         },
         {
             label: "Crit Rate",
-            get: (x) => x.critRate,
-            format: (x) => `${Math.round(x * 100)}%`,
+            get: (x) => x.critRate ?? -1,
+            format: fmtPercentage,
+        },
+        // {
+        //     label: "Success Rate",
+        //     get: (x) => x.hitRate,
+        //     format: fmtPercentage,
+        //     tooltip: <span>Percentage of hits that dealt full damage.</span>,
+        // },
+        {
+            label: "Fail Rate",
+            get: (x) => x.failRate ?? -1,
+            format: fmtPercentage,
+            tooltip: (
+                <span>
+                    Percentage of hits that dealt zero damage.
+                    <br />
+                    (Failed both accuracy rolls or both parry / resist rolls)
+                </span>
+            ),
         },
         {
-            label: "Miss Rate",
-            get: (x) => 1 - x.hitRate,
-            format: (x) => `${Math.round(x * 100)}%`,
+            label: "Glance Rate",
+            get: (x) => x.glanceRate ?? -1,
+            format: fmtPercentage,
         },
+        hasResists
+            ? {
+                  label: "Partial Resists",
+                  get: (x) => x.resistRate ?? -1,
+                  format: fmtPercentage,
+                  //   tooltip: (
+                  //       <span>
+                  //           Percentage of spell hits that were partially resisted.
+                  //           <br />
+                  //           (Failed 1 of 2 rolls.)
+                  //       </span>
+                  //   ),
+              }
+            : null,
+        hasParries
+            ? {
+                  label: "Partial Parries",
+                  get: (x) => x.parryRate ?? -1,
+                  format: fmtPercentage,
+                  //   tooltip: (
+                  //       <span>
+                  //           Percentage of hits that were partially parried.
+                  //           <br />
+                  //           (Failed 1 of 2 rolls.)
+                  //       </span>
+                  //   ),
+              }
+            : null,
     ]
+
+    const columns = columnsMaybe.filter((x) => x !== null)
 
     return (
         <TallyTable
             label="Damage"
             rows={rows}
             columns={columns}
-            className="offensive max-w-[50rem]"
+            className="offensive"
+            rowStyle={{
+                gridTemplateColumns: `minmax(20ch, 1fr) repeat(${columns.length}, minmax(6ch, 1fr))`,
+            }}
             hideTotal
         />
     )
@@ -509,63 +398,53 @@ type MiscTableData = TallyTableProps<{
     value: string
 }>
 
-function MiscTable(
-    summary: LogSummary,
-    indexMap: IndexMap,
-    log: CompleteLog
-) {
-    const sparks = log.entries.filter(
-        (entry) =>
-            entry.type === "event" &&
-            entry.event.event_type === "SPARK_TRIGGER"
-    ).length
+function MiscTable({ combat, meta }: DetailsSummary) {
+    const sparkCount = combat.spark["Spark of Life"]?.events.logIdx.length ?? 0
+    const ponyCount = combat.riddlemaster["Ponies"]?.events.logIdx.length ?? 0
 
-    const ponies = log.entries.filter(
-        (entry) =>
-            entry.type === "event" &&
-            entry.event.event_type === "RIDDLE_MASTER"
-    ).length
-
-    const gems = log.entries.filter(
-        (entry) =>
-            entry.type === "event" && entry.event.event_type === "GEM"
-    ).length
-
+    const gems = Object.values(combat.heal)
+        .filter((x) => x.key.includes("Gem"))
+        .map((x) => ({
+            label: x.key,
+            value: x.events.logIdx.length,
+        }))
     const rows: MiscTableData["rows"] = [
         {
             label: "Rounds",
             value: {
-                value: summary.round?.end
-                    ? `${summary.round.end} / ${summary.round.max}`
+                value: meta.round?.end
+                    ? `${meta.round.end} / ${meta.round.max}`
                     : "1 / ???",
             },
         },
         {
             label: "Turns",
             value: {
-                value: formatNumber(indexMap.turnIndexes.length),
+                value: formatNumber(meta.turnIndices.length),
             },
         },
         {
             label: "SoL Triggers",
             value: {
-                value: formatNumber(sparks),
+                value: formatNumber(sparkCount),
             },
-            disabled: sparks === 0,
+            disabled: sparkCount === 0,
         },
         {
             label: "Riddlemasters",
             value: {
-                value: formatNumber(ponies),
+                value: formatNumber(ponyCount),
             },
-            disabled: ponies === 0,
+            disabled: ponyCount === 0,
         },
         {
             label: "Gems",
             value: {
-                value: formatNumber(gems),
+                value: formatNumber(gems.length),
             },
-            disabled: gems === 0,
+            subValues: gems,
+            disabled: gems.length === 0,
+            selectable: gems.length > 0,
         },
     ]
 
@@ -576,88 +455,86 @@ function MiscTable(
             format: (_, x) => x.value, // this is awful
         },
     ]
+    const subColumns: CastTableData["subColumns"] = [
+        { label: "Name", get: (x) => x.label, align: "left" },
+        { label: "Count", get: (x) => x.count },
+    ]
 
     return (
         <TallyTable
             label="Misc"
             rows={rows}
             columns={columns}
-            className="offensive w-max"
+            subColumns={subColumns}
+            className="misc w-max"
             hideTotal
         />
     )
 }
 
 type DebuffTableData = TallyTableProps<{
-    castCount: number
+    count: number
     hitCount: number
     hitCountAvg: number
     hitRate: number
+    missRate: number
+    partialResistRate: number
     resistRate: number
 }>
 
-function DebuffTable(usage: CombatSummary) {
-    const group = usage.groups.find((grp) => grp.label === "Debuffs")!
+function DebuffTable({ combat }: DetailsSummary) {
+    const rows: DebuffTableData["rows"] = sort(
+        Object.values(combat.debuff).map((xs) => {
+            const castCount = xs.events.logIdx.length
+            const hitCount = sum(xs.events.hitCount)
+            const partialResists = sum(xs.events.partialResistCount)
+            const resists = sum(xs.events.resistCount)
+            const misses = sum(xs.events.missCount)
+            const total = hitCount + misses + partialResists + resists
 
-    const casts = Object.entries(usage.data).flatMap(
-        ([spell, allCasts]) =>
-            allCasts.length && group.has(allCasts[0])
-                ? [[spell, allCasts] as const]
-                : []
+            return {
+                label: xs.key,
+                value: {
+                    count: castCount,
+                    hitCount,
+                    hitCountAvg: hitCount / castCount,
+                    hitRate: hitCount / total,
+                    partialResistRate: partialResists / total,
+                    resistRate: resists / total,
+                    missRate: misses / total,
+                },
+                selectable: false,
+                disabled: false,
+            }
+        }),
+        (r) => r.value.count,
     )
-
-    let rows = [] as DebuffTableData["rows"]
-
-    for (const [spell, allCasts] of Object.entries(usage.data)) {
-        if (!allCasts.length || !group.has(allCasts[0])) {
-            continue
-        }
-
-        const castCount = allCasts.length
-
-        const effects = allCasts.flatMap((cast) => cast.debuff ?? [])
-
-        const hitCount = sum(
-            allCasts.map((cast) => (cast.debuff ?? []).length)
-        )
-        const hitRate = hitCount / effects.length
-
-        const resistRate =
-            1 - effects.filter((x) => x).length / effects.length
-
-        rows.push({
-            label: spell,
-            value: {
-                castCount,
-                hitCount,
-                hitCountAvg: hitCount / castCount,
-                hitRate,
-                resistRate,
-            },
-            selectable: false,
-            disabled: false,
-        })
-    }
-
-    rows = sortBy(rows, [{ fn: (r) => r.value.castCount }]).reverse()
 
     const columns: DebuffTableData["columns"] = [
         {
             label: "Casts",
-            get: (x) => x.castCount,
+            get: (x) => x.count,
         },
         {
             label: "Target Count",
             get: (x) => x.hitCountAvg,
             format: (x) => `${x.toFixed(1)}`,
-            tooltip: (
-                <span>Average number of monsters hit per cast.</span>
-            ),
+            tooltip: <span>Average number of monsters hit per cast.</span>,
+        },
+        // {
+        //     label: "Misses",
+        //     get: (x) => x.missRate,
+        //     format: (x) => `${(100 * x).toFixed(2)}%`,
+        // },
+        {
+            label: "Partial\nResists",
+            get: (x) => x.partialResistRate,
+            format: (x) => `${(100 * x).toFixed(2)}%`,
         },
         {
-            label: "Resist Rate",
+            label: "Resists",
             get: (x) => x.resistRate,
-            format: (x) => `${x.toFixed(1)}%`,
+            format: (x) => `${(100 * x).toFixed(2)}%`,
         },
     ]
 
@@ -666,7 +543,7 @@ function DebuffTable(usage: CombatSummary) {
             label="Debuffs"
             rows={rows}
             columns={columns}
-            className="casts w-max"
+            className="debuffs w-max max-w-[50%]"
             hideTotal
         />
     ) : (
@@ -686,7 +563,7 @@ type HealTableData = TallyTableProps<
     }
 >
 
-function HealTable(usage: CombatSummary) {
+function HealTable({ combat }: DetailsSummary) {
     const newRow = (label: string) =>
         ({
             label,
@@ -697,7 +574,7 @@ function HealTable(usage: CombatSummary) {
                 value: 0,
             },
             subValues: [],
-        } as HealTableData["rows"][number])
+        }) as HealTableData["rows"][number]
 
     const rowMap = {
         hpA: newRow("HP (active)"),
@@ -708,111 +585,38 @@ function HealTable(usage: CombatSummary) {
         spP: newRow("SP (passive)"),
     } as const
 
-    for (const group of usage.groups) {
-        const casts = Object.entries(usage.data).flatMap(
-            ([spell, allCasts]) =>
-                allCasts.length && group.has(allCasts[0])
-                    ? [[spell, allCasts] as const]
-                    : []
-        )
+    function add(
+        type: keyof typeof rowMap,
+        label: string,
+        count: number,
+        value: number,
+    ) {
+        rowMap[type].subValues!.push({
+            label,
+            count,
+            value,
+        })
+        rowMap[type].value.count += count
+        rowMap[type].value.value += value
+    }
 
-        switch (group.label) {
-            case "Heals":
-                for (const [label, castsForSpell] of casts) {
-                    const hpCasts = castsForSpell.flatMap((cast) =>
-                        cast.heal?.health ? [cast.heal?.health] : []
-                    )
-                    const hpCount = hpCasts.length
-                    const hpValue = sum(hpCasts)
-                    rowMap.hpA.value.count += hpCount
-                    rowMap.hpA.value.value += hpValue
-                    if (hpValue > 0)
-                        rowMap.hpA.subValues!.push({
-                            label,
-                            count: hpCount,
-                            value: hpValue,
-                        })
-
-                    const mpCasts = castsForSpell.flatMap((cast) =>
-                        cast.heal?.magic ? [cast.heal?.magic] : []
-                    )
-                    const mpCount = mpCasts.length
-                    const mpValue = sum(mpCasts)
-                    rowMap.mpA.value.count += mpCount
-                    rowMap.mpA.value.value += mpValue
-                    if (mpValue > 0)
-                        rowMap.mpA.subValues!.push({
-                            label,
-                            count: mpCount,
-                            value: mpValue,
-                        })
-
-                    const spCasts = castsForSpell.flatMap((cast) =>
-                        cast.heal?.spirit ? [cast.heal?.spirit] : []
-                    )
-                    const spCount = spCasts.length
-                    const spValue = sum(spCasts)
-                    rowMap.spA.value.count += spCount
-                    rowMap.spA.value.value += spValue
-                    if (spValue > 0)
-                        rowMap.spA.subValues!.push({
-                            label,
-                            count: spCount,
-                            value: spValue,
-                        })
-                }
-                break
-            case "Passive Heals":
-                for (const [label, castsForSpell] of casts) {
-                    const hpCasts = castsForSpell.flatMap((cast) =>
-                        cast.effectHeals?.health
-                            ? [cast.effectHeals?.health]
-                            : []
-                    )
-                    const hpCount = hpCasts.length
-                    const hpValue = sum(hpCasts)
-                    rowMap.hpP.value.count += hpCount
-                    rowMap.hpP.value.value += hpValue
-                    if (hpValue > 0)
-                        rowMap.hpP.subValues!.push({
-                            label,
-                            count: hpCount,
-                            value: hpValue,
-                        })
-
-                    const mpCasts = castsForSpell.flatMap((cast) =>
-                        cast.effectHeals?.magic
-                            ? [cast.effectHeals?.magic]
-                            : []
-                    )
-                    const mpCount = mpCasts.length
-                    const mpValue = sum(mpCasts)
-                    rowMap.mpP.value.count += mpCount
-                    rowMap.mpP.value.value += mpValue
-                    if (mpValue > 0)
-                        rowMap.mpP.subValues!.push({
-                            label,
-                            count: mpCount,
-                            value: mpValue,
-                        })
-
-                    const spCasts = castsForSpell.flatMap((cast) =>
-                        cast.effectHeals?.spirit
-                            ? [cast.effectHeals?.spirit]
-                            : []
-                    )
-                    const spCount = spCasts.length
-                    const spValue = sum(spCasts)
-                    rowMap.spP.value.count += spCount
-                    rowMap.spP.value.value += spValue
-                    if (spValue > 0)
-                        rowMap.spP.subValues!.push({
-                            label,
-                            count: spCount,
-                            value: spValue,
-                        })
-                }
-                break
+    for (const [type, key, data] of [
+        ["hpA", "health", combat.heal],
+        ["mpA", "magic", combat.heal],
+        ["spA", "spirit", combat.heal],
+        ["hpP", "health", combat.passiveHeal],
+        ["mpP", "magic", combat.passiveHeal],
+        ["spP", "spirit", combat.passiveHeal],
+    ] as const) {
+        for (const source of Object.values(data)) {
+            if (source.events[key].some((v) => v > 0)) {
+                add(
+                    type,
+                    source.key,
+                    source.events.logIdx.length,
+                    sum(source.events[key]),
+                )
+            }
         }
     }
 
@@ -827,6 +631,8 @@ function HealTable(usage: CombatSummary) {
         {
             label: "Value",
             get: (x) => x.value,
+            // opt out of k/m/b units
+            format: (x) => formatNumber(x),
         },
         {
             label: "Count",
@@ -861,18 +667,10 @@ function HealTable(usage: CombatSummary) {
     )
 }
 
-function HealChartWrapper({ log }: { log: CompleteLog }) {
-    const { combatUsage, indexMap, summary } = useStats(log, {
-        combatUsage: true,
-        indexMap: true,
-        summary: true,
-    })
+function HealChartWrapper({ stats }: { stats: DetailsSummary }) {
+    const { meta, combat, indexMap } = stats
 
-    const chart = new HealChart(
-        combatUsage,
-        indexMap,
-        summary.round?.end ?? 1
-    )
+    const chart = new HealChart(combat, indexMap, meta.round?.end ?? 1)
     const el = chart.render()
 
     const container = useRef<HTMLDivElement>(null)
@@ -887,7 +685,7 @@ function HealChartWrapper({ log }: { log: CompleteLog }) {
         <div className="flex flex-col">
             <h1 className="text-base font-bold">Heals</h1>
             <span className="text-sm text-muted-foreground py-1">
-                Red tick marks denote Spark of Life triggers
+                Red tick marks denote Spark of Life triggers.
             </span>
 
             <div ref={container} className="w-full flex"></div>
@@ -895,18 +693,10 @@ function HealChartWrapper({ log }: { log: CompleteLog }) {
     )
 }
 
-function CastChartWrapper({ log }: { log: CompleteLog }) {
-    const { combatUsage, indexMap, summary } = useStats(log, {
-        combatUsage: true,
-        indexMap: true,
-        summary: true,
-    })
+function ActionChartWrapper({ stats }: { stats: DetailsSummary }) {
+    const { meta, combat, indexMap } = stats
 
-    const chart = new CastChart(
-        combatUsage,
-        indexMap,
-        summary.round?.end ?? 1
-    )
+    const chart = new ActionChart(combat, meta, meta.round?.end ?? 1, indexMap)
     const el = chart.render()
 
     const container = useRef<HTMLDivElement>(null)
@@ -919,12 +709,254 @@ function CastChartWrapper({ log }: { log: CompleteLog }) {
 
     return (
         <div className="flex flex-col">
-            <h1 className="text-base font-bold">Casts</h1>
+            <h1 className="text-base font-bold">Actions</h1>
             <span className="text-sm text-muted-foreground py-1">
-                Red tick marks denote Spark of Life triggers
+                Red tick marks denote Spark of Life triggers. Averaged over{" "}
+                {(meta.round?.end ?? 1) > 300 ? 30 : 10} rounds.
             </span>
 
             <div ref={container} className="w-full flex"></div>
         </div>
+    )
+}
+
+function fmtPercentage(x: number) {
+    if (x < 0) {
+        return "-"
+    }
+
+    const p = x * 100
+    if (p < 0.1) {
+        return "0%"
+    } else if (p < 10) {
+        return `${p.toFixed(1)}%`
+    } else {
+        return `${p.toFixed(0)}%`
+    }
+}
+
+type DamageTakenData = TallyTableProps<
+    CombatSummary["damageTaken"][string] & {
+        damageTotal: number
+    },
+    {
+        label: string
+        damageTotal: number
+    }
+>
+
+function DamageTakenTable({ meta, combat }: DetailsSummary) {
+    const rows: DamageTakenData["rows"] = sort(
+        Object.entries(combat.damageTaken).map(([k, v]) => ({
+            label: k,
+            value: {
+                ...v,
+                damageTotal: sum(Object.values(v.types)),
+            },
+            subValues: sort(
+                Object.entries(v.types).map(([k, v]) => ({
+                    label: k,
+                    damageTotal: v,
+                })),
+                (r) => r.damageTotal,
+                true,
+            ),
+            selectable: true,
+        })),
+        (r) => r.value.damageTotal,
+        true,
+    )
+
+    const damageTotalTotal = sum(rows.map((r) => r.value.damageTotal))
+
+    // const hasParries = rows.some(
+    //     (r) => (r.value.partialParries || r.value.parries || 0) > 0,
+    // )
+    const hasParries = true
+    const hasBlocks = rows.some(
+        (r) => (r.value.partialBlocks || r.value.blocks || 0) > 0,
+    )
+
+    const columns: Array<DamageTakenData["columns"][number] | null> = [
+        {
+            label: "Per Round",
+            get: (x) => x.damageTotal / (meta.round?.end ?? 1),
+            format: (x) => {
+                if (x >= 10_000) {
+                    return `${(x / 1000).toFixed(0)}k`
+                } else if (x >= 1_000) {
+                    return `${(x / 1000).toFixed(1)}k`
+                } else {
+                    return formatNumber(x)
+                }
+            },
+            tooltip: <span>Average damage taken per round.</span>,
+        },
+        {
+            label: "Per Hit",
+            get: (x) => x.damageTotal / x.hitCount,
+            format: (x) => {
+                if (x >= 10_000) {
+                    return `${(x / 1000).toFixed(0)}k`
+                } else if (x >= 1_000) {
+                    return `${(x / 1000).toFixed(1)}k`
+                } else {
+                    return formatNumber(x)
+                }
+            },
+            tooltip: <span>Average damage taken per hit.</span>,
+        },
+        {
+            label: "Hits",
+            get: (x) => x.hitCount,
+        },
+        {
+            label: "Weight",
+            get: (v) => v.damageTotal / damageTotalTotal,
+            format: fmtPercentage,
+            tooltip: <span>Percentage of total damage taken.</span>,
+        },
+        {
+            label: "C.",
+            get: (x) => x.crits / x.hitCount,
+            format: fmtPercentage,
+            tooltip: <span>Critical hits.</span>,
+        },
+        {
+            label: "G.",
+            get: (x) => x.glances / x.hitCount,
+            format: fmtPercentage,
+            tooltip: <span>Glances.</span>,
+        },
+        {
+            label: "E.",
+            get: (x) => x.evades / x.hitCount,
+            format: fmtPercentage,
+            tooltip: <span>Evades.</span>,
+        },
+        hasParries
+            ? {
+                  label: "P.P.",
+                  get: (x) =>
+                      x.partialParries ? x.partialParries / x.hitCount : -1,
+                  format: fmtPercentage,
+                  tooltip: <span>Partial parries.</span>,
+              }
+            : null,
+        hasParries
+            ? {
+                  label: "P.",
+                  get: (x) => (x.parries ? x.parries / x.hitCount : -1),
+                  format: fmtPercentage,
+                  tooltip: <span>Parries.</span>,
+              }
+            : null,
+        hasBlocks
+            ? {
+                  label: "P.B.",
+                  get: (x) =>
+                      x.partialBlocks ? x.partialBlocks / x.hitCount : -1,
+                  format: fmtPercentage,
+                  tooltip: <span>Partial blocks.</span>,
+              }
+            : null,
+        hasBlocks
+            ? {
+                  label: "B.",
+                  get: (x) => (x.blocks ? x.blocks / x.hitCount : -1),
+                  format: fmtPercentage,
+                  tooltip: <span>Blocks.</span>,
+              }
+            : null,
+        {
+            label: "P.R.",
+            get: (x) => (x.partialResists ? x.partialResists / x.hitCount : -1),
+            format: fmtPercentage,
+            tooltip: <span>Partial Resists.</span>,
+        },
+        {
+            label: "R.",
+            get: (x) => (x.resists ? x.resists / x.hitCount : -1),
+            format: fmtPercentage,
+            tooltip: <span>Resists.</span>,
+        },
+        {
+            label: "W.",
+            get: (x) => (x.whiffs ? x.whiffs / x.hitCount : -1),
+            format: fmtPercentage,
+            tooltip: <span>Whiffs.</span>,
+        },
+        // {
+        //     label: "Absorbs",
+        //     get: (x) => (x.absorbs ? x.absorbs / x.hitCount : -1),
+        //     format: fmtPercentage,
+        // },
+    ]
+
+    const subColumns: DamageTakenData["subColumns"] = [
+        {
+            label: "Type",
+            get: (v) => v.label,
+        },
+        {
+            label: "Total",
+            get: (v) => v.damageTotal,
+            // @ts-ignore
+            format: (v: number) => {
+                if (v >= 10_000) {
+                    return `${(v / 1000).toFixed(0)}k`
+                } else if (v >= 1_000) {
+                    return `${(v / 1000).toFixed(1)}k`
+                } else {
+                    return formatNumber(v)
+                }
+            },
+        },
+    ]
+
+    return rows.length ? (
+        <TallyTable
+            label="Damage Taken"
+            rows={rows}
+            columns={columns.filter((col) => col !== null)}
+            subColumns={subColumns}
+            className="damage-taken max-w-full overflow-x-auto text-sm!"
+            hideTotal
+        />
+    ) : (
+        <></>
+    )
+}
+
+type CritData = TallyTableProps<{
+    count: number
+}>
+function CritTable({ combat }: DetailsSummary) {
+    const totalCrits = sum(combat.critMults.map((x) => x.count))
+    const rows: CritData["rows"] = combat.critMults.map(({ count }, idx) => ({
+        label: `${idx + 1}-Crit`,
+        value: {
+            count,
+        },
+    }))
+    const columns: CritData["columns"] = [
+        {
+            label: "Count",
+            get: (v) => v.count,
+        },
+        {
+            label: "Frequency",
+            get: (v) => v.count / totalCrits,
+            format: fmtPercentage,
+        },
+    ]
+    return (
+        <TallyTable
+            label="Melee Crits"
+            rows={rows}
+            columns={columns}
+            className="crits max-w-[20em]"
+            hideTotal
+        />
     )
 }

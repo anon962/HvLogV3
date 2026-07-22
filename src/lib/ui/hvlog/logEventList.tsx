@@ -1,22 +1,20 @@
-import { CompleteLog, LogEntry } from "@/lib/logDb/logDb"
-import { HvEventMap } from "@/lib/parsers"
-import { enumerate } from "@/lib/utils/miscUtils"
+import { CompleteLog, LogEntry } from "@/lib/logDb/schema"
 import JsonView from "@uiw/react-json-view"
-import { range, sleep } from "radash"
-import {
-    memo,
-    ReactElement,
-    useEffect,
-    useRef,
-    useState,
-} from "react"
+import { range, sleep, enumerate } from "myutils"
+import { memo, ReactElement, useEffect, useRef, useState } from "react"
 import { IndexMap } from "../../stats/indexMap"
 import { XIcon } from "../icons/tailwind"
-import { useStats } from "./logStatsContext"
+import { BaseHvEvent } from "@/lib/eventParser"
+import { DetailsSummary } from "@/lib/summary"
 
-export function LogEventList(props: { log: CompleteLog }) {
-    const { rows, loading, indexMap, activeIdx, setActiveIdx } =
-        useRowsAsync(props.log)
+export function LogEventList<T extends BaseHvEvent>(props: {
+    log: CompleteLog<T>
+    stats: DetailsSummary
+}) {
+    const { rows, loading, indexMap, activeIdx, setActiveIdx } = useRowsAsync(
+        props.log,
+        props.stats.indexMap,
+    )
 
     const scrollRef = useRef<HTMLDivElement>(null)
 
@@ -40,7 +38,7 @@ export function LogEventList(props: { log: CompleteLog }) {
                     onClose={() => setActiveIdx(-1)}
                     entry={props.log.entries[activeIdx]}
                     label={`Round ${indexMap.l2r(
-                        activeIdx
+                        activeIdx,
                     )}, Turn ${indexMap.l2t(activeIdx)}`}
                 />
             )}
@@ -48,7 +46,10 @@ export function LogEventList(props: { log: CompleteLog }) {
     )
 }
 
-function useRowsAsync(log: CompleteLog) {
+function useRowsAsync<T extends BaseHvEvent>(
+    log: CompleteLog<T>,
+    indexMap: IndexMap,
+) {
     const [current, setCurrent] = useState({
         id: "",
         rows: [] as ReactElement[],
@@ -60,8 +61,6 @@ function useRowsAsync(log: CompleteLog) {
     })
 
     const [loading, setLoading] = useState(true)
-
-    const { indexMap } = useStats(log, { indexMap: true })
 
     useEffect(() => {
         let cancelled = false
@@ -75,8 +74,8 @@ function useRowsAsync(log: CompleteLog) {
                 activeLogIdx: -1,
             }))
 
-            range(0, log.entries.length - 1).forEach((idx) =>
-                updateTargets.add(idx)
+            range(0, log.entries.length).forEach((idx) =>
+                updateTargets.add(idx),
             )
         }
 
@@ -184,14 +183,8 @@ interface EventRowContainerProps {
 }
 
 const EventRowContainer = memo((props: EventRowContainerProps) => {
-    const {
-        logIdx,
-        entry,
-        indexMap,
-        activeLogIdx,
-        setActiveLogIdx,
-        logId,
-    } = props
+    const { logIdx, entry, indexMap, activeLogIdx, setActiveLogIdx, logId } =
+        props
 
     const els: ReactElement[] = []
 
@@ -204,14 +197,11 @@ const EventRowContainer = memo((props: EventRowContainerProps) => {
             <div className="turn-start flex gap-2 px-6 pb-4 items-center">
                 <span className="">{turnIdx}</span>
                 <hr className=""></hr>
-            </div>
+            </div>,
         )
     }
 
-    if (
-        entry.type === "event" &&
-        entry.event.event_type === "ROUND_START"
-    ) {
+    if (entry.type === "event" && entry.event.event_type === "ROUND_START") {
         const nextRoundStartTurn =
             indexMap.r2t(roundIdx + 1) ?? indexMap.turnIndexes.length
 
@@ -231,7 +221,7 @@ const EventRowContainer = memo((props: EventRowContainerProps) => {
                 }
             >
                 {label}
-            </div>
+            </div>,
         )
     } else {
         els.push(
@@ -240,7 +230,7 @@ const EventRowContainer = memo((props: EventRowContainerProps) => {
                 onClick={() => setActiveLogIdx(logIdx)}
                 entry={entry}
                 isActive={activeLogIdx === logIdx}
-            />
+            />,
         )
     }
 
@@ -262,16 +252,12 @@ const EventRow = memo((props: EventRowProps) => {
         const eventType = props.entry.event.event_type
         const summary =
             eventType in EVENT_SUMMARY_MAP
-                ? EVENT_SUMMARY_MAP[eventType](
-                      props.entry.event as any
-                  )
+                ? EVENT_SUMMARY_MAP[eventType](props.entry.event as any)
                 : JSON.stringify(props.entry.event)
 
         content = (
             <>
-                <pre className="event-type">
-                    {props.entry.event.event_type}
-                </pre>
+                <pre className="event-type">{props.entry.event.event_type}</pre>
                 <pre className="event-detail">{summary}</pre>
             </>
         )
@@ -279,9 +265,7 @@ const EventRow = memo((props: EventRowProps) => {
         content = (
             <>
                 <pre className="event-type">ERROR</pre>
-                <pre className="event-detail">
-                    {props.entry.detail}
-                </pre>
+                <pre className="event-detail">{props.entry.detail}</pre>
             </>
         )
     }
@@ -346,8 +330,7 @@ const EVENT_SUMMARY_MAP = {
     DISPEL: (ev) => `Dispelled ${ev.effect}`,
     DROP: (ev) => `Dropped ${ev.item}`,
     DROP_EVENT: (ev) => `Dropped ${ev.item}`,
-    EFFECT_RESTORE: (ev) =>
-        `Healed ${ev.value} ${ev.type} from ${ev.effect}`,
+    EFFECT_RESTORE: (ev) => `Healed ${ev.value} ${ev.type} from ${ev.effect}`,
     ENEMY_BASIC: (ev) => `Lost ${ev.value} health`,
     ENEMY_DODGE: (ev) => ``,
     ENEMY_EVADE: (ev) => ``,
@@ -374,18 +357,13 @@ const EVENT_SUMMARY_MAP = {
         const msg = `Dealt ${ev.value}${
             ev.damage_type ? " " + ev.damage_type : ""
         } damage`
-        if (!ev.spell.endsWith(" Strike")) {
-            return `${msg} (${ev.resist ?? 0}% resist).`
-        } else {
-            return `${msg}.`
-        }
+        return `${msg}.`
     },
     PLAYER_BUFF: (ev) => `Gained ${ev.effect}`,
     PLAYER_COUNTER: (ev) => ``,
     PLAYER_ITEM: (ev) => `Cast ${ev.item}`,
     PLAYER_OFFHAND: (ev) => `Dealt ${ev.value} damage`,
-    PLAYER_MELEE: (ev) =>
-        `Dealt ${ev.value} ${ev.damage_type} damage`,
+    PLAYER_MELEE: (ev) => `Dealt ${ev.value} ${ev.damage_type} damage`,
     PLAYER_SKILL: (ev) => `Cast ${ev.spell}`,
     PLAYER_SPELL_ABSORBED: (ev) => ``,
     PLAYER_SPIKE_SHIELD: (ev) => `Dealt ${ev.value} damage`,

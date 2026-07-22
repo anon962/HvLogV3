@@ -1,105 +1,86 @@
-import { App } from "../app/app"
-import { CompleteLog } from "../logDb/logDb"
-import {
-    BUBBLE_VASE,
-    HEALTH_ITEMS,
-    MANA_ITEMS,
-    SCROLLS,
-    SPIRIT_ITEMS,
-} from "../ui/constants"
-import { EventSummary } from "../ui/hvlog/eventSummary"
-import { enumerate } from "../utils/miscUtils"
+import { CompleteLog } from "../logDb/schema"
+import { BaseHvEvent } from "../eventParser"
+import { enumerate } from "myutils"
 
-// Map events to usage
-function extractItemUsage(log: CompleteLog) {
-    let usage: Record<string, number[]> = {}
+export const ITEM_USAGE_CATEGORIES = {
+    "Gum & Vase": "Gum & Vase",
+    Scrolls: "Scrolls",
+    "Health Items": "Health Items",
+    "Mana Items": "Mana Items",
+    "Spirit Items": "Spirit Items",
+    "Last Elixir": "Last Elixir",
+} as const
+type ItemUsageCategory = keyof typeof ITEM_USAGE_CATEGORIES
 
-    for (const [idx, entry] of enumerate(log.entries)) {
+export type ItemUsageInfo = {
+    key: string
+    name: string
+    priceKey: string
+}
+
+export type ItemUsageSummary = Record<
+    string,
+    ItemUsageInfo & {
+        category: ItemUsageCategory | null
+        events: {
+            logIdx: number[]
+            count: number[]
+        }
+    }
+>
+
+export function summarizeItemUsage<T extends BaseHvEvent>(
+    log: CompleteLog<T>,
+    count: (ev: T) => Array<{
+        key: string
+        name?: string
+        priceKey?: string
+        count: number
+    }>,
+    groups: Record<
+        ItemUsageCategory,
+        Set<string> | ((info: ItemUsageInfo) => boolean)
+    >,
+): ItemUsageSummary {
+    const summary: ItemUsageSummary = {}
+
+    for (const [logIdx, entry] of enumerate(log.entries)) {
         if (entry.type !== "event") {
             continue
         }
 
         const ev = entry.event
-        switch (ev.event_type) {
-            case "PLAYER_ITEM":
-                usage[ev.item] = usage[ev.item] ?? []
-                usage[ev.item].push(idx)
-                break
+        const countResult = count(ev)
+        if (!countResult) {
+            continue
         }
-    }
 
-    return usage
-}
+        for (const x of countResult) {
+            if (!(x.key in summary)) {
+                summary[x.key] = {
+                    key: x.key,
+                    name: x.name ?? x.key,
+                    priceKey: x.priceKey ?? x.key,
+                    category: null,
+                    events: {
+                        logIdx: [],
+                        count: [],
+                    },
+                }
+                const info = summary[x.key]
 
-export function summarizeItemUsage(
-    app: App,
-    log: CompleteLog
-): ItemUsageSummary {
-    const usage = extractItemUsage(log)
+                summary[x.key].category =
+                    ((Object.entries(groups).find(([grpKey, cond]) =>
+                        cond instanceof Set ? cond.has(info.name) : cond(info),
+                    )?.[0] as ItemUsageCategory) ||
+                        undefined) ??
+                    null
+            }
 
-    const summary: ItemUsageSummary = {
-        data: {},
-        groups: [
-            newDropEventGroup("Gum & Vase", BUBBLE_VASE),
-            newDropEventGroup("Scrolls", SCROLLS),
-            newDropEventGroup("Health Items", HEALTH_ITEMS),
-            newDropEventGroup("Mana Items", MANA_ITEMS),
-            newDropEventGroup("Spirit Items", SPIRIT_ITEMS),
-            newDropEventGroup(
-                "Last Elixir",
-                new Set(["Last Elixir"])
-            ),
-        ],
-    }
-
-    const mapUses = (
-        key: string,
-        logIdxs: (typeof usage)[string],
-        value: number
-    ) =>
-        logIdxs.map((logIdx) => ({
-            key,
-            count: 1,
-            value: value,
-            logIdx,
-        }))
-
-    for (let [item, logIdxs] of Object.entries(usage)) {
-        const k = item as any
-        const ps = app.config.prices
-
-        if (BUBBLE_VASE.has(k)) {
-            summary.data[k] = mapUses(k, logIdxs, ps[k])
-        } else if (SCROLLS.has(k)) {
-            summary.data[k] = mapUses(k, logIdxs, ps[k])
-        } else if (HEALTH_ITEMS.has(k)) {
-            summary.data[k] = mapUses(k, logIdxs, ps[k])
-        } else if (MANA_ITEMS.has(k)) {
-            summary.data[k] = mapUses(k, logIdxs, ps[k])
-        } else if (SPIRIT_ITEMS.has(k)) {
-            summary.data[k] = mapUses(k, logIdxs, ps[k])
-        } else if (item === "Last Elixir") {
-            summary.data[k] = mapUses(k, logIdxs, ps["Last Elixir"])
+            summary[x.key].events.logIdx.push(logIdx)
+            summary[x.key].events.count.push(x.count)
         }
     }
 
     return summary
 }
-
-function newDropEventGroup<T extends string>(
-    label: string,
-    keys: Set<T>
-): ItemUsageSummary["groups"][number] {
-    return { label, has: (key) => keys.has(key as any) }
-}
-
-export type ItemUsageSummary = EventSummary<
-    {
-        count: number
-        value: number
-    },
-    Array<{
-        label: string
-        has: (key: string) => boolean
-    }>
->

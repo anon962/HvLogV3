@@ -1,620 +1,244 @@
-import { range, sum } from "radash"
-import { EventGrammar, takeEvents } from "../eventGrammar"
-import { CompleteLog, LogEntry } from "../logDb/logDb"
-import { HvEvent, HvEventMap } from "../parsers"
-import {
-    EventSummary,
-    EventSummaryData,
-} from "../ui/hvlog/eventSummary"
-import { enumerate, setDefault } from "../utils/miscUtils"
+import { sort, ValueOf } from "myutils"
 
-export function summarizeCombatUsage(
-    log: CompleteLog
-): CombatSummary {
-    const data: CombatSummary["data"] = {}
-
-    const offenseKeys = new Set<string>()
-    const debuffKeys = new Set<string>()
-    const healKeys = new Set<string>()
-    const buffKeys = new Set<string>()
-    const passiveHealKeys = new Set<string>()
-    const passiveAttackKeys = new Set<string>()
-    const meleeCastKeys = new Set<string>()
-
-    const xs = log.entries
-    for (let idx = 0; idx < xs.length; idx++) {
-        const entry = log.entries[idx]
-        if (entry.type !== "event") {
-            continue
-        }
-        const ev = entry.event
-
-        // Offense
-        const offenseData = takeEntriesWithRoot(
-            xs,
-            idx,
-            "cast",
-            "offense"
-        )
-        if (offenseData) {
-            const { cast, effects } = offenseData as {
-                cast: HvEventMap["PLAYER_SKILL"]
-                effects: HvEvent[][]
-            }
-
-            const effectSummary: CombatSummaryData["spell"] = []
-
-            for (const grp of effects) {
-                const attack = grp.find(
-                    (ev) => ev.event_type === "PLAYER_ATTACK"
-                )
-                const resist = grp.find(
-                    (ev) => ev.event_type === "RESIST"
-                )
-                const miss = grp.find(
-                    (ev) => ev.event_type === "ENEMY_PARRY"
-                )
-                const death = grp.find(
-                    (ev) => ev.event_type === "MONSTER_DEATH"
-                )
-                effectSummary.push({
-                    value: attack?.value ?? 0,
-                    miss: !!miss,
-                    resist: resist ? 100 : attack?.resist ?? 0,
-                    kill: !!death,
-                    crit:
-                        attack?.multiplier_type === "crits" ||
-                        attack?.multiplier_type === "blasts",
-                })
-            }
-
-            setDefault(data, cast.spell, []).push({
-                key: cast.spell,
-                logIdx: idx,
-                spell: effectSummary,
-            })
-
-            offenseKeys.add(cast.spell)
-
-            idx += sum(effects, (xs) => xs.length)
-            continue
-        }
-
-        // Debuffs
-        const debuffData = takeEntriesWithRoot(
-            xs,
-            idx,
-            "cast",
-            "debuff"
-        )
-        if (debuffData) {
-            const { cast, effects } = debuffData as {
-                cast: HvEventMap["PLAYER_SKILL"]
-                effects: HvEvent[][]
-            }
-
-            const effectSummary: CombatSummaryData["debuff"] = []
-
-            for (const grp of effects) {
-                const resist = grp.find(
-                    (ev) => ev.event_type === "RESIST"
-                )
-                effectSummary.push(!!resist)
-            }
-
-            setDefault(data, cast.spell, []).push({
-                key: cast.spell,
-                logIdx: idx,
-                debuff: effectSummary,
-            })
-
-            debuffKeys.add(cast.spell)
-
-            idx += sum(effects, (xs) => xs.length)
-            continue
-        }
-
-        // Supportive
-        const supportiveData = takeEntriesWithRoot(
-            xs,
-            idx,
-            "supportiveCast",
-            "supportive"
-        )
-        if (supportiveData) {
-            const { cast, effects } = supportiveData as {
-                cast: HvEventMap["PLAYER_SKILL" | "PLAYER_ITEM"]
-                effects: HvEvent[][]
-            }
-
-            const key =
-                cast.event_type === "PLAYER_SKILL"
-                    ? cast.spell
-                    : cast.item
-
-            const isBuff = effects[0][0].event_type === "PLAYER_BUFF"
-            if (isBuff) {
-                setDefault(data, key, []).push({
-                    key,
-                    logIdx: idx,
-                    buff: true,
-                })
-
-                buffKeys.add(key)
-            } else {
-                const heal = effects
-                    .flatMap((x) => x)
-                    .reduce(
-                        (acc, x) => {
-                            let type = ""
-                            let value = 0
-                            switch (x.event_type) {
-                                case "CURE_RESTORE":
-                                    type = "health"
-                                    value = x.value
-                                    break
-                                case "ITEM_RESTORE":
-                                    type = x.type
-                                    value = x.value
-                                    break
-                            }
-
-                            if (!(type in acc)) {
-                                // Channeling
-                                // console.error(
-                                //     "Unknown heal effect from supportive cast",
-                                //     x,
-                                //     cast,
-                                //     effects
-                                // )
-                                return acc
-                            }
-
-                            acc[type] += value
-                            return acc
-                        },
-                        { health: 0, magic: 0, spirit: 0 } as any
-                    )
-
-                setDefault(data, key, []).push({
-                    key: key,
-                    logIdx: idx,
-                    heal,
-                })
-
-                healKeys.add(key)
-            }
-
-            idx += sum(effects, (xs) => xs.length)
-            continue
-        }
-
-        // Melee attacks
-        const isStaffBonk =
-            ev.event_type === "PLAYER_ATTACK" &&
-            ev.spell === "Arcane Blow"
-        if (ev.event_type === "PLAYER_MELEE" || isStaffBonk) {
-            const effects = takeEntries(xs, idx, "offense")
-
-            const effectSummary: CombatSummaryData["melee"] = {
-                primary: {
-                    name: isStaffBonk ? "Arcane Blow" : "Main Hand",
-                    value: ev.value,
-                    miss: false,
-                    kill: false,
-                    crit:
-                        ev.multiplier_type === "crit" ||
-                        ev.multiplier_type === "crits",
-                },
-                secondary: [],
-            }
-            for (const [idx, grp] of enumerate(effects)) {
-                const attack = grp.find(
-                    (ev) => ev.event_type === "PLAYER_ATTACK"
-                )
-                const offhand = grp.find(
-                    (ev) => ev.event_type === "PLAYER_OFFHAND"
-                )
-                const miss = grp.find(
-                    (ev) =>
-                        ev.event_type === "ENEMY_EVADE" ||
-                        ev.event_type === "ENEMY_DODGE"
-                )
-                const death = grp.find(
-                    (ev) => ev.event_type === "MONSTER_DEATH"
-                )
-
-                if (idx === 0 && !attack && !offhand) {
-                    effectSummary.primary.miss = !!miss
-                    effectSummary.primary.kill = !!death
-                } else {
-                    effectSummary.secondary.push({
-                        name: // prettier-ignore
-                            offhand ? "Offhand" :
-                            attack ? attack.spell :
-                            "Unknown",
-                        value: attack?.value ?? 0,
-                        miss: !!miss,
-                        kill: !!death,
-                        crit: attack?.multiplier_type === "crit",
-                    })
-                }
-            }
-
-            setDefault(data, "Melee Attacks", []).push({
-                key: "Melee Attacks",
-                logIdx: idx,
-                melee: effectSummary,
-            })
-
-            idx += sum(effects, (xs) => xs.length) - 1
-            continue
-        }
-
-        const meleeSkillData = takeEntriesWithRoot(
-            xs,
-            idx,
-            "meleeCast",
-            "offense"
-        )
-        if (meleeSkillData) {
-            const { cast, effects } = meleeSkillData as {
-                cast: HvEventMap["PLAYER_ITEM"]
-                effects: HvEvent[][]
-            }
-
-            const effectSummary: CombatSummaryData["meleeCast"] = []
-
-            for (const [idx, grp] of enumerate(effects)) {
-                const attack = grp.find(
-                    (ev) => ev.event_type === "PLAYER_ATTACK"
-                )
-                if (!attack) {
-                    console.error(
-                        "Expected melee skill to have attack but got nothing",
-                        effects
-                    )
-                    continue
-                }
-
-                const parry = grp.find(
-                    (ev) => ev.event_type === "ENEMY_PARRY"
-                )
-                const death = grp.find(
-                    (ev) => ev.event_type === "MONSTER_DEATH"
-                )
-
-                effectSummary.push({
-                    value: attack?.value ?? 0,
-                    kill: !!death,
-                    crit: attack?.multiplier_type === "crit",
-                    parry: !!parry,
-                    monster: attack.monster,
-                })
-            }
-
-            setDefault(data, cast.item, []).push({
-                key: cast.item,
-                logIdx: idx,
-                meleeCast: effectSummary,
-            })
-
-            meleeCastKeys.add(cast.item)
-
-            idx += sum(effects, (xs) => xs.length)
-            continue
-        }
-
-        // Passive attacks (eg spike shield, DoTs)
-        if (
-            ev.event_type === "PLAYER_ATTACK" ||
-            ev.event_type === "PLAYER_SPIKE_SHIELD" ||
-            ev.event_type === "EXPLOSION"
-        ) {
-            let key
-            if (ev.event_type === "PLAYER_ATTACK") {
-                key = `${ev.spell} (passive)`
-            } else if (ev.event_type === "EXPLOSION") {
-                key = `${ev.explosion} (explosion)`
-            } else {
-                key = "Spike Shield"
-            }
-            passiveAttackKeys.add(key)
-
-            let kill = false
-            const nextEntry = xs[0]
-            if (
-                nextEntry?.type === "event" &&
-                nextEntry?.event.event_type === "MONSTER_DEATH"
-            ) {
-                kill = true
-            }
-
-            setDefault(data, key, []).push({
-                key,
-                logIdx: idx,
-                passiveAttack: {
-                    value: ev.value,
-                    kill,
-                },
-            })
-
-            idx += kill ? 1 : 0
-            continue
-        }
-    }
-
-    for (let idx = 0; idx < xs.length; idx++) {
-        const entry = log.entries[idx]
-        if (entry.type !== "event") {
-            continue
-        }
-
-        const ev = entry.event
-
-        // Draughts / Regen / Riddlemaster
-        const healTypes = new Set([
-            "health",
-            "magic",
-            "spirit",
-        ] as const)
-        if (ev.event_type === "EFFECT_RESTORE") {
-            if (healTypes.has(ev.type as any)) {
-                setDefault(data, ev.effect, []).push({
-                    key: ev.effect,
-                    logIdx: idx,
-                    effectHeals: {
-                        health: 0,
-                        magic: 0,
-                        spirit: 0,
-                        [ev.type]: ev.value,
-                    },
-                })
-
-                passiveHealKeys.add(ev.effect)
-            } else {
-                console.error(
-                    "Unknown heal effect from EFFECT_RESTORE",
-                    ev
-                )
-            }
-        } else if (ev.event_type === "RIDDLE_RESTORE") {
-            setDefault(data, "RIDDLE_RESTORE", []).push({
-                key: "RIDDLE_RESTORE",
-                logIdx: idx,
-                effectHeals: {
-                    health: ev.hp,
-                    magic: ev.mp,
-                    spirit: ev.sp,
-                },
-            })
-
-            passiveHealKeys.add("RIDDLE_RESTORE")
-        }
-
-        // Spark of Life
-        if (ev.event_type === "SPARK_TRIGGER") {
-            setDefault(data, "SPARK_TRIGGER", []).push({
-                key: "SPARK_TRIGGER",
-                logIdx: idx,
-                spark: true,
-            })
-        }
-    }
-
-    return {
-        data,
-        groups: [
-            {
-                label: "Spells",
-                has: (d) => offenseKeys.has(d.key),
-            },
-            {
-                label: "Debuffs",
-                has: (d) => debuffKeys.has(d.key),
-            },
-            {
-                label: "Heals",
-                has: (d) => healKeys.has(d.key),
-            },
-            {
-                label: "Buffs",
-                has: (d) => buffKeys.has(d.key),
-            },
-            {
-                label: "Passive Heals",
-                has: (d) => passiveHealKeys.has(d.key),
-            },
-            {
-                label: "Times Sparked",
-                has: (d) => d.key === "SPARK_TRIGGER",
-            },
-            {
-                label: "Melee Attacks",
-                has: (d) => d.key === "Melee Attacks",
-            },
-            {
-                label: "Melee Casts",
-                has: (d) => meleeCastKeys.has(d.key),
-            },
-            {
-                label: "Passive Attacks",
-                has: (d) => passiveAttackKeys.has(d.key),
-            },
-        ],
-    }
-}
-
-function takeEntriesWithRoot(
-    entries: LogEntry[],
-    startIdx: number,
-    rootRef: keyof typeof CAST_GRAMMAR,
-    effectRef: keyof typeof CAST_GRAMMAR
-): { cast: HvEvent; effects: HvEvent[][] } | null {
-    const evs = takeEvents(
-        entries,
-        startIdx,
-        [{ refs: [rootRef] }, { refs: [effectRef] }],
-        CAST_GRAMMAR
-    )
-    if (!evs) {
-        return null
-    }
-
-    const [cast, ...firstEffects] = evs
-    if (!firstEffects.length) {
-        return null
-    }
-
-    const effects = firstEffects.length ? [firstEffects] : []
-    effects.push(
-        ...takeEntries(
-            entries,
-            startIdx + 1 + firstEffects.length,
-            effectRef
-        )
-    )
-
-    return {
-        cast,
-        effects,
-    }
-}
-
-function takeEntries(
-    entries: LogEntry[],
-    startIdx: number,
-    effectRef: keyof typeof CAST_GRAMMAR
-): HvEvent[][] {
-    const effects = []
-    let offset = 0
-
-    while (true) {
-        const nextEffects = takeEvents(
-            entries,
-            startIdx + offset,
-            [{ refs: [effectRef] }],
-            CAST_GRAMMAR
-        )
-
-        if (nextEffects) {
-            effects.push(nextEffects)
-            offset += nextEffects.length
-        } else {
-            return effects
-        }
-    }
-}
-
-// prettier-ignore
-const CAST_GRAMMAR = {
-    cast: [
-        { keys: ["PLAYER_SKILL"] },
-    ],
-    offense: [
-        { refs: ["offenseMiss", "offenseHit"] },
-    ],
-    offenseMiss: [
-        { keys: ["ENEMY_PARRY", "ENEMY_EVADE", "ENEMY_DODGE"] },
-    ],
-    offenseHit: [
-        { keys: ["PLAYER_ATTACK", "PLAYER_OFFHAND"] },
-        // Debuffs can occur an indefinite number of times
-        // but currently no way to express that in the grammar
-        // so just add it a bunch times as optional
-        ...[...range(10)].map(() => 
-            ({ keys: [
-                "MONSTER_DEATH" as const,
-                "DEBUFF" as const,
-                "PLAYER_SPELL_ABSORBED" as const,
-            ],
-                optional: true 
-            })
+export function summarizeStyle(
+    spell: CombatSummary["spell"],
+    attack: CombatSummary["attack"],
+    skill: CombatSummary["skill"],
+): {
+    primary: FightingStyle | null
+    secondary: FightingStyle | null
+    isImperil: boolean
+} {
+    const spellsWeighted = sort(
+        Object.entries(spell).map(
+            (kv) => [kv[0], kv[1].events.logIdx.length] as const,
         ),
+        (kv) => kv[1],
+        true,
+    )
 
-    ],
-    debuff: [
-        { keys: ["DEBUFF", "RESIST"] },
-    ],
-    supportiveCast: [
-        { keys: ["PLAYER_SKILL", "PLAYER_ITEM"] },
-    ],
-    supportive: [
-        { keys: ["CURE_RESTORE", "ITEM_RESTORE", "PLAYER_BUFF"] },
-    ],
-    meleeCast: [
-        { keys: ["PLAYER_ITEM"] }
-    ],
-    items: [
-        { keys: ["PLAYER_ITEM"] }
-    ],
-} as const satisfies EventGrammar
+    const attackWeight = attack["Attack"]?.events.logIdx.length ?? 0
+    const skillsWeighted = sort(
+        Object.entries(skill).map(
+            (kv) => [kv[0], kv[1].events.logIdx.length] as const,
+        ),
+        (kv) => kv[1] + attackWeight,
+        true,
+    )
 
-//
+    const candidates = sort([...spellsWeighted, ...skillsWeighted], (x) => x[1])
 
-export type CombatSummary = EventSummary<
-    CombatSummaryData,
-    Array<{
-        label:
-            | "Spells"
-            | "Debuffs"
-            | "Heals"
-            | "Buffs"
-            | "Passive Heals"
-            | "Times Sparked"
-            | "Melee Attacks"
-            | "Passive Attacks"
-            | "Melee Casts"
-        has: (d: CombatSummaryData) => boolean
-    }>
->
-
-type CombatSummaryData = EventSummaryData<{
-    spell?: Array<{
-        value: number
-        miss: boolean
-        resist: number
-        kill: boolean
-        crit: boolean
-    }>
-    heal?: {
-        health: number
-        magic: number
-        spirit: number
-    }
-    effectHeals?: {
-        health: number
-        magic: number
-        spirit: number
-    }
-    debuff?: boolean[]
-    buff?: boolean
-    spark?: boolean
-    melee?: {
-        primary: {
-            name: string
-            value: number
-            miss: boolean
-            kill: boolean
-            crit: boolean
+    let pStyle: FightingStyle | null = null
+    let pStyleWeight = 0
+    let sStyle: FightingStyle | null = null
+    let sStyleWeight = 0
+    for (const [id, weight] of candidates) {
+        const style: FightingStyle | undefined =
+            MAGE_STYLES_BY_SPELL[id] ?? MELEE_STYLES_BY_SKILL[id]
+        if (!style) {
+            continue
         }
-        secondary: Array<{
-            name: string
-            value: number
-            miss: boolean
-            kill: boolean
-            crit: boolean
-        }>
+        if (style.id === (pStyle as FightingStyle)?.id) {
+            continue
+        }
+
+        if (!pStyle) {
+            pStyle = style
+            pStyleWeight = weight
+        } else {
+            sStyle = style
+            sStyleWeight = weight
+            break
+        }
     }
-    meleeCast?: Array<{
-        value: number
-        kill: boolean
-        crit: boolean
-        parry: boolean
-        monster: string
-    }>
-    passiveAttack?: {
-        value: number
-        kill: boolean
+
+    const isImperil =
+        (spell["Imperil"]?.events.logIdx.length ?? 0) >= pStyleWeight / 8
+
+    return {
+        primary: pStyle,
+        secondary: sStyle,
+        isImperil,
     }
-}>
+}
+
+export type CombatSummary = {
+    [K in keyof CombatSummaryEventMap]: Record<
+        string,
+        {
+            key: string
+            events: {
+                [K2 in keyof CombatSummaryEventMap[K]]: Array<
+                    CombatSummaryEventMap[K][K2]
+                >
+            } & { logIdx: number[] }
+        }
+    >
+} & {
+    style: {
+        primary: FightingStyle | null
+        secondary: FightingStyle | null
+        isImperil: boolean
+    }
+} & {
+    effectBlame: Record<string, string>
+    downtime: Record<string, number>
+    damageTaken: Record<
+        string,
+        {
+            types: Record<string, number>
+            hitCount: number
+            crits: number
+            glances: number
+            evades: number
+            partialParries?: number
+            parries?: number
+            partialBlocks?: number
+            blocks?: number
+            partialResists?: number
+            resists?: number
+            whiffs?: number
+            absorbs?: number
+        }
+    >
+    critMults: Array<{ count: number }>
+}
+
+export type CombatSummaryEventMap = {
+    spell: SpellEvent
+    heal: HealEvent
+    passiveHeal: PassiveHealEvent
+    debuff: DebuffEvent
+    buff: BuffEvent
+    spark: SparkEvent
+    attack: AttackEvent
+    skill: SkillEvent
+    passiveAttack: PassiveAttackEvent
+    riddlemaster: RiddlemasterEvent
+}
+
+type SpellEvent = {
+    hitCount: number
+    value: number
+    miss: number
+    kill: number
+    crit: number
+    partialResist: number
+    resist: number
+    glance: number
+    absorb: number
+}
+type HealEvent = {
+    type: "item" | "cast"
+    health: number
+    magic: number
+    spirit: number
+}
+type PassiveHealEvent = {
+    health: number
+    magic: number
+    spirit: number
+}
+type DebuffEvent = {
+    hitCount: number
+    partialResistCount: number
+    resistCount: number
+    missCount: number
+}
+type BuffEvent = { type: "item" | "cast" }
+type SparkEvent = {}
+type AttackEvent = {
+    value: number
+    hitCount: number
+    kill: number
+    crit: number
+    miss: number
+    partialParry: number
+    parry: number
+    glance: number
+}
+type SkillEvent = {
+    hitCount: number
+    value: number
+    kill: number
+    crit: number
+    absorb: number
+}
+type PassiveAttackEvent = {
+    damage: number
+    kill: number
+}
+type RiddlemasterEvent = {}
+
+const MAGE_STYLES = {
+    "Dark Mage": {
+        id: "Dark Mage",
+        name: "Dark Mage",
+        spells: new Set(["Ragnarok", "Disintegrate", "Corruption"]),
+    },
+    "Holy Mage": {
+        id: "Holy Mage",
+        name: "Holy Mage",
+        spells: new Set(["Paradise Lost", "Banishment", "Smite"]),
+    },
+    "Wind Mage": {
+        id: "Wind Mage",
+        name: "Wind Mage",
+        spells: new Set(["Storms of Njord", "Downburst", "Gale"]),
+    },
+    "Elec Mage": {
+        id: "Elec Mage",
+        name: "Elec Mage",
+        spells: new Set(["Wrath of Thor", "Chained Lightning", "Shockblast"]),
+    },
+    "Fire Mage": {
+        id: "Fire Mage",
+        name: "Fire Mage",
+        spells: new Set(["Flames of Loki", "Inferno", "Fiery Blast"]),
+    },
+    "Cold Mage": {
+        id: "Cold Mage",
+        name: "Cold Mage",
+        spells: new Set(["Fimbulvetr", "Blizzard", "Freeze"]),
+    },
+} as const
+const MAGE_STYLES_BY_SPELL = Object.fromEntries(
+    Object.values(MAGE_STYLES).flatMap((style) =>
+        [...style.spells].map((spell) => [spell, style]),
+    ),
+)
+
+const MELEE_STYLES = {
+    "One-Handed": {
+        id: "One-Handed",
+        name: "One-Handed",
+        skills: new Set(["Merciful Blow", "Vital Strike", "Shield Bash"]),
+    },
+    "Dual Wield": {
+        id: "Dual Wield",
+        name: "Dual Wield",
+        skills: new Set(["Iris Strike", "Backstab", "Frenzied Blows"]),
+    },
+    "Two-Handed": {
+        id: "Two-Handed",
+        name: "Two-Handed",
+        skills: new Set(["Great Cleave", "Rending Blow", "Shatter Strike"]),
+    },
+    Niten: {
+        id: "Niten",
+        name: "Niten",
+        skills: new Set(["Skyward Sword"]),
+    },
+    Bonk: {
+        id: "Bonk",
+        name: "Bonk",
+        skills: new Set(["Concussive Strike"]),
+    },
+} as const
+const MELEE_STYLES_BY_SKILL = Object.fromEntries(
+    Object.values(MELEE_STYLES).flatMap((style) =>
+        [...style.skills].map((skill) => [skill, style]),
+    ),
+)
+
+type FightingStyle = ValueOf<typeof MAGE_STYLES> | ValueOf<typeof MELEE_STYLES>

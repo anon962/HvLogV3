@@ -1,25 +1,21 @@
-import { AppConfig } from "@/lib/app/app"
 import { DataSeries } from "@/lib/charts/dataSeries"
-import { CompleteLog, LogEntry } from "@/lib/logDb/logDb"
-import { HvEventMap } from "@/lib/parsers"
-import { DropSummary } from "@/lib/stats/dropStats"
+import { DROP_CATEGORIES, DropSummary } from "@/lib/stats/dropStats"
 import { ItemUsageSummary } from "@/lib/stats/itemUsageStats"
-import { findNext, formatNumber } from "@/lib/utils/miscUtils"
+import { formatNumber } from "@/lib/utils/miscUtils"
 import * as Plot from "@observablehq/plot"
+import { TAILWIND_COLORS, TAILWIND_SHADES } from "../../../ui/constants"
 import {
-    alphabetical,
-    group,
+    alphabeticalBy,
+    findNext,
+    groupBy,
     last,
     mapEntries,
-    max,
     range,
     sort,
     sum,
-} from "radash"
-import {
-    TAILWIND_COLORS,
-    TAILWIND_SHADES,
-} from "../../../ui/constants"
+    zip,
+} from "myutils"
+import { IndexMap } from "@/lib/stats/indexMap"
 
 type Series = DataSeries<{
     value: number
@@ -34,45 +30,39 @@ export class IncomeChart {
     endRound: number
 
     constructor(
-        public prices: AppConfig["prices"],
-        public log: CompleteLog,
+        public prices: Record<string, number>,
         public dropSummary: DropSummary,
         public usageSummary: ItemUsageSummary,
-        public isGrindfest: boolean
+        public isGrindfest: boolean,
+        public roundIdxs: Array<{ logIdx: number; roundIdx: number }>,
+        public indexMap: IndexMap,
     ) {
         let toPush: Record<
             string,
             Array<{ roundIdx: number; value: number }>
         > = {}
-        for (const group of dropSummary.groups) {
-            toPush[group.label] = []
+        for (const cat of Object.keys(DROP_CATEGORIES)) {
+            toPush[cat] = []
         }
+        toPush["Other"] = []
 
-        for (const [key, entries] of Object.entries(
-            dropSummary.data
-        )) {
-            for (const group of dropSummary.groups) {
-                if (group.has(key)) {
-                    if (group.label === "Other") {
-                        break
-                    }
-
-                    for (const entry of entries) {
-                        toPush[group.label].push(
-                            summaryToPoint(entry, log)
-                        )
-                    }
-
-                    break
-                }
-            }
+        for (const x of Object.values(dropSummary)) {
+            const category = x.category ?? "Other"
+            toPush[category].push(
+                ...zip(x.events.logIdx, x.events.count).map(
+                    ([logIdx, count]) => ({
+                        roundIdx: this.indexMap.l2r(logIdx),
+                        value: count * (this.prices[x.priceKey] ?? 0),
+                    }),
+                ),
+            )
         }
 
         this.endRound = Math.max(
             ...Object.values(toPush)
                 .flatMap((xs) => xs)
                 .map((x) => x.roundIdx),
-            1
+            0,
         )
 
         const newSeries = () =>
@@ -87,11 +77,12 @@ export class IncomeChart {
                     { type: "accumulate" },
                     {
                         type: "fill",
+                        variant: "hold",
                         start: { x: 0, y: 0 },
-                        stop: this.endRound ?? undefined,
+                        stop: this.endRound ?? 1,
                     },
                     // { type: "average", width: 5 },
-                ]
+                ],
             ) as Series
 
         for (const [key, xs] of Object.entries(toPush)) {
@@ -104,74 +95,52 @@ export class IncomeChart {
         //     ...Object.values(toPush).flatMap((xs) => xs)
         // )
 
-        const usageExpenses = Object.values(usageSummary.data)
-            .flatMap((xs) => xs)
-            .map((x) => summaryToPoint(x, log))
+        const usageExpenses = []
+        for (const x of Object.values(usageSummary)) {
+            const category = x.category ?? "Other"
+            usageExpenses.push(
+                ...zip(x.events.logIdx, x.events.count).map(
+                    ([logIdx, count]) => ({
+                        roundIdx: this.indexMap.l2r(logIdx),
+                        value: count * (this.prices[x.priceKey] ?? 0),
+                    }),
+                ),
+            )
+        }
 
         const entryCost = this.isGrindfest
             ? this.prices["Energy Drink"] / 10
             : 0
         const roundCost = this.prices["Energy Drink"] / (10 * 50)
-        const staminaExpenses = [...range(1, this.endRound)].map(
-            (idx) => ({
-                value: idx === 1 ? entryCost + roundCost : roundCost,
-                roundIdx: idx,
-            })
-        )
-        this.expenses = newSeries().push(
-            ...usageExpenses,
-            ...staminaExpenses
-        )
-
-        function isRoundStart(x: LogEntry): x is LogEntry<
-            HvEventMap["ROUND_START"]
-        > & {
-            type: "event"
-        } {
-            return (
-                x.type === "event" &&
-                x.event.event_type === "ROUND_START"
-            )
-        }
-
-        function summaryToPoint(
-            entry: DropSummary["data"][string][number],
-            log: CompleteLog
-        ) {
-            const [ev] = findNext(log.entries, isRoundStart, {
-                start: entry.logIdx,
-                reverse: true,
-            })
-            const roundIdx = ev?.event.current ?? 1
-
-            return { roundIdx, value: entry.value }
-        }
+        const staminaExpenses = [...range(1, this.endRound + 1)].map((idx) => ({
+            value: idx === 1 ? entryCost + roundCost : roundCost,
+            roundIdx: idx,
+        }))
+        this.expenses = newSeries().push(...usageExpenses, ...staminaExpenses)
     }
 
     public render() {
         const seriesEntries = sort(
             Object.entries(this.series).filter(
-                ([_, series]) => series.mappedPoints.length > 0
+                ([_, series]) => series.mappedPoints.length > 0,
             ),
-            ([_, series]) => last(series.mappedPoints)!.y
+            ([_, series]) => last(series.mappedPoints)!.y,
         )
 
-        const incomePoints = seriesEntries.flatMap(
-            ([label, series], idx) =>
-                series.mappedPoints.map((pt) => ({
-                    ...pt,
-                    label: label.padStart(idx + label.length, " "),
-                }))
+        const incomePoints = seriesEntries.flatMap(([label, series], idx) =>
+            series.mappedPoints.map((pt) => ({
+                ...pt,
+                label: label.padStart(idx + label.length, " "),
+            })),
         )
 
         const percs = this.toPercentages(
             incomePoints,
-            this.expenses.mappedPoints
+            this.expenses.mappedPoints,
         )
 
         const total = sum(
-            Object.values(this.series),
-            (s) => last(s.mappedPoints)?.y ?? 0
+            Object.values(this.series).map((s) => last(s.mappedPoints)?.y ?? 0),
         )
 
         const plotEl = Plot.plot({
@@ -206,7 +175,7 @@ export class IncomeChart {
                         dx: 1,
                         stroke: "var(--foreground)",
                         strokeWidth: 2,
-                    })
+                    }),
                 ),
                 Plot.tip(
                     percs,
@@ -218,7 +187,7 @@ export class IncomeChart {
                         frameAnchor: "top",
                         pointerSize: 0,
                         strokeWidth: 2,
-                    })
+                    }),
                 ),
             ],
             color: {
@@ -226,14 +195,10 @@ export class IncomeChart {
                 range: [
                     "red",
                     ...TAILWIND_COLORS.slice(1)
-                        .map(
-                            (row) => row.colors[TAILWIND_SHADES[600]]
-                        )
+                        .map((row) => row.colors[TAILWIND_SHADES[600]])
                         .filter((_, idx) => idx % 3 === 2),
                     ...TAILWIND_COLORS.slice(1)
-                        .map(
-                            (row) => row.colors[TAILWIND_SHADES[400]]
-                        )
+                        .map((row) => row.colors[TAILWIND_SHADES[400]])
                         .filter((_, idx) => idx % 3 === 2),
                 ],
             },
@@ -247,28 +212,32 @@ export class IncomeChart {
 
     private toPercentages(
         points: Array<{ x: number; y: number; label: string }>,
-        expensePoints: Array<{ x: number; y: number }>
+        expensePoints: Array<{ x: number; y: number }>,
     ) {
-        const byX = group(points, (pt) => pt.x)
-        const expenses = group(expensePoints, (pt) => pt.x)
+        const byX = groupBy(points, (pt) => pt.x)
+        const expenses = groupBy(expensePoints, (pt) => pt.x)
 
-        const byRelativeFrac = mapEntries(byX, (x, pts) => {
-            const byLabel = group(pts!, (pt) => pt.label)
-            const summed = mapEntries(byLabel, (label, pts) => [
-                label,
-                sum(pts as typeof points, (pt) => pt.y),
-            ])
+        const byRelativeFrac: Record<
+            string,
+            { description: string; total: number }
+        > = mapEntries(byX, (x, pts) => {
+            const byLabel = groupBy(pts!, (pt) => pt.label)
+            const summed: Record<string, number> = mapEntries(
+                byLabel,
+                (label, pts) => ({
+                    [label]: sum(pts.map((pt) => pt.y)),
+                }),
+            )
 
             const total = sum(Object.values(summed))
-            const relative = mapEntries(summed, (label, value) => [
-                label,
-                value / total,
-            ])
+            const relative = mapEntries(summed, (label, value) => ({
+                [label]: value / total,
+            }))
 
-            const costs = expenses[x]![0].y
+            const costs = expenses.get(x)![0].y
             const net = total - costs
 
-            const keys = alphabetical(Object.keys(relative), (x) => x)
+            const keys = alphabeticalBy(Object.keys(relative), (x) => x)
 
             let descriptionLines = [
                 `Round ${x}`,
@@ -281,17 +250,19 @@ export class IncomeChart {
                     (k) =>
                         `${k}: ${Math.trunc(relative[k] * 100)
                             .toString()
-                            .padStart(2)}%`
+                            .padStart(2)}%`,
                 ),
             ]
-            const padLength = max(
-                descriptionLines.map((ln) => ln.length)
+            const padLength = Math.max(
+                ...descriptionLines.map((ln) => ln.length),
             )
             const description = descriptionLines
                 .map((ln) => ln.padStart(padLength ?? 1))
                 .join("\n")
 
-            return [x, { description, total }]
+            return {
+                [x]: { description, total },
+            }
         })
 
         return Object.entries(byRelativeFrac).map(([x, d]) => ({

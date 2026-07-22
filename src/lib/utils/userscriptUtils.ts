@@ -1,19 +1,15 @@
 import React from "react"
 import { createRoot } from "react-dom/client"
-import { unsafeWindow } from "vite-plugin-monkey/dist/client"
-import { App } from "../app/app"
-import { LogDb } from "../logDb/logDb"
 
-export async function mountReact(
-    component: RootComponent,
-    app: App,
+export interface MountReactOptions {
     targetEl?: HTMLElement
+}
+
+export async function mountReact<T extends React.JSXElementConstructor<any>>(
+    component: T,
+    props: React.ComponentProps<T>,
+    { targetEl }: MountReactOptions = {},
 ) {
-    window.HV_LOG_INIT_STYLES()
-
-    const persistentDb = await LogDb.ainit("persistent")
-    const isekaiDb = await LogDb.ainit("isekai")
-
     if (!targetEl) {
         document.body.innerHTML = `
             <div id="root" className="h-full w-full">
@@ -25,11 +21,7 @@ export async function mountReact(
         document.title = "HvLog"
     }
 
-    const rootComponent = React.createElement(component, {
-        app,
-        persistentDb,
-        isekaiDb,
-    })
+    const rootComponent = React.createElement(component, props)
     const reactEl = createRoot(targetEl)
     reactEl.render(rootComponent)
 
@@ -44,88 +36,20 @@ export async function mountReact(
 export function readUrl(override?: string) {
     const parts = (override ?? window.location.pathname)
         .split("/")
+        .map((part) => part.trim())
         .filter((part) => !!part.length)
         .map((part) => part.toLowerCase())
-
-    let isIsekai = false
-    if (parts[0] === "isekai") {
-        isIsekai = true
-        parts.shift()
-    }
 
     const url = new URL(window.location.href)
 
     return {
-        isIsekai,
         parts,
-        params: url.searchParams,
+        url,
     }
 }
 
-export function openPath(path: string) {
-    const w = (unsafeWindow ?? window).open(path, "_blank")
-    if (!w) {
-        alert(
-            "Unable to open new tab for HvLog. Please enable pop-ups for this site."
-        )
-        return
-    }
+export type RootComponent<T = {}> = React.FC<{} & T>
+
+export function isChrome() {
+    return !!(window as any).chrome
 }
-
-// Monsterbation clears timers on new round which causes sleep() to never return
-// This fixes that by patching clearInterval() to check for any ids that we're using
-export const ACTIVE_TIMERS = new Set<number>()
-export function patchClearInterval() {
-    const clearInterval = unsafeWindow.clearInterval
-    unsafeWindow.clearInterval = (id: any) => {
-        if (ACTIVE_TIMERS.has(id)) {
-            return
-        }
-
-        clearInterval(id)
-    }
-
-    const clearTimeout = unsafeWindow.clearTimeout
-    unsafeWindow.clearTimeout = (id: any) => {
-        if (ACTIVE_TIMERS.has(id)) {
-            return
-        }
-
-        clearTimeout(id)
-    }
-}
-export async function sleepWithRegistration(
-    t: number
-): Promise<void> {
-    return new Promise((resolve) => {
-        // Apparently chrome clears timers if document (body?) is replaced
-        // https://stackoverflow.com/questions/28516274/interval-set-through-content-script-being-cleared-by-webpage
-        // So patching the clearInterval that MB uses above isn't enough to prevent forever-sleeps
-        const forceResolve = () => {
-            console.debug("Force resolving sleep()")
-            resolve()
-            document.removeEventListener(
-                "DOMContentLoaded",
-                forceResolve
-            )
-        }
-        document.addEventListener("DOMContentLoaded", forceResolve)
-
-        const cb = () => {
-            ACTIVE_TIMERS.delete(id)
-            document.removeEventListener(
-                "DOMContentLoaded",
-                forceResolve
-            )
-            resolve()
-        }
-        let id: any = setTimeout(cb, t)
-        ACTIVE_TIMERS.add(id)
-    })
-}
-
-export type RootComponent = React.FC<{
-    app: App
-    persistentDb: LogDb
-    isekaiDb: LogDb
-}>

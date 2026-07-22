@@ -5,7 +5,7 @@
         }
 
         [role="tabpanel"] {
-            padding-bottom: 4rem;
+            padding-bottom: 2rem;
         }
 
         [data-slot="tabs-trigger"] {
@@ -18,7 +18,7 @@
 
 @container (width > 30rem) {
     .details-pane {
-        padding: calc(var(--spacing) * 8);
-        padding-bottom: 0;
+        /* padding: calc(var(--spacing) * 8);
+        padding-bottom: 0; */
     }
 }

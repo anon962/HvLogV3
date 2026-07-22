@@ -1,0 +1,156 @@
+.tally-table {
+    font-size: 0.9em;
+    line-height: 1.25;
+    overflow-x: auto;
+    height: max-content;
+
+    h1 {
+        font-size: 1em;
+        font-weight: bold;
+    }
+
+    .row {
+        display: grid;
+        align-items: center;
+    }
+
+    .cell,
+    .header,
+    .footer {
+        padding: 0.75em 0.5em;
+    }
+
+    .header {
+        padding-top: 1em;
+    }
+    .footer {
+        padding-bottom: 1em;
+    }
+    .row {
+        padding-right: 1em;
+        padding-left: 1em;
+    }
+
+    .row {
+        border-bottom: 1px solid var(--border);
+        border-left: 1px solid var(--border);
+        border-right: 1px solid var(--border);
+    }
+    .row:first-child {
+        border-top: 1px solid var(--border);
+    }
+
+    .row:first-child {
+        border-bottom-width: 3px;
+    }
+    .footer-row {
+        border-top: 2px solid var(--border);
+    }
+
+    .row > * {
+        min-width: 0;
+    }
+
+    .header,
+    .footer {
+        font-weight: bold;
+    }
+
+    .row.selectable {
+        cursor: pointer;
+    }
+
+    .row.active {
+        background-color: color-mix(
+            in oklab,
+            var(--muted-foreground) 15%,
+            var(--card)
+        );
+    }
+
+    .row.active,
+    .row.next-active {
+        border-bottom-color: color-mix(
+            in oklab,
+            var(--foreground) 25%,
+            transparent
+        );
+    }
+    .footer-row.prev-active {
+        border-top-color: color-mix(
+            in oklab,
+            var(--foreground) 25%,
+            transparent
+        );
+    }
+
+    .row.active:hover {
+        background-color: color-mix(
+            in oklab,
+            var(--muted-foreground) 25%,
+            var(--card)
+        );
+    }
+
+    .row:hover:not(.active):not(.disabled) {
+        background-color: color-mix(in oklab, var(--muted) 100%, var(--card));
+    }
+
+    .row.disabled {
+        color: var(--muted-foreground);
+    }
+
+    .cell:not(:first-child) {
+        text-align: right;
+    }
+
+    .tooltip button {
+        width: min-content;
+        position: relative;
+
+        &::after {
+            content: "";
+            position: absolute;
+            bottom: -0.3em;
+            width: 100%;
+            border-bottom: 3px dashed
+                color-mix(in oklab, var(--muted-foreground) 75%, transparent);
+            left: 0;
+            right: 0;
+        }
+    }
+    .subheader.tooltip button {
+        &::after {
+            bottom: -0.15em;
+            border-bottom-width: 1.5px;
+        }
+    }
+
+    .subtable {
+        display: grid;
+
+        width: 100%;
+        max-height: 20vh;
+        overflow: auto;
+        font-size: 0.8em;
+        padding-bottom: 1em;
+
+        border-top: 1px dashed
+            color-mix(in oklab, var(--muted-foreground) 50%, transparent);
+
+        .subheader {
+            padding-top: 0.5em;
+            color: color-mix(in oklab, var(--foreground) 75%, transparent);
+        }
+
+        .subcell,
+        .subheader {
+            padding-left: 0.5em;
+            padding-right: 2em;
+        }
+
+        .subcell {
+            padding-top: 0.5em;
+        }
+    }
+}

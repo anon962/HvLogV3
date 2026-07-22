@@ -1,86 +1,128 @@
+// @ts-ignore
 import "@/lib/ui/global.css"
-import {
-    ResizableHandle,
-    ResizablePanel,
-    ResizablePanelGroup,
-} from "@/lib/ui/shadcn/resizable"
-import { RootComponent } from "@/lib/utils/userscriptUtils"
+import { humanizeBattleType } from "@/lib/stats/metaStats"
+import { useAsync } from "@/lib/utils/miscUtils"
+import { readUrl, RootComponent } from "@/lib/utils/userscriptUtils"
 import { StrictMode } from "react"
-import { AppContextProvider } from "../appContext"
-import { DbContextProvider } from "../dbContext"
-import { Sidebar } from "../sidebar"
-import { LogContextProvider, useLogContext } from "./logContext"
 import { LogDetailsPane } from "./logDetailsPane"
-import { LogStatsProvider } from "./logStatsContext"
-import { LogSummaryTable } from "./logSummaryTable/logSummaryTable"
-import {
-    SummaryTableContextProvider,
-    useSummaryTableContext,
-} from "./logSummaryTable/summaryTableContext"
-import { SummaryDbProvider } from "./summaryDbContext"
+import { LOG_SOURCE } from "./logSource"
+import { CustomMap, range, zip } from "myutils"
+import { LogList } from "./logList"
+import { Router } from "./router"
 
-export const HvLog: RootComponent = ({
-    app,
-    persistentDb,
-    isekaiDb,
-}) => {
+// @fixme: log list
+//    filter
+//    pagination
+//    search
+// @todo: mob leaderboard
+//    appearance (per million)
+//    survival rate (avg 1.34)
+//    damage
+//    cast rate
+//    attack rate
+//    trainer table vs mob table (searchable)
+// @fixme: item world
+// @fixme: monsters killed
+// @fixme: income per round
+// @fixme: search endpoint
+// @fixme: price endpoint
+// @fixme: version
+// @fixme: price history
+// @fixme: client vs server entry points
+
+// @todo: equip drop search
+// @todo: global equip drops
+// @todo: local nav
+// @todo: per round / avgs (config?)
+// @todo: effect blame
+// @todo: chart utils
+// @todo: consistent chart colors
+// @todo: profit history
+
+export const HvLog: RootComponent = ({}) => {
+    const routes = new CustomMap({
+        toRaw: (parts) => parts.join("/"),
+        fromRaw: (raw) => raw.split("/"),
+        initValue: (
+            [
+                [
+                    "logs/*",
+                    (parts: string[]) => <LogDetailsRoute id={parts[1]} />,
+                ],
+                ["logs", () => <LogListRoute />],
+            ] as const
+        ).map((kv) => [kv[0].split("/"), kv[1]] as const),
+    })
+
     return (
         <StrictMode>
-            <AppContextProvider app={app}>
-                <DbContextProvider
-                    persistentDb={persistentDb}
-                    isekaiDb={isekaiDb}
-                >
-                    <LogContextProvider>
-                        <SummaryDbProvider>
-                            <LogStatsProvider>
-                                <Sidebar>
-                                    <SummaryTableContextProvider>
-                                        <HvLogInner />
-                                    </SummaryTableContextProvider>
-                                </Sidebar>
-                            </LogStatsProvider>
-                        </SummaryDbProvider>
-                    </LogContextProvider>
-                </DbContextProvider>
-            </AppContextProvider>
+            <LOG_SOURCE.Provider>
+                <Router routes={routes} />
+            </LOG_SOURCE.Provider>
         </StrictMode>
     )
 }
 
-function HvLogInner() {
-    const { selectedLogId } = useSummaryTableContext()
+function LogListRoute() {
+    return (
+        <>
+            <LogList />
+        </>
+    )
+}
 
-    const { useLogFetch, isFetching } = useLogContext()
-    const fetcher = useLogFetch([selectedLogId])
+function LogDetailsRoute(props: { id: string }) {
+    const logSource = LOG_SOURCE.useContext()
+    const srcData = useAsync(async () => {
+        const log = await logSource.fetchLog(props.id)
+        const details = await logSource.fetchDetails(props.id)
+        // const s = v91.summarize(log)
+        // const stats = {
+        //     ...s,
+        //     finances: summarizeFinances(
+        //         s.meta,
+        //         s.drops,
+        //         s.usage,
+        //         apiData.prices,
+        //     ),
+        //     indexMap: new IndexMap(
+        //         s.meta.turnIndices,
+        //         s.meta.roundIndices,
+        //         s.meta.eventCount,
+        //     ),
+        // }
+        return { log, details }
+    }, null)
+
+    let title
+    if (srcData.data) {
+        const d = new Date(srcData.data.log.meta.start)
+        const m = srcData.data.details.meta
+        const zfill = (x: number, n = 2) => x.toString().padStart(n, "0")
+        title = `${humanizeBattleType(m.battleType, m.round?.end ?? null)} - ${window.HV_LOG.apiData.username ?? "(anonymous)"} - ${d.getFullYear()}-${zfill(d.getMonth())}-${zfill(d.getDate())} ${zfill(d.getHours())}:${zfill(d.getMinutes())}`
+    } else {
+        title = "-"
+    }
 
     return (
-        <ResizablePanelGroup
-            direction="horizontal"
-            autoSaveId="hvlog_detail_split"
-        >
-            <ResizablePanel className="overflow-auto!">
-                <div
-                    className="flex flex-col items-center w-full h-full"
-                    style={{ containerType: "inline-size" }}
-                >
-                    <LogSummaryTable />
-                </div>
-            </ResizablePanel>
+        <div className="w-full h-full flex flex-col overflow-hidden gap-4 p-4 pb-8">
+            <div className="flex justify-between gap-4">
+                <a href="/logs/" className="max-w-1/4">
+                    Back
+                </a>
 
-            <ResizableHandle withHandle />
+                <span className="font-bold">{title}</span>
 
-            <ResizablePanel className="flex justify-center">
-                {fetcher.logs[0] ? (
-                    <LogDetailsPane log={fetcher.logs[0]} />
-                ) : (
-                    <div className="py-8">
-                        {isFetching(selectedLogId)
-                            ? "Loading..."
-                            : "Select a log!"}
-                    </div>
-                )}
-            </ResizablePanel>
-        </ResizablePanelGroup>
+                <span></span>
+            </div>
+
+            <div className="w-full max-w-[60rem] h-full mx-auto">
+                <LogDetailsPane
+                    log={srcData.data?.log ?? null}
+                    prices={window.HV_LOG.apiData.prices!}
+                    details={srcData.data?.details ?? null}
+                />
+            </div>
+        </div>
     )
 }
