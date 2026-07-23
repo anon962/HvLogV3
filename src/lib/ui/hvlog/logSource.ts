@@ -5,7 +5,7 @@ import { IndexMap } from "@/lib/stats/indexMap"
 import { MetaSummary } from "@/lib/stats/metaStats"
 import { DetailsSummary } from "@/lib/summary"
 import { newContext } from "@/lib/utils/miscUtils"
-import { CustomMap, zip } from "myutils"
+import { CustomMap, sleep, zip } from "myutils"
 
 export interface TLogSource {
     fetchLog: (id: string) => Promise<CompleteLog<any>>
@@ -14,7 +14,7 @@ export interface TLogSource {
 }
 
 export interface LogSearchRequest {
-    page: number
+    pageIdx: number
     pageSize?: number
     battleType?: string[] | null
     primaryStyle?: string | null
@@ -49,19 +49,25 @@ export interface LogSearchResult {
     search: SearchSummary
 }
 
+interface Dated<T> {
+    data: T
+    createdAt: Date
+}
+
 class LogSourceRemote {
     private HVDATA_URL = "https://hvdata.gisadan.dev"
     // private HVDATA_URL = "http://localhost:4546" // @DEBUG
 
-    private logCache = new Map<string, CompleteLog>()
+    private SEARCH_TTL = 5 * 60 * 1000
 
-    private summaryCache = new Map<string, DetailsSummary>()
+    private logCache = new Map<string, Dated<CompleteLog>>()
+
+    private summaryCache = new Map<string, Dated<DetailsSummary>>()
     private summaryPending = new Map<string, Promise<DetailsSummary>>()
 
-    private sep = "|LogSourceRemote|"
     private searchCache = new CustomMap<
         LogSearchRequest,
-        LogSearchResponse,
+        Dated<LogSearchResponse>,
         string
     >({
         toRaw: (k) => this.toSearchKey(k),
@@ -81,24 +87,30 @@ class LogSourceRemote {
             apiData?.logs ?? [],
             apiData?.details ?? [],
         )) {
-            this.logCache.set(log.id, log)
+            this.logCache.set(log.id, {
+                data: log,
+                createdAt: new Date(),
+            })
 
             this.summaryCache.set(log.id, {
-                meta: d.meta,
-                combat: d.combat,
-                drops: d.drops,
-                usage: d.usage,
-                finances: summarizeFinances(
-                    d.meta,
-                    d.drops,
-                    d.usage,
-                    apiData.prices!,
-                ),
-                indexMap: new IndexMap(
-                    d.meta.turnIndices,
-                    d.meta.roundIndices,
-                    d.meta.eventCount,
-                ),
+                data: {
+                    meta: d.meta,
+                    combat: d.combat,
+                    drops: d.drops,
+                    usage: d.usage,
+                    finances: summarizeFinances(
+                        d.meta,
+                        d.drops,
+                        d.usage,
+                        apiData.prices!,
+                    ),
+                    indexMap: new IndexMap(
+                        d.meta.turnIndices,
+                        d.meta.roundIndices,
+                        d.meta.eventCount,
+                    ),
+                },
+                createdAt: new Date(),
             })
         }
     }
@@ -106,8 +118,13 @@ class LogSourceRemote {
     async fetchSearch(req: LogSearchRequest) {
         const k = req
         if (this.searchCache.has(k)) {
-            return this.searchCache.get(k)
-        } else {
+            const fromCache = this.searchCache.get(k)!
+            if (!isExpired(fromCache, this.SEARCH_TTL)) {
+                return fromCache.data
+            }
+        }
+
+        if (!this.searchPending.has(k)) {
             const resp = fetch(this.HVDATA_URL + "/search_logs", {
                 method: "POST",
                 body: JSON.stringify(req),
@@ -116,34 +133,28 @@ class LogSourceRemote {
                 },
             }).then((resp) => resp.json())
             this.searchPending.set(k, resp)
-
-            const result = await resp
-            this.searchCache.set(k, result)
-
-            // @todo: prefetch
-            return result
-        }
-    }
-
-    searchFromCache(req: LogSearchRequest) {
-        const k = req
-        if (this.searchCache.has(k)) {
-            return this.searchCache.get(k)
         }
 
-        return null
+        const result = await this.searchPending.get(k)!
+        this.searchCache.set(k, {
+            data: result,
+            createdAt: new Date(),
+        })
+        this.searchPending.delete(k)
+
+        return result
     }
 
     async fetchLog(id: string) {
         if (this.logCache.has(id)) {
-            return this.logCache.get(id)!
+            return this.logCache.get(id)!.data
         }
         throw new Error("not implemented")
     }
 
     async fetchDetails(id: string) {
         if (this.summaryCache.has(id)) {
-            return this.summaryCache.get(id)!
+            return this.summaryCache.get(id)!.data
         }
         throw new Error("not implemented")
     }
@@ -161,3 +172,10 @@ export const LOG_SOURCE = newContext<TLogSource>(() =>
         ? new LogSourceRemote(window.HV_LOG.apiData)
         : (null as any),
 )
+
+function isExpired<T>(x: Dated<T>, thresholdMs: number): boolean {
+    const createdAt = x.createdAt.getTime()
+    const now = new Date().getTime()
+    const elapsed = now - createdAt
+    return elapsed > thresholdMs
+}

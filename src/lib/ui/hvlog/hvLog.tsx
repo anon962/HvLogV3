@@ -39,6 +39,7 @@ import { humanizeFightingType } from "@/lib/stats/combatStats"
 // @todo: chart utils
 // @todo: consistent chart colors
 // @todo: profit history
+// @todo: temp search response
 
 export const HvLog: RootComponent = ({}) => {
     const routes = new CustomMap({

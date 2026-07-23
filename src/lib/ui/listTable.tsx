@@ -76,9 +76,17 @@ export function ListTable<T>(props: {
     setPageIndex: (pg: number) => void
     rowUrl?: (d: T) => string
     isLoading?: boolean
+    className?: {
+        root?: string
+    }
 }) {
     return (
-        <div className="list-table-container overflow-auto w-full pb-0! flex flex-col">
+        <div
+            className={cn(
+                "list-table-container overflow-auto w-full pb-0! flex flex-col",
+                props.className?.root,
+            )}
+        >
             <Paginator {...props} />
 
             <hr className="border my-2!" />
@@ -206,7 +214,7 @@ const TableInner = <T,>(props: {
             : ""
 
     return (
-        <Table className="list-table w-auto min-h-0 mx-auto">
+        <Table className="list-table w-auto min-h-0 mx-auto text-[length:inherit]">
             <TableHeader>
                 <TableRow className={cn(headerSelected)}>
                     {...preprocs}

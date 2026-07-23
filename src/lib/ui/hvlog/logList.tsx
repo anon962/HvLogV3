@@ -21,14 +21,23 @@ export function LogList(props: {
     const logSource = LOG_SOURCE.useContext()
     const fetcher = useAsync(
         async (req) => {
-            // @fixme: temp client response
-            // @fixme: prefetch
-            const resp = await logSource.fetchSearch({
-                page: req.pageIdx,
-                pageSize: req.pageSize,
-                idUser: req.id_user,
-                keyUser: req.key_user,
-            })
+            const get = (pageIdx: number) =>
+                logSource.fetchSearch({
+                    pageIdx,
+                    pageSize: req.pageSize,
+                    idUser: req.id_user,
+                    keyUser: req.key_user,
+                })
+
+            const resp = await get(req.pageIdx)
+
+            // prefetch
+            get(0)
+            const lastPageIdx = Math.ceil(resp.resultCount / resp.pageSize) - 1
+            get(lastPageIdx)
+            if (req.pageIdx > 0) get(req.pageIdx - 1)
+            if (req.pageIdx < lastPageIdx) get(req.pageIdx + 1)
+
             return resp
         },
         {
@@ -80,6 +89,7 @@ export function LogList(props: {
             setSortCriteria={() => {}}
             rowUrl={(d) => `/logs/${d.id}`}
             isLoading={fetcher.isPending}
+            className={{ root: "text-sm" }}
         />
     )
 }
