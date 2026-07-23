@@ -141,11 +141,7 @@ export function LogList() {
             getId={(d) => d.id}
             sortCols={new Set(SORT_IDS)}
             pageIndex={fetcher.request.pageIdx}
-            setPageIndex={(idx) => {
-                setUrlParams({
-                    p: idx + 1,
-                })
-            }}
+            setPageIndex={(idx) => {}}
             setPageSize={{
                 options: [15, 50, 100, 1000],
                 handler: (pageSize: number) => {

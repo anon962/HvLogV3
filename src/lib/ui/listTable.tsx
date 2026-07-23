@@ -366,11 +366,7 @@ const Paginator = React.memo(
 
         const pageEls = pages.map((idx, j) => {
             return (
-                <PaginationItem
-                    key={j}
-                    onClick={() => onSelect(idx)}
-                    className="cursor-pointer"
-                >
+                <PaginationItem key={j} className="cursor-pointer">
                     <PaginationLink
                         href={getHref(idx)}
                         isActive={idx === props.pageIndex}
@@ -388,7 +384,6 @@ const Paginator = React.memo(
             <Pagination className="p-4! pl-12!">
                 <PaginationContent>
                     <PaginationItem
-                        onClick={() => onSelect(0)}
                         className={
                             disablePrev
                                 ? "opacity-50 pointer-events-none"
@@ -398,7 +393,6 @@ const Paginator = React.memo(
                         <PaginationFirst href={getHref(0)} />
                     </PaginationItem>
                     <PaginationItem
-                        onClick={() => onSelect(props.pageIndex - 1)}
                         className={
                             disablePrev
                                 ? "opacity-50 pointer-events-none"
@@ -413,7 +407,6 @@ const Paginator = React.memo(
                     {...pageEls}
 
                     <PaginationItem
-                        onClick={() => onSelect(props.pageIndex + 1)}
                         className={
                             disableNext
                                 ? "opacity-50 pointer-events-none"
@@ -423,14 +416,13 @@ const Paginator = React.memo(
                         <PaginationNext href={getHref(props.pageIndex + 1)} />
                     </PaginationItem>
                     <PaginationItem
-                        onClick={() => onSelect(pageCount - 1)}
                         className={
                             disableNext
                                 ? "opacity-50 pointer-events-none"
                                 : cn("cursor-pointer")
                         }
                     >
-                        <PaginationLast href={getHref(pageCount)} />
+                        <PaginationLast href={getHref(pageCount - 1)} />
                     </PaginationItem>
                 </PaginationContent>
 
@@ -466,7 +458,7 @@ function PageJump(props: { onJump: (idx: number) => void; pageCount: number }) {
                 onChange={(ev) => {
                     const value = parseInt(ev.target.value)
                     const idx = !isNaN(value)
-                        ? clamp(value - 1, 0, props.pageCount)
+                        ? clamp(value - 1, 0, props.pageCount - 1)
                         : 0
                     props.onJump(idx)
                 }}
