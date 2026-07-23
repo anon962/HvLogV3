@@ -40,6 +40,9 @@ type CastTableData = TallyTableProps<
 function CastTable({ meta, combat }: DetailsSummary) {
     let rows = [] as CastTableData["rows"]
 
+    const ti = new Set(meta.turnIndices)
+    const seen = new Set()
+
     for (const action of [
         { label: "Heals", data: combat.heal, showSub: true },
         { label: "Buffs", data: combat.buff, showSub: true },
@@ -62,6 +65,15 @@ function CastTable({ meta, combat }: DetailsSummary) {
             })),
             [{ fn: (r) => r.count }, { fn: (r) => r.label, reverse: true }],
         ).reverse()
+
+        for (const x of Object.values(action.data)) {
+            for (const logIdx of x.events.logIdx) {
+                if (!ti.has(logIdx) || seen.has(logIdx)) {
+                    console.error(x, !ti.has(logIdx), seen.has(logIdx))
+                }
+                seen.add(logIdx)
+            }
+        }
 
         rows.push({
             label: action.label,
@@ -86,7 +98,11 @@ function CastTable({ meta, combat }: DetailsSummary) {
 
     const columns: CastTableData["columns"] = [
         { label: "Turns", get: (x) => x.count },
-        { label: "Per Round", get: (x) => x.countRound },
+        {
+            label: "Per Round",
+            get: (x) => x.countRound,
+            formatTotal: (x) => x.toFixed(1),
+        },
     ]
     const subColumns: CastTableData["subColumns"] = [
         { label: "Spell", get: (x) => x.label, align: "left" },
@@ -402,8 +418,9 @@ function MiscTable({ combat, meta }: DetailsSummary) {
     const sparkCount = combat.spark["Spark of Life"]?.events.logIdx.length ?? 0
     const ponyCount = combat.riddlemaster["Ponies"]?.events.logIdx.length ?? 0
 
-    const gems = Object.values(combat.heal)
-        .filter((x) => x.key.includes("Gem"))
+    const gems = Object.values(combat)
+        .flatMap((cat) => Object.values(cat))
+        .filter((x) => x?.key?.includes(" Gem"))
         .map((x) => ({
             label: x.key,
             value: x.events.logIdx.length,
@@ -440,7 +457,7 @@ function MiscTable({ combat, meta }: DetailsSummary) {
         {
             label: "Gems",
             value: {
-                value: formatNumber(gems.length),
+                value: formatNumber(sum(gems.map((x) => x.value))),
             },
             subValues: gems,
             disabled: gems.length === 0,
@@ -455,9 +472,9 @@ function MiscTable({ combat, meta }: DetailsSummary) {
             format: (_, x) => x.value, // this is awful
         },
     ]
-    const subColumns: CastTableData["subColumns"] = [
+    const subColumns: MiscTableData["subColumns"] = [
         { label: "Name", get: (x) => x.label, align: "left" },
-        { label: "Count", get: (x) => x.count },
+        { label: "Count", get: (x) => x.value },
     ]
 
     return (
@@ -485,23 +502,24 @@ type DebuffTableData = TallyTableProps<{
 function DebuffTable({ combat }: DetailsSummary) {
     const rows: DebuffTableData["rows"] = sort(
         Object.values(combat.debuff).map((xs) => {
+            // Debuffs can "hit" AND partial resist (reduced duration)
             const castCount = xs.events.logIdx.length
             const hitCount = sum(xs.events.hitCount)
             const partialResists = sum(xs.events.partialResistCount)
             const resists = sum(xs.events.resistCount)
             const misses = sum(xs.events.missCount)
-            const total = hitCount + misses + partialResists + resists
+            const targetCount = hitCount + misses + resists
 
             return {
                 label: xs.key,
                 value: {
                     count: castCount,
                     hitCount,
-                    hitCountAvg: hitCount / castCount,
-                    hitRate: hitCount / total,
-                    partialResistRate: partialResists / total,
-                    resistRate: resists / total,
-                    missRate: misses / total,
+                    hitCountAvg: targetCount / castCount,
+                    hitRate: (targetCount - resists - misses) / castCount,
+                    partialResistRate: partialResists / targetCount,
+                    resistRate: resists / targetCount,
+                    missRate: misses / targetCount,
                 },
                 selectable: false,
                 disabled: false,
@@ -519,7 +537,12 @@ function DebuffTable({ combat }: DetailsSummary) {
             label: "Target Count",
             get: (x) => x.hitCountAvg,
             format: (x) => `${x.toFixed(1)}`,
-            tooltip: <span>Average number of monsters hit per cast.</span>,
+            tooltip: (
+                <span>
+                    Average number of monsters hit per cast (including partial
+                    resists).
+                </span>
+            ),
         },
         // {
         //     label: "Misses",
@@ -711,8 +734,8 @@ function ActionChartWrapper({ stats }: { stats: DetailsSummary }) {
         <div className="flex flex-col">
             <h1 className="text-base font-bold">Actions</h1>
             <span className="text-sm text-muted-foreground py-1">
-                Red tick marks denote Spark of Life triggers. Averaged over{" "}
-                {(meta.round?.end ?? 1) > 300 ? 30 : 10} rounds.
+                Averaged over {(meta.round?.end ?? 1) > 300 ? 30 : 10} rounds.
+                Red tick marks denote Spark of Life triggers.
             </span>
 
             <div ref={container} className="w-full flex"></div>
@@ -742,27 +765,33 @@ type DamageTakenData = TallyTableProps<
     {
         label: string
         damageTotal: number
+        weight: number
     }
 >
 
 function DamageTakenTable({ meta, combat }: DetailsSummary) {
     const rows: DamageTakenData["rows"] = sort(
-        Object.entries(combat.damageTaken).map(([k, v]) => ({
-            label: k,
-            value: {
-                ...v,
-                damageTotal: sum(Object.values(v.types)),
-            },
-            subValues: sort(
-                Object.entries(v.types).map(([k, v]) => ({
-                    label: k,
-                    damageTotal: v,
-                })),
-                (r) => r.damageTotal,
-                true,
-            ),
-            selectable: true,
-        })),
+        Object.entries(combat.damageTaken).map(([k, v]) => {
+            const totalForSource = sum(Object.values(v.types))
+
+            return {
+                label: k,
+                value: {
+                    ...v,
+                    damageTotal: totalForSource,
+                },
+                subValues: sort(
+                    Object.entries(v.types).map(([k, v]) => ({
+                        label: k,
+                        damageTotal: v,
+                        weight: v / totalForSource,
+                    })),
+                    (r) => r.damageTotal,
+                    true,
+                ),
+                selectable: true,
+            }
+        }),
         (r) => r.value.damageTotal,
         true,
     )
@@ -911,6 +940,12 @@ function DamageTakenTable({ meta, combat }: DetailsSummary) {
                     return formatNumber(v)
                 }
             },
+        },
+        {
+            label: "Weight",
+            get: (v) => v.weight,
+            // @ts-ignore
+            format: fmtPercentage,
         },
     ]
 

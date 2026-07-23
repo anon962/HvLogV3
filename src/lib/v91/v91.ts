@@ -735,6 +735,7 @@ const ACTION_GRAMMAR = {
                 // Status effects cause damage outside of enemy attack phase
                 // Ripened Soul hits Emerald Giant for 14646 damage.
                 "P_NAMED_HIT_2",
+                "P_DRAIN",
                 "MONSTER_DEATH",
                 "GEM",
             ],

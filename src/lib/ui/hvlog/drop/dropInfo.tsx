@@ -109,6 +109,9 @@ function IncomeSummaryTable({
                 acc[category].value.count += count
                 acc[category].value.value += count * value
             }
+            if (category === "Credits") {
+                acc[category].value.count = x.events.logIdx.length
+            }
             acc[category].subValues!.push({
                 label: x.name,
                 count,

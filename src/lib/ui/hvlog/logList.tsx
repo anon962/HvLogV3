@@ -9,6 +9,7 @@ import { CheckIcon } from "../icons/tailwind"
 import { ListTable } from "../listTable"
 import { useLocalJsonState } from "./hooks"
 import { useUrlParams } from "./router"
+import { IS_REMOTE } from "../constants"
 
 export function LogList() {
     const [urlParams, setUrlParams] = useUrlParams({
@@ -248,7 +249,8 @@ const COLS = {
     },
     date: {
         id: "date",
-        header: { content: "Start Date" },
+        align: "text-left",
+        header: { content: IS_REMOTE ? "Date" : "Start Date" },
         preprocess: (xs) => {
             const [now, setNow] = useState(new Date())
 

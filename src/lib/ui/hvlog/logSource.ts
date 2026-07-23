@@ -6,6 +6,7 @@ import { MetaSummary } from "@/lib/stats/metaStats"
 import { DetailsSummary } from "@/lib/summary"
 import { newContext } from "@/lib/utils/miscUtils"
 import { compressGzip, CustomMap, sleep, zip } from "myutils"
+import { IS_REMOTE } from "../constants"
 
 export interface TLogSource {
     fetchLog: (id: string) => Promise<CompleteLog<any>>
@@ -234,9 +235,7 @@ class LogSourceRemote {
 }
 
 export const LOG_SOURCE = newContext<TLogSource>(() => [
-    "apiData" in window.HV_LOG
-        ? new LogSourceRemote(window.HV_LOG.apiData)
-        : (null as any),
+    IS_REMOTE ? new LogSourceRemote(window.HV_LOG.apiData) : (null as any),
     () => {},
 ])
 

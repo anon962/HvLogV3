@@ -1,3 +1,6 @@
+export const IS_BROWSER = typeof window !== "undefined"
+export const IS_REMOTE = IS_BROWSER ? "apiData" in window.HV_LOG : true
+
 export const DEBUG = 0
 
 /**

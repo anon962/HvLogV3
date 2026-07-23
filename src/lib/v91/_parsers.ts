@@ -232,6 +232,15 @@ const PARSERS = {
         `Recovered ${Num("value")} points of ${Word("type")}\\.`,
         { value: t("number"), type: t("string") }
     ),
+    // You drain 924 points of health from Drogon.
+    P_DRAIN: new EventParser(
+        "P_DRAIN",
+        `You drain ${Num("value")} points of ${Word("type")} from ${Monster()}.`,
+        {
+            value: t("number"),
+            type: t("string"),
+        }
+    ),
 
     // Trying A Margherita Pizza hits you, causing 874 points of Piercing damage.
     // Myth Android glances you, causing 466 points of Slashing damage.

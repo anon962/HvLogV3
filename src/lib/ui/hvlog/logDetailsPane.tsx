@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "../shadcn/tabs"
 import { CombatInfo } from "./combat/combatInfo"
 import { DropInfo } from "./drop/dropInfo"
 import { LogEventList } from "./logEventList"
+import { IS_REMOTE } from "../constants"
 
 export const LogDetailsPane = React.memo(
     <T extends BaseHvEvent>({
@@ -26,7 +27,7 @@ export const LogDetailsPane = React.memo(
                 }}
             >
                 <Tabs
-                    defaultValue="stats"
+                    defaultValue={IS_REMOTE ? "combat" : "stats"}
                     className="details-pane h-full w-full"
                 >
                     <TabsList className="grid grid-cols-3 w-full mb-2">

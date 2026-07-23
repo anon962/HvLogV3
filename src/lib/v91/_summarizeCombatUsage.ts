@@ -123,6 +123,12 @@ export function _summarizeCombatUsage(
             buffer.flush(spell, root.logIdx)
         }
     }
+    // Remove (likely) debuffs
+    for (const [key, group] of Object.entries(spell)) {
+        if (group.events.value.every((v) => v === 0)) {
+            delete spell[key]
+        }
+    }
 
     const heal: CombatSummary["heal"] = {}
     {
