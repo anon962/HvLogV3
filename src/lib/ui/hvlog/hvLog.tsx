@@ -8,7 +8,7 @@ import { StrictMode } from "react"
 import { LogDetailsPane } from "./logDetailsPane"
 import { LogList } from "./logList"
 import { LOG_SOURCE } from "./logSource"
-import { Router } from "./router"
+import { ROUTER, Router } from "./router"
 import { humanizeFightingType } from "@/lib/stats/combatStats"
 import { RouteLink } from "../routeLink"
 
@@ -68,9 +68,11 @@ export const HvLog: RootComponent = ({}) => {
 
     return (
         <StrictMode>
-            <LOG_SOURCE.Provider>
-                <Router routes={routes} />
-            </LOG_SOURCE.Provider>
+            <ROUTER.Provider>
+                <LOG_SOURCE.Provider>
+                    <Router routes={routes} />
+                </LOG_SOURCE.Provider>
+            </ROUTER.Provider>
         </StrictMode>
     )
 }

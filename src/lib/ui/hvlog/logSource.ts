@@ -201,11 +201,12 @@ class LogSourceRemote {
     }
 }
 
-export const LOG_SOURCE = newContext<TLogSource>(() =>
+export const LOG_SOURCE = newContext<TLogSource>(() => [
     "apiData" in window.HV_LOG
         ? new LogSourceRemote(window.HV_LOG.apiData)
         : (null as any),
-)
+    () => {},
+])
 
 function isExpired<T>(x: Dated<T>, thresholdMs: number): boolean {
     const createdAt = x.createdAt.getTime()
