@@ -11,7 +11,7 @@ export function RouteLink({
     )
 
     function onClick(ev: MouseEvent<HTMLAnchorElement>) {
-        onClick?.(ev)
+        props.onClick?.(ev)
         if (ev.defaultPrevented) return
 
         const isModified =

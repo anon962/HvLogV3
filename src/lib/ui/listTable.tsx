@@ -30,6 +30,7 @@ import {
     SelectValue,
 } from "./shadcn/select"
 import * as lucide from "lucide-react"
+import { RouteLink } from "./routeLink"
 
 export namespace ListTable {
     export interface Column<TValue = unknown, TImpureValue = null> {
@@ -80,6 +81,7 @@ export function ListTable<T>(props: {
     className?: {
         root?: string
     }
+    pageUrl?: (pageIdx: number) => Record<string, string>
 }) {
     return (
         <div
@@ -290,7 +292,7 @@ const Cell = ReactMemo(
     }) => {
         let child
         if (props.href) {
-            child = <a href={props.href}>{props.content}</a>
+            child = <RouteLink href={props.href}>{props.content}</RouteLink>
         } else {
             child = <span>{props.content}</span>
         }
@@ -314,6 +316,7 @@ const Paginator = React.memo(
         pageIndex: number
         setPageIndex: (x: number) => void
         isLoading?: boolean
+        pageUrl?: (pageIdx: number) => Record<string, string>
     }) => {
         const pageCount = Math.ceil(props.count / props.pageSize) || 1
 
@@ -341,17 +344,29 @@ const Paginator = React.memo(
             [props.setPageIndex],
         )
 
-        const pageEls = pages.map((idx, j) => (
-            <PaginationItem
-                key={j}
-                onClick={() => onSelect(idx)}
-                className="cursor-pointer"
-            >
-                <PaginationLink isActive={idx === props.pageIndex}>
-                    {idx + 1}
-                </PaginationLink>
-            </PaginationItem>
-        ))
+        const pageEls = pages.map((idx, j) => {
+            const url = new URL(window.location.href)
+
+            const params = props.pageUrl ? props.pageUrl(idx) : {}
+            for (const [k, v] of Object.entries(params)) {
+                url.searchParams.set(k, v)
+            }
+
+            return (
+                <PaginationItem
+                    key={j}
+                    onClick={() => onSelect(idx)}
+                    className="cursor-pointer"
+                >
+                    <PaginationLink
+                        href={url.href}
+                        isActive={idx === props.pageIndex}
+                    >
+                        {idx + 1}
+                    </PaginationLink>
+                </PaginationItem>
+            )
+        })
 
         const disablePrev = props.pageIndex <= 0
         const disableNext = props.pageIndex >= pageCount - 1

@@ -11,12 +11,12 @@ declare global {
     interface Window {
         HV_LOG: {
             apiData: {
-                prices?: Record<string, number>
                 logs?: Array<CompleteLog>
                 details: Array<Omit<DetailsSummary, "finances" | "indexMap">>
                 username?: string
             }
         }
+        HV_LOG_PRICES: Record<string, number>
     }
 }
 

@@ -10,6 +10,7 @@ import { LogList } from "./logList"
 import { LOG_SOURCE } from "./logSource"
 import { Router } from "./router"
 import { humanizeFightingType } from "@/lib/stats/combatStats"
+import { RouteLink } from "../routeLink"
 
 // @fixme: log list
 //    filter
@@ -116,9 +117,9 @@ function LogDetailsRoute(props: { id: string }) {
     return (
         <div className="w-full h-full flex flex-col overflow-hidden gap-4 p-4 pb-8">
             <div className="flex justify-between gap-4">
-                <a href="/logs/" className="max-w-1/4">
+                <RouteLink href="/logs/" className="max-w-1/4">
                     Back
-                </a>
+                </RouteLink>
 
                 <span className="font-bold">{title}</span>
 
@@ -128,7 +129,7 @@ function LogDetailsRoute(props: { id: string }) {
             <div className="w-full max-w-[60rem] h-full mx-auto">
                 <LogDetailsPane
                     log={srcData.data?.log ?? null}
-                    prices={window.HV_LOG.apiData.prices!}
+                    prices={window.HV_LOG_PRICES}
                     details={srcData.data?.details ?? null}
                 />
             </div>

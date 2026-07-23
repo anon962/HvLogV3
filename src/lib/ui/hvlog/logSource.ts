@@ -60,10 +60,8 @@ class LogSourceRemote {
 
     private SEARCH_TTL = 5 * 60 * 1000
 
-    private logCache = new Map<string, Dated<CompleteLog>>()
-
-    private summaryCache = new Map<string, Dated<DetailsSummary>>()
-    private summaryPending = new Map<string, Promise<DetailsSummary>>()
+    private logCache = new Map<string, Dated<unknown>>()
+    private logPending = new Map<string, Promise<CompleteLog>>()
 
     private searchCache = new CustomMap<
         LogSearchRequest,
@@ -83,33 +81,24 @@ class LogSourceRemote {
     })
 
     constructor(apiData: typeof window.HV_LOG.apiData) {
-        for (const [log, d] of zip(
-            apiData?.logs ?? [],
-            apiData?.details ?? [],
-        )) {
+        for (const log of apiData?.logs ?? []) {
+            // this.logCache.set(log.id, {
+            //     data: {
+            //         id: log.id,
+            //         meta: {
+            //             start: log.created_at.replace("+00:00", "") + "Z",
+            //             lastUpdate: log.created_at.replace("+00:00", "") + "Z",
+            //             version: -999,
+            //             world: "persistent",
+            //             user_id: log.id_user,
+            //             user_name: log.name,
+            //         },
+            //         entries: log.parsed.events.entries,
+            //     },
+            //     createdAt: new Date(),
+            // })
             this.logCache.set(log.id, {
                 data: log,
-                createdAt: new Date(),
-            })
-
-            this.summaryCache.set(log.id, {
-                data: {
-                    meta: d.meta,
-                    combat: d.combat,
-                    drops: d.drops,
-                    usage: d.usage,
-                    finances: summarizeFinances(
-                        d.meta,
-                        d.drops,
-                        d.usage,
-                        apiData.prices!,
-                    ),
-                    indexMap: new IndexMap(
-                        d.meta.turnIndices,
-                        d.meta.roundIndices,
-                        d.meta.eventCount,
-                    ),
-                },
                 createdAt: new Date(),
             })
         }
@@ -145,18 +134,63 @@ class LogSourceRemote {
         return result
     }
 
-    async fetchLog(id: string) {
-        if (this.logCache.has(id)) {
-            return this.logCache.get(id)!.data
+    private async _fetchLog(id: string) {
+        const k = id
+        if (this.logCache.has(k)) {
+            return this.logCache.get(k)!.data
         }
-        throw new Error("not implemented")
+
+        if (!this.logPending.has(k)) {
+            const resp = fetch(this.HVDATA_URL + `/battle_logs/${id}`).then(
+                (resp) => resp.json(),
+            )
+            this.logPending.set(k, resp)
+        }
+
+        const result = await this.logPending.get(k)!
+        this.logCache.set(id, {
+            data: result,
+            createdAt: new Date(),
+        })
+        this.logPending.delete(k)
+
+        return result
+    }
+
+    async fetchLog(id: string) {
+        let result = (await this._fetchLog(id)) as any
+        const log: CompleteLog = {
+            id: result.id,
+            meta: {
+                start: result.created_at.replace("+00:00", "") + "Z",
+                lastUpdate: result.created_at.replace("+00:00", "") + "Z",
+                version: -999,
+                world: "persistent",
+                user_id: result.id_user,
+                user_name: result.name,
+            },
+            entries: result.parsed.events.entries,
+        }
+        return log
     }
 
     async fetchDetails(id: string) {
-        if (this.summaryCache.has(id)) {
-            return this.summaryCache.get(id)!.data
+        const result = (await this._fetchLog(id)) as any
+        const d = result.parsed.details
+        return {
+            ...d,
+            finances: summarizeFinances(
+                d.meta,
+                d.drops,
+                d.usage,
+                window.HV_LOG_PRICES,
+            ),
+            indexMap: new IndexMap(
+                d.meta.turnIndices,
+                d.meta.roundIndices,
+                d.meta.eventCount,
+            ),
         }
-        throw new Error("not implemented")
     }
 
     private toSearchKey(k: LogSearchRequest) {

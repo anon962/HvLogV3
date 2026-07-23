@@ -9,6 +9,7 @@ import * as React from "react"
 
 import { Button, buttonVariants } from "@/lib/ui/shadcn/button"
 import { cn } from "@/lib/utils/shadcnUtils"
+import { RouteLink } from "../routeLink"
 
 function Pagination({ className, ...props }: React.ComponentProps<"nav">) {
     return (
@@ -51,7 +52,7 @@ function PaginationLink({
     ...props
 }: PaginationLinkProps) {
     return (
-        <a
+        <RouteLink
             aria-current={isActive ? "page" : undefined}
             data-slot="pagination-link"
             data-active={isActive}

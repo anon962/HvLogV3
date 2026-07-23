@@ -118,6 +118,7 @@ export function LogList(props: {
             rowUrl={(d) => `/logs/${d.id}`}
             isLoading={fetcher.isPending}
             className={{ root: "text-sm" }}
+            pageUrl={(pageIdx) => ({ p: String(pageIdx + 1) })}
         />
     )
 }
