@@ -115,7 +115,7 @@ function IncomeSummaryTable({
             acc[category].subValues!.push({
                 label: x.name,
                 count,
-                value,
+                value: count * value,
             })
 
             return acc
@@ -209,7 +209,7 @@ function UsageSummaryTable({
             acc[category].subValues!.push({
                 label: x.name,
                 count,
-                value,
+                value: count * value,
             })
 
             return acc

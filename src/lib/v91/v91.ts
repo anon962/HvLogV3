@@ -315,7 +315,7 @@ function _summarizeItemDrops(log: CompleteLog<parsers.HvEvent>) {
                 case "PROFICIENCY": {
                     return [
                         {
-                            key: "proficiency",
+                            key: ev.type,
                             count: ev.value,
                             isEquip: false,
                         },

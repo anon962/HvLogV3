@@ -362,6 +362,10 @@ function SubTable({ subValues, subColumns, span }: SubRowProps) {
                     : Number.isNaN(Number(value))
                       ? String(value)
                       : Number(value).toFixed(1)
+
+                if (/^0+\.0+$/.test(valueStr)) {
+                    valueStr = Number(value).toFixed(4)
+                }
             }
 
             const cls = `subcell ${alignClass[idx]}`
