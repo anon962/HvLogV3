@@ -6,11 +6,17 @@ import { RunIcon, Skull2Icon } from "../icons/misc"
 import { CheckIcon } from "../icons/tailwind"
 import { ListTable } from "../listTable"
 import { cn } from "myutils"
+import { useLocalJsonState } from "./hooks"
 
 export function LogList(props: {
     id_user: string | null
     key_user: string | null
 }) {
+    const [pageSize, setPageSize] = useLocalJsonState(
+        15,
+        "hvlog_log_list_page_size",
+    )
+
     const logSource = LOG_SOURCE.useContext()
     const fetcher = useAsync(
         async (req) => {
@@ -26,7 +32,7 @@ export function LogList(props: {
         },
         {
             pageIdx: 0,
-            pageSize: 15,
+            pageSize,
             id_user: props.id_user,
             key_user: props.key_user,
         },
@@ -38,8 +44,8 @@ export function LogList(props: {
             cols={[
                 COLS.battleType,
                 COLS.turns,
-                COLS.duration,
-                COLS.profit,
+                COLS.style,
+                COLS.user,
                 COLS.date,
                 COLS.status,
             ]}
@@ -57,6 +63,7 @@ export function LogList(props: {
             setPageSize={{
                 options: [15, 50, 100, 1000],
                 handler: (pageSize: number) => {
+                    setPageSize(pageSize)
                     fetcher.setRequest({
                         pageIdx: 0,
                         pageSize: pageSize,
@@ -77,6 +84,16 @@ export function LogList(props: {
 }
 
 const COLS = {
+    user: {
+        id: "user",
+        header: { content: "User" },
+        align: "text-left",
+        cell: (x) => ({
+            content: x.meta.user_name ?? "(anonymous)",
+            className: "user",
+            title: x.meta.user_id ?? "",
+        }),
+    },
     battleType: {
         id: "battleType",
         header: { content: "Type", className: "w-[6rem]" },
@@ -149,6 +166,27 @@ const COLS = {
         header: { content: "Status" },
         align: "text-center",
         cell: (x) => formatCompletionType(x),
+    },
+    style: {
+        id: "style",
+        header: { content: "Style" },
+        align: "text-left",
+        cell: (x) => {
+            let content
+            const s = x.search.style
+            if (s.primary && s.secondary) {
+                content = `${s.primary.name} + ${s.secondary.name}`
+            } else if (s.primary) {
+                content = s.primary.name
+            } else {
+                content = "???"
+            }
+
+            return {
+                content: <>{content}</>,
+                className: "style",
+            }
+        },
     },
     // {
     //     id: "enchants",

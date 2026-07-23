@@ -1,13 +1,12 @@
+import { enumerate } from "myutils"
 import { CompleteLog } from "../logDb/schema"
 import {
     CombatSummary,
     CombatSummaryEventMap,
     summarizeStyle,
 } from "../stats/combatStats"
-import { type v91 } from "./v91"
 import { type v91 as parsers } from "./_parsers"
-import { enumerate } from "myutils"
-import { humanizeBattleType } from "../stats/metaStats"
+import { type v91 } from "./v91"
 
 const enemyActions = new Set([
     "E_ATTACK",

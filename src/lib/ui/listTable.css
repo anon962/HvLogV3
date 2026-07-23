@@ -1,9 +1,11 @@
 .list-table {
     /* Cell padding */
-    td {
-        padding: 0 !important;
+    td,
+    th {
+        padding: 0;
     }
-    td > * {
+    td > *,
+    th > * {
         padding-left: calc(var(--spacing) * 6);
         padding-right: calc(var(--spacing) * 6);
         padding-top: calc(var(--spacing) * 2);
@@ -16,7 +18,7 @@
         text-decoration: none;
     }
     th {
-        padding-left: calc(var(--spacing) * 4);
+        /* padding-left: calc(var(--spacing) * 4); */
     }
 
     /* Big headers */

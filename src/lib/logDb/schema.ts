@@ -10,6 +10,8 @@ export interface LogMeta {
     lastUpdate: ISODate
     version: number
     world: HvWorld
+    user_id: string | null
+    user_name: string | null
 }
 
 export interface CompleteLog<T extends BaseHvEvent = BaseHvEvent> {

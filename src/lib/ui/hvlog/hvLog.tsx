@@ -1,13 +1,13 @@
+import { humanizeBattleType } from "@/lib/stats/metaStats"
 // @ts-ignore
 import "@/lib/ui/global.css"
-import { humanizeBattleType } from "@/lib/stats/metaStats"
 import { useAsync } from "@/lib/utils/miscUtils"
-import { readUrl, RootComponent } from "@/lib/utils/userscriptUtils"
+import { RootComponent } from "@/lib/utils/userscriptUtils"
+import { CustomMap } from "myutils"
 import { StrictMode } from "react"
 import { LogDetailsPane } from "./logDetailsPane"
-import { LOG_SOURCE } from "./logSource"
-import { CustomMap, range, zip } from "myutils"
 import { LogList } from "./logList"
+import { LOG_SOURCE } from "./logSource"
 import { Router } from "./router"
 
 // @fixme: log list
@@ -100,7 +100,7 @@ function LogDetailsRoute(props: { id: string }) {
         const d = new Date(srcData.data.log.meta.start)
         const m = srcData.data.details.meta
         const zfill = (x: number, n = 2) => x.toString().padStart(n, "0")
-        title = `${humanizeBattleType(m.battleType, m.round?.end ?? null)} - ${window.HV_LOG.apiData.username ?? "(anonymous)"} - ${d.getFullYear()}-${zfill(d.getMonth())}-${zfill(d.getDate())} ${zfill(d.getHours())}:${zfill(d.getMinutes())}`
+        title = `${humanizeBattleType(m.battleType, m.round?.end ?? null)} - ${srcData.data.log.meta.user_name ?? "(anonymous)"} - ${d.getFullYear()}-${zfill(d.getMonth())}-${zfill(d.getDate())} ${zfill(d.getHours())}:${zfill(d.getMinutes())}`
     } else {
         title = "-"
     }
