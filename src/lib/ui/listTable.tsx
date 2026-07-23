@@ -55,7 +55,7 @@ export namespace ListTable {
 
     export interface SortCriteria {
         cid: Column["id"]
-        order: "asc" | "desc" | null
+        order: "asc" | "desc"
     }
 }
 
@@ -63,7 +63,7 @@ export function ListTable<T>(props: {
     data: Array<T>
     cols: Array<ListTable.Column<T, any>>
     sortCriteria: ListTable.SortCriteria | null
-    setSortCriteria: (crit: ListTable.SortCriteria) => void
+    setSortCriteria: (crit: ListTable.SortCriteria | null) => void
     selectedId: string
     setSelectedId: (id: string) => void
     getId: (d: T) => string
@@ -107,7 +107,7 @@ const TableInner = <T,>(props: {
     data: Array<T>
     cols: Array<ListTable.Column<T, any>>
     sortCriteria: ListTable.SortCriteria | null
-    setSortCriteria: (crit: ListTable.SortCriteria) => void
+    setSortCriteria: (crit: ListTable.SortCriteria | null) => void
     selectedId: string
     setSelectedId: (id: string) => void
     getId: (d: T) => string
@@ -124,7 +124,7 @@ const TableInner = <T,>(props: {
 
             let component
             const className = ["sort-icon"]
-            let nextOrder: ListTable.SortCriteria["order"] = "desc"
+            let nextOrder: ListTable.SortCriteria["order"] | null = "desc"
             if (isActive) {
                 className.push("active")
 
@@ -144,10 +144,14 @@ const TableInner = <T,>(props: {
                 className: className.join(" "),
             })
             onClick = () =>
-                props.setSortCriteria({
-                    cid: col.id,
-                    order: nextOrder,
-                })
+                props.setSortCriteria(
+                    nextOrder
+                        ? {
+                              cid: col.id,
+                              order: nextOrder,
+                          }
+                        : null,
+                )
         }
 
         const flexJustify = {
@@ -340,18 +344,27 @@ const Paginator = React.memo(
         }
 
         const onSelect = useCallback(
-            (idx: number) => props.setPageIndex(idx),
+            (idx: number) => {
+                props.setPageIndex(idx)
+
+                const href = getHref(idx)
+                if (href) {
+                    history.pushState(null, "", href)
+                }
+            },
             [props.setPageIndex],
         )
 
-        const pageEls = pages.map((idx, j) => {
+        const getHref = (idx: number) => {
             const url = new URL(window.location.href)
-
             const params = props.pageUrl ? props.pageUrl(idx) : {}
             for (const [k, v] of Object.entries(params)) {
                 url.searchParams.set(k, v)
             }
+            return url.href
+        }
 
+        const pageEls = pages.map((idx, j) => {
             return (
                 <PaginationItem
                     key={j}
@@ -359,7 +372,7 @@ const Paginator = React.memo(
                     className="cursor-pointer"
                 >
                     <PaginationLink
-                        href={url.href}
+                        href={getHref(idx)}
                         isActive={idx === props.pageIndex}
                     >
                         {idx + 1}
@@ -382,7 +395,7 @@ const Paginator = React.memo(
                                 : cn("cursor-pointer")
                         }
                     >
-                        <PaginationFirst />
+                        <PaginationFirst href={getHref(0)} />
                     </PaginationItem>
                     <PaginationItem
                         onClick={() => onSelect(props.pageIndex - 1)}
@@ -392,7 +405,9 @@ const Paginator = React.memo(
                                 : cn("cursor-pointer")
                         }
                     >
-                        <PaginationPrevious />
+                        <PaginationPrevious
+                            href={getHref(props.pageIndex - 1)}
+                        />
                     </PaginationItem>
 
                     {...pageEls}
@@ -405,7 +420,7 @@ const Paginator = React.memo(
                                 : cn("cursor-pointer")
                         }
                     >
-                        <PaginationNext />
+                        <PaginationNext href={getHref(props.pageIndex + 1)} />
                     </PaginationItem>
                     <PaginationItem
                         onClick={() => onSelect(pageCount - 1)}
@@ -415,7 +430,7 @@ const Paginator = React.memo(
                                 : cn("cursor-pointer")
                         }
                     >
-                        <PaginationLast />
+                        <PaginationLast href={getHref(pageCount)} />
                     </PaginationItem>
                 </PaginationContent>
 

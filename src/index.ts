@@ -9,6 +9,7 @@ async function main() {
 
 declare global {
     interface Window {
+        // @todo: spaghetti
         HV_LOG: {
             apiData: {
                 logs?: Array<CompleteLog>

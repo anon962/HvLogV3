@@ -1,8 +1,8 @@
 import { humanizeFightingType } from "@/lib/stats/combatStats"
 import { humanizeBattleType } from "@/lib/stats/metaStats"
 import { LOG_SOURCE, LogSearchResult } from "@/lib/ui/hvlog/logSource"
-import { formatNumber, useAsync } from "@/lib/utils/miscUtils"
-import { alphabeticalBy, cn, sort } from "myutils"
+import { formatNumber, pushSearchParam, useAsync } from "@/lib/utils/miscUtils"
+import { alphabeticalBy, cn, range, sort } from "myutils"
 import { useEffect, useMemo, useState } from "react"
 import { RunIcon, Skull2Icon } from "../icons/misc"
 import { CheckIcon } from "../icons/tailwind"
@@ -13,10 +13,45 @@ export function LogList(props: {
     id_user: string | null
     key_user: string | null
 }) {
-    const [pageSize, setPageSize] = useLocalJsonState(
+    const [pageSizeStorage, setPageSizeStorage] = useLocalJsonState(
         15,
         "hvlog_log_list_page_size",
     )
+
+    const windowHref = new URL(window.location.href)
+
+    let pageIdx = parseInt(windowHref.searchParams.get("p") ?? "0")
+    if (isNaN(pageIdx)) {
+        pageIdx = 0
+    } else {
+        pageIdx -= 1
+    }
+
+    let pageSize = parseInt(windowHref.searchParams.get("n") ?? "")
+    if (isNaN(pageSize) || pageSize <= 0) {
+        pageSize = pageSizeStorage
+    } else if (pageSizeStorage !== pageSize) {
+        setPageSizeStorage(pageSize)
+    }
+
+    let [sortCriteria, setSortCriteria] =
+        useState<ListTable.SortCriteria | null>(null)
+
+    const s = windowHref.searchParams.get("s")
+    const desc = parseInt(windowHref.searchParams.get("desc")!)
+    if (SORT_IDS.has(s as any) && !isNaN(desc)) {
+        const update = {
+            cid: s!,
+            order: desc > 0 ? "desc" : "asc",
+        } as const
+        if (
+            update.cid !== sortCriteria?.cid ||
+            update.order !== sortCriteria?.order
+        ) {
+            setSortCriteria(update)
+            sortCriteria = update
+        }
+    }
 
     const logSource = LOG_SOURCE.useContext()
     const fetcher = useAsync(
@@ -27,6 +62,12 @@ export function LogList(props: {
                     pageSize: req.pageSize,
                     idUser: req.id_user,
                     keyUser: req.key_user,
+                    sort: req.sortCriteria
+                        ? {
+                              type: req.sortCriteria.cid as any,
+                              order: req.sortCriteria.order,
+                          }
+                        : null,
                 })
 
             const resp = await get(req.pageIdx)
@@ -35,21 +76,25 @@ export function LogList(props: {
             get(0)
             const lastPageIdx = Math.ceil(resp.resultCount / resp.pageSize) - 1
             get(lastPageIdx)
-            if (req.pageIdx > 0) get(req.pageIdx - 1)
-            if (req.pageIdx < lastPageIdx) get(req.pageIdx + 1)
+
+            for (let idx of range(req.pageIdx - 2, req.pageIdx + 2 + 1)) {
+                if (idx <= 0 || idx >= lastPageIdx - 2) {
+                    continue
+                }
+
+                get(idx)
+            }
 
             return resp
         },
         {
-            pageIdx: 0,
+            pageIdx,
             pageSize,
             id_user: props.id_user,
             key_user: props.key_user,
+            sortCriteria,
         },
     )
-
-    const [sortCriteria, setSortCriteria] =
-        useState<ListTable.SortCriteria | null>(null)
 
     const sortedData = useMemo(() => {
         const results = fetcher.data?.results
@@ -88,25 +133,27 @@ export function LogList(props: {
             ]}
             count={fetcher.data?.resultCount ?? 1}
             getId={(d) => d.id}
-            sortCols={new Set([COLS.turns.id, COLS.date.id])}
+            sortCols={new Set(SORT_IDS)}
             pageIndex={fetcher.request.pageIdx}
             setPageIndex={(idx) => {
                 fetcher.setRequest({
+                    ...fetcher.request,
                     pageIdx: idx,
-                    pageSize: fetcher.request.pageSize,
-                    id_user: props.id_user,
-                    key_user: props.key_user,
                 })
             }}
             setPageSize={{
                 options: [15, 50, 100, 1000],
                 handler: (pageSize: number) => {
-                    setPageSize(pageSize)
+                    setPageSizeStorage(pageSize)
                     fetcher.setRequest({
+                        ...fetcher.request,
                         pageIdx: 0,
                         pageSize: pageSize,
-                        id_user: props.id_user,
-                        key_user: props.key_user,
+                    })
+
+                    pushSearchParam({
+                        p: String(1),
+                        n: String(pageSize),
                     })
                 },
             }}
@@ -114,11 +161,42 @@ export function LogList(props: {
             selectedId=""
             setSelectedId={() => {}}
             sortCriteria={sortCriteria}
-            setSortCriteria={setSortCriteria}
+            setSortCriteria={(crit) => {
+                setSortCriteria(crit)
+
+                fetcher.setRequest({
+                    ...fetcher.request,
+                    sortCriteria: crit,
+                })
+
+                if (crit) {
+                    pushSearchParam({
+                        s: String(crit.cid),
+                        desc: crit.order === "desc" ? "1" : "0",
+                    })
+                } else {
+                    pushSearchParam({
+                        s: null,
+                        desc: null,
+                    })
+                }
+            }}
             rowUrl={(d) => `/logs/${d.id}`}
             isLoading={fetcher.isPending}
             className={{ root: "text-sm" }}
-            pageUrl={(pageIdx) => ({ p: String(pageIdx + 1) })}
+            pageUrl={(pageIdx) => ({
+                p: String(pageIdx + 1),
+                n: String(fetcher.request.pageSize),
+                ...(fetcher.request.sortCriteria
+                    ? {
+                          s: String(fetcher.request.sortCriteria.cid),
+                          desc:
+                              fetcher.request.sortCriteria.order === "desc"
+                                  ? "1"
+                                  : "0",
+                      }
+                    : {}),
+            })}
         />
     )
 }
@@ -200,7 +278,7 @@ const COLS = {
             ...formatStartDate(x.meta.start, now),
             className: "date",
         }),
-    } satisfies ListTable.Column<LogSearchResult, Date>,
+    } as const satisfies ListTable.Column<LogSearchResult, Date>,
     status: {
         id: "status",
         header: { content: "Status" },
@@ -226,6 +304,8 @@ const COLS = {
     //     ReturnType<typeof formatEnchants>[number]
     // >,
 } as const satisfies Record<string, ListTable.Column<LogSearchResult, any>>
+
+const SORT_IDS = new Set([COLS.turns.id, COLS.date.id] as const)
 
 function formatDuration(start: Date, end: Date) {
     const elapsed = end.getTime() - start.getTime()

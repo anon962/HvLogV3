@@ -143,3 +143,15 @@ export function useAsyncGen<TReq, TRes>(
 export function ReactMemo<T, P = {}>(component: (props: P) => React.ReactNode) {
     return React.memo(component) as (props: P) => React.ReactNode
 }
+
+export function pushSearchParam(update: Record<string, string | null>) {
+    const url = new URL(window.location.href)
+    for (const [k, v] of Object.entries(update)) {
+        if (v !== null) {
+            url.searchParams.set(k, v)
+        } else {
+            url.searchParams.delete(k)
+        }
+    }
+    window.history.pushState(null, "", url.href)
+}
