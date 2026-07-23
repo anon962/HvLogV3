@@ -14,9 +14,8 @@ import { RouteLink } from "../routeLink"
 
 // @fixme: log list
 //    filter
-//    pagination
 //    search
-// @todo: mob leaderboard
+// @fixme: mob leaderboard
 //    appearance (per million)
 //    survival rate (avg 1.34)
 //    damage
@@ -26,15 +25,12 @@ import { RouteLink } from "../routeLink"
 // @fixme: item world
 // @fixme: monsters killed
 // @fixme: income per round
-// @fixme: search endpoint
-// @fixme: price endpoint
 // @fixme: version
 // @fixme: price history
 // @fixme: client vs server entry points
 
 // @todo: equip drop search
 // @todo: global equip drops
-// @todo: local nav
 // @todo: per round / avgs (config?)
 // @todo: effect blame
 // @todo: chart utils
@@ -57,9 +53,7 @@ export const HvLog: RootComponent = ({}) => {
                 [
                     "logs",
                     (parts: string[], url: URL) => {
-                        const id_user = url.searchParams.get("id_user")
-                        const key_user = url.searchParams.get("key_user")
-                        return <LogList id_user={id_user} key_user={key_user} />
+                        return <LogList />
                     },
                 ],
             ] as const

@@ -385,7 +385,7 @@ const Paginator = React.memo(
         const disableNext = props.pageIndex >= pageCount - 1
 
         return (
-            <Pagination className="p-4!">
+            <Pagination className="p-4! pl-12!">
                 <PaginationContent>
                     <PaginationItem
                         onClick={() => onSelect(0)}
@@ -513,7 +513,7 @@ function Loader(props: { show: boolean; delay?: number }) {
             setShow(false)
             return
         }
-        const timeout = setTimeout(() => setShow(true), props.delay ?? 300)
+        const timeout = setTimeout(() => setShow(true), props.delay ?? 200)
         return () => clearTimeout(timeout)
     }, [props.show, props.delay])
 

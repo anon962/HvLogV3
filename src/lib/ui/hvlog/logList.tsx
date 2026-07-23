@@ -10,10 +10,7 @@ import { ListTable } from "../listTable"
 import { useLocalJsonState } from "./hooks"
 import { useUrlParams } from "./router"
 
-export function LogList(props: {
-    id_user: string | null
-    key_user: string | null
-}) {
+export function LogList() {
     const [urlParams, setUrlParams] = useUrlParams({
         schema: {
             p: {
@@ -29,6 +26,12 @@ export function LogList(props: {
             },
             desc: {
                 type: "boolean",
+            },
+            id_user: {
+                type: "string",
+            },
+            key_user: {
+                type: "string",
             },
         },
     })
@@ -48,8 +51,8 @@ export function LogList(props: {
             ({
                 pageIdx,
                 pageSize,
-                id_user: props.id_user,
-                key_user: props.key_user,
+                id_user: urlParams["id_user"],
+                key_user: urlParams["key_user"],
                 sortCriteria: sortCid
                     ? {
                           cid: sortCid,
@@ -60,7 +63,14 @@ export function LogList(props: {
                       }
                     : null,
             }) as const,
-        [pageIdx, pageSize, props.id_user, props.key_user, sortCid, sortDesc],
+        [
+            pageIdx,
+            pageSize,
+            urlParams["id_user"],
+            urlParams["key_user"],
+            sortCid,
+            sortDesc,
+        ],
     )
     useEffect(() => {
         fetcher.setRequest(req)
@@ -68,34 +78,50 @@ export function LogList(props: {
 
     const logSource = LOG_SOURCE.useContext()
     const fetcher = useAsync(async (req) => {
-        const get = (pageIdx: number) =>
+        const get = (pageIdx: number, sortCriteria?: ListTable.SortCriteria) =>
             logSource.fetchSearch({
                 pageIdx,
                 pageSize: req.pageSize,
                 idUser: req.id_user,
                 keyUser: req.key_user,
-                sort: req.sortCriteria
+                sort: sortCriteria
                     ? {
-                          type: req.sortCriteria.cid as any,
-                          order: req.sortCriteria.order,
+                          type: sortCriteria.cid,
+                          order: sortCriteria.order,
                       }
-                    : null,
+                    : req.sortCriteria
+                      ? {
+                            type: req.sortCriteria.cid as any,
+                            order: req.sortCriteria.order,
+                        }
+                      : null,
             })
 
         const resp = await get(req.pageIdx)
 
-        // prefetch
-        get(0)
-        const lastPageIdx = Math.ceil(resp.resultCount / resp.pageSize) - 1
-        get(lastPageIdx)
+        const prefetch = async () => {
+            await get(0)
+            const lastPageIdx = Math.ceil(resp.resultCount / resp.pageSize) - 1
+            await get(lastPageIdx)
 
-        for (let idx of range(req.pageIdx - 2, req.pageIdx + 2 + 1)) {
-            if (idx <= 0 || idx >= lastPageIdx - 2) {
-                continue
+            for (let idx of range(req.pageIdx - 2, req.pageIdx + 2 + 1)) {
+                if (idx <= 0 || idx >= lastPageIdx - 2) {
+                    continue
+                }
+
+                await get(idx)
             }
 
-            get(idx)
+            for (const cid of SORT_IDS) {
+                for (const order of ["desc", "asc"] as const) {
+                    await get(req.pageIdx, {
+                        cid,
+                        order,
+                    })
+                }
+            }
         }
+        prefetch()
 
         return resp
     }, req)

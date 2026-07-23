@@ -5,7 +5,7 @@ import { IndexMap } from "@/lib/stats/indexMap"
 import { MetaSummary } from "@/lib/stats/metaStats"
 import { DetailsSummary } from "@/lib/summary"
 import { newContext } from "@/lib/utils/miscUtils"
-import { CustomMap, sleep, zip } from "myutils"
+import { compressGzip, CustomMap, sleep, zip } from "myutils"
 
 export interface TLogSource {
     fetchLog: (id: string) => Promise<CompleteLog<any>>
@@ -15,6 +15,8 @@ export interface TLogSource {
 
 export interface LogSearchRequest {
     pageIdx: number
+
+    seen?: string[]
     pageSize?: number
     battleType?: string[] | null
     primaryStyle?: string | null
@@ -63,7 +65,7 @@ class LogSourceRemote {
     private logCache = new Map<string, Dated<unknown>>()
     private logPending = new Map<string, Promise<CompleteLog>>()
 
-    private searchCache = new CustomMap<
+    private searchRequestCache = new CustomMap<
         LogSearchRequest,
         Dated<LogSearchResponse>,
         string
@@ -71,6 +73,7 @@ class LogSourceRemote {
         toRaw: (k) => this.toSearchKey(k),
         fromRaw: (k) => this.fromSearchKey(k),
     })
+    private searchLogCache = new Map<string, LogSearchResult>()
     private searchPending = new CustomMap<
         LogSearchRequest,
         Promise<LogSearchResponse>,
@@ -104,33 +107,62 @@ class LogSourceRemote {
         }
     }
 
-    async fetchSearch(req: LogSearchRequest) {
+    private async _fetchSearch(req: LogSearchRequest) {
         const k = req
-        if (this.searchCache.has(k)) {
-            const fromCache = this.searchCache.get(k)!
+        if (this.searchRequestCache.has(k)) {
+            const fromCache = this.searchRequestCache.get(k)!
             if (!isExpired(fromCache, this.SEARCH_TTL)) {
                 return fromCache.data
             }
         }
 
         if (!this.searchPending.has(k)) {
+            const body = await compressGzip(
+                JSON.stringify({
+                    ...req,
+                    seen: [...this.searchLogCache.keys()],
+                }),
+            )
             const resp = fetch(this.HVDATA_URL + "/search_logs", {
                 method: "POST",
-                body: JSON.stringify(req),
+                body,
                 headers: {
                     "Content-Type": "application/json",
+                    "Content-Encoding": "gzip",
                 },
             }).then((resp) => resp.json())
             this.searchPending.set(k, resp)
         }
 
-        const result = await this.searchPending.get(k)!
-        this.searchCache.set(k, {
-            data: result,
+        const resp = await this.searchPending.get(k)!
+        for (const log of resp.results) {
+            if (this.searchLogCache.has(log.id)) {
+                continue
+            }
+
+            this.searchLogCache.set(log.id, { ...log })
+            for (const k of Object.keys(log)) {
+                if (k !== "id") {
+                    // @ts-ignore
+                    delete log[k]
+                }
+            }
+        }
+        this.searchRequestCache.set(k, {
+            data: resp,
             createdAt: new Date(),
         })
         this.searchPending.delete(k)
 
+        return resp
+    }
+
+    async fetchSearch(req: LogSearchRequest): Promise<LogSearchResponse> {
+        const resp = await this._fetchSearch(req)
+        const result = {
+            ...resp,
+            results: resp.results.map((x) => this.searchLogCache.get(x.id)!),
+        }
         return result
     }
 
