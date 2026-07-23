@@ -49,7 +49,7 @@ export namespace ListTable {
             className?: string
             title?: string
         }
-        hasSort?: boolean
+        sort?: (xs: Array<TValue>) => Array<TValue>
     }
 
     export interface SortCriteria {
@@ -66,6 +66,7 @@ export function ListTable<T>(props: {
     selectedId: string
     setSelectedId: (id: string) => void
     getId: (d: T) => string
+    sortCols?: Set<string>
     count: number
     pageSize: number
     setPageSize: {
@@ -109,11 +110,12 @@ const TableInner = <T,>(props: {
     setSelectedId: (id: string) => void
     getId: (d: T) => string
     rowUrl?: (d: T) => string
+    sortCols?: Set<string>
 }) => {
     const headerRow = props.cols.map((col) => {
         let icon: ReactNode = null
         let onClick = () => {}
-        if (col.hasSort) {
+        if (props.sortCols?.has(col.id)) {
             const isActive =
                 col.id === props.sortCriteria?.cid &&
                 props.sortCriteria?.order !== null
@@ -158,7 +160,7 @@ const TableInner = <T,>(props: {
                     onClick={onClick}
                     className={cn(
                         "flex items-center",
-                        !!col.hasSort ? "cursor-pointer" : "",
+                        props.sortCols?.has(col.id) ? "cursor-pointer" : "",
                         flexJustify[col.align ?? "text-center"],
                     )}
                 >

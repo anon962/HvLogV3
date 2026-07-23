@@ -1,13 +1,13 @@
-import { LOG_SOURCE, LogSearchResult } from "@/lib/ui/hvlog/logSource"
+import { humanizeFightingType } from "@/lib/stats/combatStats"
 import { humanizeBattleType } from "@/lib/stats/metaStats"
+import { LOG_SOURCE, LogSearchResult } from "@/lib/ui/hvlog/logSource"
 import { formatNumber, useAsync } from "@/lib/utils/miscUtils"
-import { useEffect, useState } from "react"
+import { alphabeticalBy, cn, sort } from "myutils"
+import { useEffect, useMemo, useState } from "react"
 import { RunIcon, Skull2Icon } from "../icons/misc"
 import { CheckIcon } from "../icons/tailwind"
 import { ListTable } from "../listTable"
-import { cn } from "myutils"
 import { useLocalJsonState } from "./hooks"
-import { humanizeFightingType } from "@/lib/stats/combatStats"
 
 export function LogList(props: {
     id_user: string | null
@@ -48,9 +48,36 @@ export function LogList(props: {
         },
     )
 
+    const [sortCriteria, setSortCriteria] =
+        useState<ListTable.SortCriteria | null>(null)
+
+    const sortedData = useMemo(() => {
+        const results = fetcher.data?.results
+        if (!sortCriteria?.order || !results?.length) {
+            return results
+        }
+
+        switch (sortCriteria.cid) {
+            case COLS.turns.id:
+                return sort(
+                    results,
+                    (x) => x.search.meta.turnIndices.length,
+                    sortCriteria.order === "desc",
+                )
+            case COLS.date.id:
+                return alphabeticalBy(
+                    results,
+                    (x) => x.meta.start ?? "zzz",
+                    sortCriteria.order === "desc",
+                )
+            default:
+                console.error(sortCriteria)
+        }
+    }, [fetcher.data?.results, sortCriteria])
+
     return (
         <ListTable
-            data={fetcher.data?.results ?? []}
+            data={sortedData ?? []}
             cols={[
                 COLS.battleType,
                 COLS.turns,
@@ -61,6 +88,7 @@ export function LogList(props: {
             ]}
             count={fetcher.data?.resultCount ?? 1}
             getId={(d) => d.id}
+            sortCols={new Set([COLS.turns.id, COLS.date.id])}
             pageIndex={fetcher.request.pageIdx}
             setPageIndex={(idx) => {
                 fetcher.setRequest({
@@ -85,8 +113,8 @@ export function LogList(props: {
             pageSize={fetcher.data?.pageSize ?? 1}
             selectedId=""
             setSelectedId={() => {}}
-            sortCriteria={null}
-            setSortCriteria={() => {}}
+            sortCriteria={sortCriteria}
+            setSortCriteria={setSortCriteria}
             rowUrl={(d) => `/logs/${d.id}`}
             isLoading={fetcher.isPending}
             className={{ root: "text-sm" }}
