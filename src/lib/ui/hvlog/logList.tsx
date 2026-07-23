@@ -7,6 +7,7 @@ import { CheckIcon } from "../icons/tailwind"
 import { ListTable } from "../listTable"
 import { cn } from "myutils"
 import { useLocalJsonState } from "./hooks"
+import { humanizeFightingType } from "@/lib/stats/combatStats"
 
 export function LogList(props: {
     id_user: string | null
@@ -171,22 +172,10 @@ const COLS = {
         id: "style",
         header: { content: "Style" },
         align: "text-left",
-        cell: (x) => {
-            let content
-            const s = x.search.style
-            if (s.primary && s.secondary) {
-                content = `${s.primary.name} + ${s.secondary.name}`
-            } else if (s.primary) {
-                content = s.primary.name
-            } else {
-                content = "???"
-            }
-
-            return {
-                content: <>{content}</>,
-                className: "style",
-            }
-        },
+        cell: (x) => ({
+            content: humanizeFightingType(x.search.style),
+            className: "style",
+        }),
     },
     // {
     //     id: "enchants",

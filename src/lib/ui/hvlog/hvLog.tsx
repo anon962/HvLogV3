@@ -9,6 +9,7 @@ import { LogDetailsPane } from "./logDetailsPane"
 import { LogList } from "./logList"
 import { LOG_SOURCE } from "./logSource"
 import { Router } from "./router"
+import { humanizeFightingType } from "@/lib/stats/combatStats"
 
 // @fixme: log list
 //    filter
@@ -100,7 +101,13 @@ function LogDetailsRoute(props: { id: string }) {
         const d = new Date(srcData.data.log.meta.start)
         const m = srcData.data.details.meta
         const zfill = (x: number, n = 2) => x.toString().padStart(n, "0")
-        title = `${humanizeBattleType(m.battleType, m.round?.end ?? null)} - ${srcData.data.log.meta.user_name ?? "(anonymous)"} - ${d.getFullYear()}-${zfill(d.getMonth())}-${zfill(d.getDate())} ${zfill(d.getHours())}:${zfill(d.getMinutes())}`
+
+        title = [
+            humanizeBattleType(m.battleType, m.round?.end ?? null),
+            srcData.data.log.meta.user_name ?? "(anonymous)",
+            humanizeFightingType(srcData.data.details.combat.style),
+            `${d.getFullYear()}-${zfill(d.getMonth())}-${zfill(d.getDate())} ${zfill(d.getHours())}:${zfill(d.getMinutes())}`,
+        ].join(" - ")
     } else {
         title = "-"
     }

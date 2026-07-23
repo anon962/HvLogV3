@@ -173,32 +173,26 @@ type RiddlemasterEvent = {}
 const MAGE_STYLES = {
     "Dark Mage": {
         id: "Dark Mage",
-        name: "Dark Mage",
         spells: new Set(["Ragnarok", "Disintegrate", "Corruption"]),
     },
     "Holy Mage": {
         id: "Holy Mage",
-        name: "Holy Mage",
         spells: new Set(["Paradise Lost", "Banishment", "Smite"]),
     },
     "Wind Mage": {
         id: "Wind Mage",
-        name: "Wind Mage",
         spells: new Set(["Storms of Njord", "Downburst", "Gale"]),
     },
     "Elec Mage": {
         id: "Elec Mage",
-        name: "Elec Mage",
         spells: new Set(["Wrath of Thor", "Chained Lightning", "Shockblast"]),
     },
     "Fire Mage": {
         id: "Fire Mage",
-        name: "Fire Mage",
         spells: new Set(["Flames of Loki", "Inferno", "Fiery Blast"]),
     },
     "Cold Mage": {
         id: "Cold Mage",
-        name: "Cold Mage",
         spells: new Set(["Fimbulvetr", "Blizzard", "Freeze"]),
     },
 } as const
@@ -211,27 +205,22 @@ const MAGE_STYLES_BY_SPELL = Object.fromEntries(
 const MELEE_STYLES = {
     "One-Handed": {
         id: "One-Handed",
-        name: "One-Handed",
         skills: new Set(["Merciful Blow", "Vital Strike", "Shield Bash"]),
     },
     "Dual Wield": {
         id: "Dual Wield",
-        name: "Dual Wield",
         skills: new Set(["Iris Strike", "Backstab", "Frenzied Blows"]),
     },
     "Two-Handed": {
         id: "Two-Handed",
-        name: "Two-Handed",
         skills: new Set(["Great Cleave", "Rending Blow", "Shatter Strike"]),
     },
     Niten: {
         id: "Niten",
-        name: "Niten",
         skills: new Set(["Skyward Sword"]),
     },
     Bonk: {
         id: "Bonk",
-        name: "Bonk",
         skills: new Set(["Concussive Strike"]),
     },
 } as const
@@ -242,3 +231,73 @@ const MELEE_STYLES_BY_SKILL = Object.fromEntries(
 )
 
 type FightingStyle = ValueOf<typeof MAGE_STYLES> | ValueOf<typeof MELEE_STYLES>
+
+export function humanizeFightingType(style: CombatSummary["style"]) {
+    let result
+
+    const p = FIGHTING_STYLE_NAMES[style.primary?.id as any]
+    const s = FIGHTING_STYLE_NAMES[style.secondary?.id as any]
+
+    if (p && s) {
+        result = `${p.short} + ${s.short}`
+    } else if (p) {
+        result = p.long
+    } else {
+        result = "???"
+    }
+
+    return result
+}
+
+export const FIGHTING_STYLE_NAMES = {
+    "Dark Mage": {
+        long: "Dark Mage",
+        short: "Dark",
+    },
+    "Holy Mage": {
+        long: "Holy Mage",
+        short: "Holy",
+    },
+    "Wind Mage": {
+        long: "Wind Mage",
+        short: "Wind",
+    },
+    "Elec Mage": {
+        long: "Elec Mage",
+        short: "Elec",
+    },
+    "Fire Mage": {
+        long: "Fire Mage",
+        short: "Fire",
+    },
+    "Cold Mage": {
+        long: "Cold Mage",
+        short: "Cold",
+    },
+    "One-Handed": {
+        long: "One-Handed",
+        short: "1H",
+    },
+    "Dual Wield": {
+        long: "Dual Wield",
+        short: "DW",
+    },
+    "Two-Handed": {
+        long: "Two-Handed",
+        short: "2H",
+    },
+    Niten: {
+        long: "Niten",
+        short: "Niten",
+    },
+    Bonk: {
+        long: "Bonk",
+        short: "Bonk",
+    },
+} as Record<
+    string,
+    {
+        long: string
+        short: string
+    }
+>
