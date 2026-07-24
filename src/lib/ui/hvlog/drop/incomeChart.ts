@@ -6,7 +6,6 @@ import * as Plot from "@observablehq/plot"
 import { TAILWIND_COLORS, TAILWIND_SHADES } from "../../../ui/constants"
 import {
     alphabeticalBy,
-    findNext,
     groupBy,
     last,
     mapEntries,
@@ -244,7 +243,8 @@ export class IncomeChart {
                 "",
                 `Income: ${formatNumber(total).padStart(7)}`,
                 `Costs: ${formatNumber(costs).padStart(7)}`,
-                `Net: ${formatNumber(net).padStart(8)}`,
+                `Net: ${formatNumber(net).padStart(7)}`,
+                `Net/R: ${(net / x).toFixed(1).padStart(7)}`,
                 "",
                 ...keys.map(
                     (k) =>

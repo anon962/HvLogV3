@@ -6,7 +6,7 @@ import { RootComponent } from "@/lib/utils/userscriptUtils"
 import { CustomMap } from "myutils"
 import { StrictMode } from "react"
 import { LogDetailsPane } from "./logDetailsPane"
-import { LogList } from "./logList"
+import { LogList } from "./logList/logList"
 import { LOG_SOURCE } from "./logSource"
 import { ROUTER, Router } from "./router"
 import { humanizeFightingType } from "@/lib/stats/combatStats"
@@ -25,9 +25,11 @@ import { RouteLink } from "../routeLink"
 // @fixme: item world
 // @fixme: monsters killed
 // @fixme: income per round
-// @fixme: version
+// @fixme: version / reparse
 // @fixme: price history
 // @fixme: client vs server entry points
+// @fixme: hover prefetch
+// @fixme: logdb, singleton
 
 // @todo: equip drop search
 // @todo: global equip drops

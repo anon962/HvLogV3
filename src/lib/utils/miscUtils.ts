@@ -147,3 +147,98 @@ export function useAsyncGen<TReq, TRes>(
 export function ReactMemo<T, P = {}>(component: (props: P) => React.ReactNode) {
     return React.memo(component) as (props: P) => React.ReactNode
 }
+
+export type CommonProps = Pick<
+    React.ComponentProps<"div">,
+    "className" | "style"
+>
+
+type MergePropStrategy<T = unknown> =
+    | { type: "override" }
+    | { type: "add"; sep?: T }
+    | {
+          type: "custom"
+          fn: (base: T, override: T) => T
+      }
+type MergePropStrategyMap = {
+    string: MergePropStrategy<string>
+    number: MergePropStrategy<number>
+    bigint: MergePropStrategy<bigint>
+    boolean: MergePropStrategy<boolean>
+}
+
+export function mergeProps<TBase extends React.ComponentProps<"div">>(
+    base: TBase,
+    overrides?: any,
+    strategy?: Partial<MergePropStrategyMap>,
+): any {
+    const result = { ...base } as any
+
+    const strat: MergePropStrategyMap = {
+        string: {
+            type: "add",
+            sep: " ",
+        },
+        number: {
+            type: "override",
+        },
+        bigint: {
+            type: "override",
+        },
+        boolean: {
+            type: "override",
+        },
+        ...strategy,
+    }
+
+    for (const k of Object.keys(overrides ?? {})) {
+        const bv = (base as any)[k]
+        const bt = typeof bv
+        const ov = overrides[k]
+        const ot = typeof ov
+
+        if (!(k in base)) {
+            result[k] = ov
+        } else if (!bv && ov) {
+            result[k] = ov
+        } else if (bv && !ov) {
+            // result[k] = bv
+        } else if (!bv && !ov) {
+            // result[k] = bv
+        } else if (bt !== ot) {
+            console.error(`Cannot merge ${bv} (${bt}) with ${ov} (${ot})`)
+        } else {
+            switch (bt) {
+                case "string":
+                case "number":
+                case "bigint":
+                case "boolean":
+                    const s = strat[bt]
+                    switch (s.type) {
+                        case "override":
+                            result[k] = ov
+                            break
+                        case "add":
+                            if (s.sep) {
+                                result[k] += s.sep
+                            }
+                            result[k] += ov
+                            break
+                        case "custom":
+                            result[k] = (s.fn as any)(bv, ov)
+                            break
+                    }
+                    break
+                case "symbol":
+                case "object":
+                case "function":
+                    console.error(
+                        `Cannot merge ${bv} (${bt}) with ${ov} (${ot})`,
+                    )
+                    break
+            }
+        }
+    }
+
+    return result
+}

@@ -1,0 +1,30 @@
+.checkbox-group {
+    display: flex;
+    flex-flow: column;
+}
+
+.input-label-container {
+    display: grid;
+    gap: 0.125em 0.35em;
+    align-items: center;
+    justify-items: start;
+    grid-template-areas: "input label";
+    /* "blank desc"; */
+    grid-template-columns: max-content 1fr;
+    cursor: pointer;
+    text-align: left;
+}
+.input-label-container button {
+    grid-area: input;
+    cursor: pointer;
+}
+.input-label-container label {
+    grid-area: label;
+    cursor: pointer;
+}
+.input-label-container p {
+    grid-area: desc;
+    margin: 0;
+    font-size: 0.6rem;
+    color: rgba(200, 200, 200);
+}

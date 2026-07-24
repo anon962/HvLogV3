@@ -186,7 +186,6 @@ function toPercentages(
         }
         cumulativeSparks.push(sparkCount)
     }
-    console.log(sparks, cumulativeSparks)
 
     const byX = groupBy(points, (pt) => pt.x)
     const byRelativeFrac: Record<

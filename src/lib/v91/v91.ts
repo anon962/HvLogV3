@@ -248,7 +248,7 @@ function _summarizeItemDrops(log: CompleteLog<parsers.HvEvent>) {
                     return [
                         {
                             key: "Credits",
-                            count: 1,
+                            count: ev.value,
                             isEquip: false,
                         },
                     ]

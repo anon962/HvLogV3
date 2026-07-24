@@ -9,6 +9,7 @@ export function summarizeStyle(
     secondary: FightingStyle | null
     isImperil: boolean
 } {
+    // @fixme: iterate over styles instead of cast groups
     const spellsWeighted = sort(
         Object.entries(spell).map(
             (kv) => [kv[0], kv[1].events.logIdx.length] as const,
