@@ -1,5 +1,4 @@
-import { range, sort } from "myutils"
-import { useState } from "react"
+import { FIGHTING_STYLE_NAMES } from "@/lib/stats/combatStats"
 import { CheckboxGroup } from "../../checkboxGroup"
 import { ListTable } from "../../listTable"
 import { LogListN } from "./logListN"
@@ -16,30 +15,6 @@ export function LogList() {
 }
 
 export function Table() {
-    // const [urlParams, setUrlParams] = useUrlParams({
-    //     schema: {
-    //         p: {
-    //             type: "number",
-    //             tfm: (x) => (x !== null && x >= 1 ? x - 1 : 0),
-    //         },
-    //         n: {
-    //             type: "number",
-    //         },
-    //         s: {
-    //             type: "string",
-    //             tfm: (x) => (x && LogListN.SORT_IDS.has(x as any) ? x : null),
-    //         },
-    //         desc: {
-    //             type: "boolean",
-    //         },
-    //         id_user: {
-    //             type: "string",
-    //         },
-    //         key_user: {
-    //             type: "string",
-    //         },
-    //     },
-    // })
     const {
         params,
         setParams,
@@ -111,51 +86,92 @@ export function Table() {
 
 function Filter() {
     const { params, setParams } = LogListN.ctx.useContext()
-    const [lastActiveIdx, setLastActive] = useState<number | null>(null)
 
     return (
-        <form className="rounded-md border flex p-4 text-sm">
+        <form className="rounded-md border flex p-4 text-xs">
             <div className="flex flex-col">
                 <CheckboxGroup
+                    header="Battle Type"
                     options={LogListN.BATTLE_TYPES.map(({ label }) => ({
                         label,
                     }))}
                     checked={LogListN.BATTLE_TYPES.map(({ label }) =>
                         params.bt.has(label),
                     )}
-                    onCheckedChange={(checked, hasShift, value, idx) => {
-                        let overrides
-                        if (idx !== null) {
-                            overrides = new Set<number>([idx])
-                            if (lastActiveIdx !== null && hasShift) {
-                                const [mn, mx] = sort(
-                                    [lastActiveIdx, idx],
-                                    (x) => x,
-                                )
-                                overrides = new Set(range(mn, mx + 1))
-                            }
-                            setLastActive(idx)
-                        } else {
-                            overrides = new Set(
-                                range(LogListN.BATTLE_TYPES.length),
-                            )
-                            setLastActive(null)
-                        }
-
+                    onCheckedChange={({ checked }) => {
                         setParams({
-                            bt: LogListN.BATTLE_TYPES.map(
-                                (cat, idx2) =>
-                                    +(overrides.has(idx2)
-                                        ? value
-                                        : params.bt.has(cat.label)) as 0 | 1,
-                            ),
+                            bt: checked.map((x) => +x as 0 | 1),
                         })
+                    }}
+                    listProps={{
+                        className: "block! columns-2",
                     }}
                 />
             </div>
-            <div className="border mx-2"></div>
-            <div></div>
-            <div className="border mx-2"></div>
+            <div className="border-r mx-4"></div>
+            <div className="flex flex-col gap-4">
+                <CheckboxGroup
+                    header="Imperil?"
+                    direction="h"
+                    hideAll={true}
+                    options={["Yes", "No"].map((label) => ({ label }))}
+                    checked={[
+                        params["i"] === "yes" || params["i"] === "both",
+                        params["i"] === "no" || params["i"] === "both",
+                    ]}
+                    onCheckedChange={({ checked }) => {
+                        setParams({
+                            i: checked.map((x) => +x as 0 | 1),
+                        })
+                    }}
+                    className="max-w-[20em]"
+                />
+
+                <CheckboxGroup
+                    header="Primary Style"
+                    direction="h"
+                    options={LogListN.STYLES.map(({ id }) => ({
+                        label: FIGHTING_STYLE_NAMES[id].short,
+                    }))}
+                    checked={LogListN.STYLES.map(({ id }) => params.sp.has(id))}
+                    onCheckedChange={({ checked }) => {
+                        setParams({
+                            sp: checked.map((x) => +x as 0 | 1),
+                        })
+                    }}
+                    className="max-w-[20em]"
+                    listProps={{
+                        className: "grid! grid-cols-4",
+                    }}
+                    containerProps={{
+                        className: "[&:nth-child(4n)]:pr-0!",
+                    }}
+                />
+
+                <CheckboxGroup
+                    header="Secondary Style"
+                    direction="h"
+                    options={LogListN.STYLES.map(({ id }) => ({
+                        label: FIGHTING_STYLE_NAMES[id].short,
+                    }))}
+                    checked={LogListN.STYLES.map(({ id }) => params.ss.has(id))}
+                    onCheckedChange={({ checked }) => {
+                        setParams({
+                            ss: checked.map((x) => +x as 0 | 1),
+                        })
+                    }}
+                    className="max-w-[20em]"
+                    listProps={{
+                        className: "grid! grid-cols-4",
+                    }}
+                    containerProps={{
+                        className: "[&:nth-child(4n)]:pr-0!",
+                    }}
+                />
+
+                <div></div>
+            </div>
+            <div className="border-r mx-4"></div>
             <div></div>
         </form>
     )

@@ -1,6 +1,6 @@
 import { newContext } from "@/lib/utils/miscUtils"
 import { readUrl } from "@/lib/utils/userscriptUtils"
-import { AnyFunction, CustomMap, Fn, range } from "myutils"
+import { AnyFunction, bitmaskToBigint, CustomMap, Fn, range } from "myutils"
 import { ReactNode, useEffect, useMemo, useState } from "react"
 
 export function Router(props: {
@@ -315,11 +315,12 @@ export namespace UrlParamN {
                     }
                     case "bitmask": {
                         let v2 = v as Array<0 | 1>
-                        let v3 = 0n
-                        for (let idx = v2.length - 1; idx >= 0; idx--) {
-                            v3 = (v3 << 1n) | BigInt(v2[idx])
+                        let v3 = bitmaskToBigint(v2)
+                        if (v3 > 0) {
+                            u.searchParams.set(k, String(v3))
+                        } else {
+                            u.searchParams.delete(k)
                         }
-                        u.searchParams.set(k, String(v3))
                         break
                     }
                 }

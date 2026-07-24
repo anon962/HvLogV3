@@ -9,56 +9,45 @@ export function summarizeStyle(
     secondary: FightingStyle | null
     isImperil: boolean
 } {
-    // @fixme: iterate over styles instead of cast groups
-    const spellsWeighted = sort(
-        Object.entries(spell).map(
-            (kv) => [kv[0], kv[1].events.logIdx.length] as const,
-        ),
-        (kv) => kv[1],
-        true,
-    )
-
-    const attackWeight = attack["Attack"]?.events.logIdx.length ?? 0
-    const skillsWeighted = sort(
-        Object.entries(skill).map(
-            (kv) => [kv[0], kv[1].events.logIdx.length] as const,
-        ),
-        (kv) => kv[1] + attackWeight,
-        true,
-    )
-
-    const candidates = sort([...spellsWeighted, ...skillsWeighted], (x) => x[1])
-
-    let pStyle: FightingStyle | null = null
-    let pStyleWeight = 0
-    let sStyle: FightingStyle | null = null
-    let sStyleWeight = 0
-    for (const [id, weight] of candidates) {
-        const style: FightingStyle | undefined =
-            MAGE_STYLES_BY_SPELL[id] ?? MELEE_STYLES_BY_SKILL[id]
-        if (!style) {
-            continue
-        }
-        if (style.id === (pStyle as FightingStyle)?.id) {
-            continue
-        }
-
-        if (!pStyle) {
-            pStyle = style
-            pStyleWeight = weight
-        } else {
-            sStyle = style
-            sStyleWeight = weight
-            break
+    const weights = {} as Record<string, number>
+    for (const style of Object.values(MAGE_STYLES)) {
+        weights[style.id] = 0
+        for (const [key, x] of Object.entries(spell)) {
+            if (style.spells.has(key)) {
+                weights[style.id] += x.events.logIdx.length
+            }
         }
     }
+
+    const attackWeight = attack["Attack"]?.events.logIdx.length ?? 0
+    for (const style of Object.values(MELEE_STYLES)) {
+        weights[style.id] = 0
+        for (const [key, x] of Object.entries(skill)) {
+            if (style.skills.has(key)) {
+                weights[style.id] += x.events.logIdx.length
+                weights[style.id] += attackWeight
+            }
+        }
+    }
+
+    const candidates = sort(Object.keys(weights), (k) => weights[k], true)
+
+    let pStyle: FightingStyle =
+        (MAGE_STYLES as any)[candidates[0]] ??
+        (MELEE_STYLES as any)[candidates[0]]
+    let pStyleWeight = weights[candidates[0]]
+
+    let sStyle: FightingStyle =
+        (MAGE_STYLES as any)[candidates[1]] ??
+        (MELEE_STYLES as any)[candidates[1]]
+    let sStyleWeight = weights[candidates[1]]
 
     const isImperil =
         (spell["Imperil"]?.events.logIdx.length ?? 0) >= pStyleWeight / 8
 
     return {
-        primary: pStyle,
-        secondary: sStyle,
+        primary: pStyleWeight > 0 ? pStyle : null,
+        secondary: pStyleWeight > 0 && sStyleWeight > 0 ? sStyle : null,
         isImperil,
     }
 }
@@ -171,7 +160,7 @@ type PassiveAttackEvent = {
 }
 type RiddlemasterEvent = {}
 
-const MAGE_STYLES = {
+export const MAGE_STYLES = {
     "Dark Mage": {
         id: "Dark Mage",
         spells: new Set(["Ragnarok", "Disintegrate", "Corruption"]),
@@ -197,13 +186,8 @@ const MAGE_STYLES = {
         spells: new Set(["Fimbulvetr", "Blizzard", "Freeze"]),
     },
 } as const
-const MAGE_STYLES_BY_SPELL = Object.fromEntries(
-    Object.values(MAGE_STYLES).flatMap((style) =>
-        [...style.spells].map((spell) => [spell, style]),
-    ),
-)
 
-const MELEE_STYLES = {
+export const MELEE_STYLES = {
     "One-Handed": {
         id: "One-Handed",
         skills: new Set(["Merciful Blow", "Vital Strike", "Shield Bash"]),
@@ -225,11 +209,6 @@ const MELEE_STYLES = {
         skills: new Set(["Concussive Strike"]),
     },
 } as const
-const MELEE_STYLES_BY_SKILL = Object.fromEntries(
-    Object.values(MELEE_STYLES).flatMap((style) =>
-        [...style.skills].map((skill) => [skill, style]),
-    ),
-)
 
 type FightingStyle = ValueOf<typeof MAGE_STYLES> | ValueOf<typeof MELEE_STYLES>
 

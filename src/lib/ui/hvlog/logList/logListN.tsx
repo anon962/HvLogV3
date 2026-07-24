@@ -1,4 +1,8 @@
-import { humanizeFightingType } from "@/lib/stats/combatStats"
+import {
+    humanizeFightingType,
+    MAGE_STYLES,
+    MELEE_STYLES,
+} from "@/lib/stats/combatStats"
 import { humanizeBattleType } from "@/lib/stats/metaStats"
 import { LOG_SOURCE, LogSearchResult } from "@/lib/ui/hvlog/logSource"
 import { formatNumber, newContext, useAsync } from "@/lib/utils/miscUtils"
@@ -147,6 +151,20 @@ export namespace LogListN {
     ]
     type BattleType = (typeof BATTLE_TYPES)[number]
 
+    export const STYLES = [
+        { ...MAGE_STYLES["Dark Mage"] },
+        { ...MAGE_STYLES["Holy Mage"] },
+        { ...MAGE_STYLES["Wind Mage"] },
+        { ...MAGE_STYLES["Elec Mage"] },
+        { ...MAGE_STYLES["Fire Mage"] },
+        { ...MAGE_STYLES["Cold Mage"] },
+        { ...MELEE_STYLES["One-Handed"] },
+        { ...MELEE_STYLES["Two-Handed"] },
+        { ...MELEE_STYLES["Dual Wield"] },
+        { ...MELEE_STYLES["Niten"] },
+        { ...MELEE_STYLES["Bonk"] },
+    ]
+
     export const PARAM_SCHEMA = {
         // Search options
         p: {
@@ -174,17 +192,40 @@ export namespace LogListN {
             type: "bitmask",
             tfm: (xs) =>
                 new Set<BattleType["label"]>(
-                    xs.map((idx) => BATTLE_TYPES[idx].label),
+                    xs
+                        .map((idx) => BATTLE_TYPES[idx]?.label)
+                        .filter((x) => !!x),
                 ),
         },
         sp: {
             type: "bitmask",
+            tfm: (xs) =>
+                new Set<string>(
+                    xs.map((idx) => STYLES[idx]?.id).filter((x) => !!x),
+                ),
         },
         ss: {
             type: "bitmask",
+            tfm: (xs) =>
+                new Set<string>(
+                    xs.map((idx) => STYLES[idx]?.id).filter((x) => !!x),
+                ),
         },
         i: {
-            type: "boolean",
+            type: "bitmask",
+            tfm: (xs) => {
+                const hasYes = xs.includes(0)
+                const hasNo = xs.includes(1)
+                if (hasYes && hasNo) {
+                    return "both" as const
+                } else if (!hasYes && !hasNo) {
+                    return "neither" as const
+                } else if (hasYes) {
+                    return "yes" as const
+                } else {
+                    return "no" as const
+                }
+            },
         },
         ds: {
             type: "date",
@@ -221,6 +262,14 @@ export namespace LogListN {
             params.bt.size > 0
                 ? BATTLE_TYPES.filter((cat) => params["bt"].has(cat.label))
                 : BATTLE_TYPES
+        const primaryStyle =
+            params.sp.size > 0
+                ? STYLES.filter((style) => params["sp"].has(style.id))
+                : STYLES
+        const secondaryStyle =
+            params.sp.size > 0
+                ? STYLES.filter((style) => params["ss"].has(style.id))
+                : STYLES
 
         const request = useMemo(
             () =>
@@ -242,6 +291,20 @@ export namespace LogListN {
                         battleType.length === BATTLE_TYPES.length
                             ? null
                             : battleType.flatMap((cat) => [...cat.ids]),
+                    primaryStyle:
+                        primaryStyle.length === STYLES.length
+                            ? null
+                            : primaryStyle.map((style) => style.id),
+                    secondaryStyle:
+                        secondaryStyle.length === STYLES.length
+                            ? null
+                            : secondaryStyle.map((style) => style.id),
+                    isImperil:
+                        params["i"] === "yes"
+                            ? true
+                            : params["i"] === "no"
+                              ? false
+                              : null,
                 }) as const,
             [
                 pageIdx,
@@ -251,6 +314,9 @@ export namespace LogListN {
                 sortCid,
                 sortDesc,
                 battleType.join("|"),
+                primaryStyle.join("|"),
+                secondaryStyle.join("|"),
+                params["i"],
             ],
         )
         useEffect(() => {
@@ -264,10 +330,8 @@ export namespace LogListN {
                 sortCriteria?: ListTable.SortCriteria,
             ) =>
                 logSource.fetchSearch({
+                    ...req,
                     pageIdx,
-                    pageSize: req.pageSize,
-                    idUser: req.id_user,
-                    keyUser: req.key_user,
                     sort: sortCriteria
                         ? {
                               type: sortCriteria.cid,
@@ -279,7 +343,6 @@ export namespace LogListN {
                                 order: req.sortCriteria.order,
                             }
                           : null,
-                    battleType: req.battleType,
                 })
 
             const resp = await get(req.pageIdx)

@@ -20,8 +20,8 @@ export interface LogSearchRequest {
     seen?: string[]
     pageSize?: number
     battleType?: string[] | null
-    primaryStyle?: string | null
-    secondaryStyle?: string | null
+    primaryStyle?: string[] | null
+    secondaryStyle?: string[] | null
     isImperil?: boolean | null
     startDate?: string | null
     endDate?: string | null

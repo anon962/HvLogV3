@@ -1,11 +1,44 @@
-.checkbox-group {
-    display: flex;
-    flex-flow: column;
+.checkbox-group-root {
+    h2 {
+        font-size: 1.1em;
+        font-weight: 500;
+        padding-bottom: 0.25em;
+    }
+
+    .checkbox-group-list {
+        display: flex;
+    }
+    .checkbox-group-list.v {
+        flex-flow: column wrap;
+        gap: 0 1em;
+
+        .input-label-container {
+            padding-bottom: 0.5em;
+        }
+    }
+    .checkbox-group-list.h {
+        flex-wrap: wrap;
+        .input-label-container {
+            padding-bottom: 0.5em;
+            padding-right: 1em;
+        }
+    }
+
+    .all button {
+        /* background-color: var(--color-yellow-100); */
+        /* color: var(--color-pink-600); */
+        border-color: var(--color-gray-400);
+    }
+    .all button[data-state="checked"] {
+        /* background-color: var(--color-yellow-200); */
+        color: var(--color-blue-600);
+        border-color: var(--color-blue-600);
+    }
 }
 
 .input-label-container {
     display: grid;
-    gap: 0.125em 0.35em;
+    gap: 0.25em 0.35em;
     align-items: center;
     justify-items: start;
     grid-template-areas: "input label";
