@@ -45,6 +45,7 @@ export interface TallyTableSubColumn<
     format?: (x: TValue) => string
     align?: "left" | "right"
     tooltip?: ReactElement | string
+    smol?: boolean
 }
 
 export function TallyTable({
@@ -363,8 +364,8 @@ function SubTable({ subValues, subColumns, span }: SubRowProps) {
                       ? String(value)
                       : Number(value).toFixed(1)
 
-                if (/^0+\.0+$/.test(valueStr)) {
-                    valueStr = Number(value).toFixed(4)
+                if (subCol.smol && /^0+\.0+$/.test(valueStr)) {
+                    valueStr = Number(value).toFixed(3)
                 }
             }
 

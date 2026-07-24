@@ -194,7 +194,7 @@ function toPercentages(
     let sparkIdx = 0
     let sparkCount = 0
     for (let idx = 0; idx < endRound; idx++) {
-        if (idx === sparks[sparkIdx]) {
+        if (idx >= sparks[sparkIdx]) {
             sparkCount += 1
             sparkIdx += 1
         }

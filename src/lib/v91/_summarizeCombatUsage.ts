@@ -132,40 +132,36 @@ export function _summarizeCombatUsage(
 
     const heal: CombatSummary["heal"] = {}
     {
-        const template = () => ({
-            logIdx: [],
-            type: [],
-            health: [],
-            magic: [],
-            spirit: [],
-        })
-        const template2 = () => ({
-            health: 0,
-            magic: 0,
-            spirit: 0,
-        })
+        const buffer = new CombatEventBuffer(
+            () => ({
+                logIdx: [],
+                health: [],
+                magic: [],
+                spirit: [],
+            }),
+            () => ({
+                type: 0,
+                health: 0,
+                magic: 0,
+                spirit: 0,
+            }),
+        )
 
         for (const seq of partition.cast) {
             const [root, ...effects] = seq
             for (const { event } of effects) {
                 switch (event.event_type) {
                     case "P_CURE_RESTORE":
-                        pushCombatEvent(
-                            heal,
-                            root.event.spell,
-                            root.logIdx,
-                            {
-                                type: "cast",
-                                health: event.value,
-                                magic: 0,
-                                spirit: 0,
-                            },
-                            template,
-                            template2,
-                        )
+                        buffer.push(root.event.spell, {
+                            health: event.value,
+                            magic: 0,
+                            spirit: 0,
+                        })
                         break
                 }
             }
+
+            buffer.flush(heal, root.logIdx, (x) => ({ ...x, type: "cast" }))
         }
 
         for (const seq of partition.item) {
@@ -173,23 +169,17 @@ export function _summarizeCombatUsage(
             for (const { event } of effects) {
                 switch (event.event_type) {
                     case "P_ITEM_RESTORE":
-                        pushCombatEvent(
-                            heal,
-                            root.event.name,
-                            root.logIdx,
-                            {
-                                type: "item",
-                                health: 0,
-                                magic: 0,
-                                spirit: 0,
-                                [event.type]: event.value,
-                            },
-                            template,
-                            template2,
-                        )
+                        buffer.push(root.event.name, {
+                            health: 0,
+                            magic: 0,
+                            spirit: 0,
+                            [event.type]: event.value,
+                        })
                         break
                 }
             }
+
+            buffer.flush(heal, root.logIdx, (x) => ({ ...x, type: "item" }))
         }
     }
 
@@ -953,8 +943,13 @@ class CombatEventBuffer<T extends keyof CombatSummaryEventMap> {
         }
     }
 
-    flush(acc: CombatSummary[T], logIdx: number) {
-        for (const [id, x] of Object.entries(this.data)) {
+    flush(
+        acc: CombatSummary[T],
+        logIdx: number,
+        tfm?: (x: CombatSummaryEventMap[T]) => CombatSummaryEventMap[T],
+    ) {
+        for (let [id, x] of Object.entries(this.data)) {
+            x = tfm ? tfm(x) : x
             pushCombatEvent(acc, id, logIdx, x, this.template, this.template2)
         }
 

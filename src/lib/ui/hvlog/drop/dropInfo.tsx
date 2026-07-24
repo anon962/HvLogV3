@@ -152,7 +152,7 @@ function IncomeSummaryTable({
     const subColumns: IncomeTable["subColumns"] = [
         { label: "Item", get: (x) => x.label, align: "left" },
         { label: "Value", get: (x) => x.value },
-        { label: "Count", get: (x) => x.count },
+        { label: "Count", get: (x) => x.count, smol: true },
     ]
 
     const rows = sortBy(Object.values(rowMap), [

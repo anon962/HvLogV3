@@ -41,7 +41,7 @@ function CastTable({ meta, combat }: DetailsSummary) {
     let rows = [] as CastTableData["rows"]
 
     const ti = new Set(meta.turnIndices)
-    const seen = new Set()
+    const blame = {} as any
 
     for (const action of [
         { label: "Heals", data: combat.heal, showSub: true },
@@ -66,14 +66,23 @@ function CastTable({ meta, combat }: DetailsSummary) {
             [{ fn: (r) => r.count }, { fn: (r) => r.label, reverse: true }],
         ).reverse()
 
-        for (const x of Object.values(action.data)) {
-            for (const logIdx of x.events.logIdx) {
-                if (!ti.has(logIdx) || seen.has(logIdx)) {
-                    console.error(x, !ti.has(logIdx), seen.has(logIdx))
-                }
-                seen.add(logIdx)
-            }
-        }
+        // setTimeout(() => {
+        //     for (const x of Object.values(action.data)) {
+        //         for (const logIdx of x.events.logIdx) {
+        //             if (!ti.has(logIdx) || logIdx in blame) {
+        //                 console.error(
+        //                     action.label,
+        //                     x,
+        //                     !ti.has(logIdx),
+        //                     blame[logIdx],
+        //                 )
+        //             }
+        //             if (!(logIdx in blame)) {
+        //                 blame[logIdx] = x
+        //             }
+        //         }
+        //     }
+        // })
 
         rows.push({
             label: action.label,
