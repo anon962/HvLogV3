@@ -118,15 +118,14 @@ class LogSourceRemote {
         }
 
         if (!this.searchPending.has(k)) {
-            const body = await compressGzip(
-                JSON.stringify({
-                    ...req,
-                    seen: [...this.searchLogCache.keys()],
-                }),
-            )
             const resp = fetch(this.HVDATA_URL + "/search_logs", {
                 method: "POST",
-                body,
+                body: await compressGzip(
+                    JSON.stringify({
+                        ...req,
+                        seen: [...this.searchLogCache.keys()],
+                    }),
+                ),
                 headers: {
                     "Content-Type": "application/json",
                     "Content-Encoding": "gzip",

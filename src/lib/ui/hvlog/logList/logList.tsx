@@ -8,7 +8,7 @@ export function LogList() {
     return (
         <LogListN.ctx.Provider>
             <div className="flex flex-col items-center pt-4">
-                {/* <Filter /> */}
+                <Filter />
                 <Table />
             </div>
         </LogListN.ctx.Provider>
@@ -117,10 +117,10 @@ function Filter() {
         <form className="rounded-md border flex p-4 text-sm">
             <div className="flex flex-col">
                 <CheckboxGroup
-                    options={LogListN.BATTLE_TYPES.map((label) => ({
+                    options={LogListN.BATTLE_TYPES.map(({ label }) => ({
                         label,
                     }))}
-                    checked={LogListN.BATTLE_TYPES.map((label) =>
+                    checked={LogListN.BATTLE_TYPES.map(({ label }) =>
                         params.bt.has(label),
                     )}
                     onCheckedChange={(checked, hasShift, value, idx) => {
@@ -144,10 +144,10 @@ function Filter() {
 
                         setParams({
                             bt: LogListN.BATTLE_TYPES.map(
-                                (x2, idx2) =>
+                                (cat, idx2) =>
                                     +(overrides.has(idx2)
                                         ? value
-                                        : params.bt.has(x2)) as 0 | 1,
+                                        : params.bt.has(cat.label)) as 0 | 1,
                             ),
                         })
                     }}

@@ -2,7 +2,7 @@ import { humanizeFightingType } from "@/lib/stats/combatStats"
 import { humanizeBattleType } from "@/lib/stats/metaStats"
 import { LOG_SOURCE, LogSearchResult } from "@/lib/ui/hvlog/logSource"
 import { formatNumber, newContext, useAsync } from "@/lib/utils/miscUtils"
-import { cn, range } from "myutils"
+import { cn, range, sum } from "myutils"
 import { useEffect, useMemo, useState } from "react"
 import { IS_REMOTE } from "../../constants"
 import { RunIcon, Skull2Icon } from "../../icons/misc"
@@ -119,17 +119,31 @@ export namespace LogListN {
 
     export const SORT_IDS = new Set([COLS.turns.id, COLS.date.id] as const)
 
+    const btA = (st: number, end?: number) =>
+        end
+            ? range(st, end + 1).map((id) => `arena challenge #${id}`)
+            : [`arena challenge #${st}`]
+    const btT = (st: number, end: number) =>
+        range(st, end + 1).map((id) => `The Tower Floor ${id}`)
     export const BATTLE_TYPES = [
-        "Grindfest",
-        "RE",
-        "Tower",
-        "Item World",
-        "SPL (A100)",
-        "PGC (A95)",
-        "DWD (A90)",
-        "A85 - A65",
-        "A60 - A35",
-        "A30 - A2",
+        { label: "Grindfest", ids: new Set(["Grindfest"]) },
+        { label: "RE", ids: new Set(["random encounter"]) },
+        { label: "Tower", ids: new Set(["Tower"]) },
+        { label: "Item World", ids: new Set(["Item World"]) },
+        { label: "SPL (A100)", ids: new Set([...btA(35)]) },
+        { label: "PGC (A95)", ids: new Set([...btA(34)]) },
+        { label: "DWD (A90)", ids: new Set([...btA(33)]) },
+        { label: "A85 - A65", ids: new Set([...btA(26, 32)]) },
+        { label: "A60 - A35", ids: new Set([...btA(17, 24)]) },
+        { label: "A30 - A2", ids: new Set([...btA(0, 16)]) },
+        { label: "RoB (TTT)", ids: new Set([...btA(112)]) },
+        { label: "RoB (FSM)", ids: new Set([...btA(111)]) },
+        { label: "RoB (Unicorn)", ids: new Set([...btA(110)]) },
+        { label: "RoB (Real Life)", ids: new Set([...btA(109)]) },
+        { label: "RoB (Nagato)", ids: new Set([...btA(108)]) },
+        { label: "RoB (Asakura)", ids: new Set([...btA(107)]) },
+        { label: "RoB (Asahina)", ids: new Set([...btA(106)]) },
+        { label: "RoB (Konata)", ids: new Set([...btA(105)]) },
     ]
     type BattleType = (typeof BATTLE_TYPES)[number]
 
@@ -159,7 +173,9 @@ export namespace LogListN {
         bt: {
             type: "bitmask",
             tfm: (xs) =>
-                new Set<BattleType>(xs.map((idx) => BATTLE_TYPES[idx])),
+                new Set<BattleType["label"]>(
+                    xs.map((idx) => BATTLE_TYPES[idx].label),
+                ),
         },
         sp: {
             type: "bitmask",
@@ -203,7 +219,7 @@ export namespace LogListN {
         const sortDesc = params["desc"]
         const battleType =
             params.bt.size > 0
-                ? BATTLE_TYPES.filter((x) => params["bt"].has(x))
+                ? BATTLE_TYPES.filter((cat) => params["bt"].has(cat.label))
                 : BATTLE_TYPES
 
         const request = useMemo(
@@ -222,7 +238,10 @@ export namespace LogListN {
                                       : ("asc" as const),
                           }
                         : null,
-                    battleType,
+                    battleType:
+                        battleType.length === BATTLE_TYPES.length
+                            ? null
+                            : battleType.flatMap((cat) => [...cat.ids]),
                 }) as const,
             [
                 pageIdx,
@@ -231,7 +250,7 @@ export namespace LogListN {
                 params["key_user"],
                 sortCid,
                 sortDesc,
-                battleType,
+                battleType.join("|"),
             ],
         )
         useEffect(() => {
@@ -260,6 +279,7 @@ export namespace LogListN {
                                 order: req.sortCriteria.order,
                             }
                           : null,
+                    battleType: req.battleType,
                 })
 
             const resp = await get(req.pageIdx)
