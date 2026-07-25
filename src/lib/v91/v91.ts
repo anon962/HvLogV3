@@ -116,8 +116,8 @@ function _summarizeMeta(
                     starts.length === 0 || starts.length < ends.length,
                 missingEnd: completionType
                     ? completionType === "finish"
-                        ? ends.length === starts.length
-                        : ends.length === starts.length - 1
+                        ? ends.length !== starts.length
+                        : ends.length !== starts.length - 1
                     : false,
             },
         }

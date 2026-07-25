@@ -171,6 +171,15 @@ export namespace LogListN {
         { id: "die", label: "Die" },
     ] as const
 
+    export const ERRORS = [
+        { id: "none", label: "(none)" },
+        { id: "inconsistentBattleTypes", label: "inconsistent" },
+        { id: "parsing", label: "parsing" },
+        { id: "missingStart", label: "missingStart" },
+        { id: "missingEnd", label: "missingEnd" },
+        { id: "dupes", label: "dupes" },
+    ]
+
     export const PARAM_SCHEMA = {
         // Search options
         p: {
@@ -250,6 +259,10 @@ export namespace LogListN {
         },
         e: {
             type: "bitmask",
+            deser: (xs) =>
+                new Set<string>(
+                    xs.map((idx) => ERRORS[idx]?.label).filter((x) => !!x),
+                ),
         },
         rmn: {
             type: "number",
@@ -291,6 +304,10 @@ export namespace LogListN {
                 : COMPLETION_TYPES
         const roundMin = params["rmn"]
         const roundMax = params["rmx"]
+        const errors =
+            params.e.size > 0
+                ? ERRORS.filter((x) => params["e"].has(x.label))
+                : ERRORS
 
         const request = useMemo(
             () =>
@@ -334,6 +351,14 @@ export namespace LogListN {
                             : completionType.map((x) => x.id),
                     roundMin,
                     roundMax,
+                    errors:
+                        errors.length === ERRORS.length
+                            ? null
+                            : Object.fromEntries(
+                                  errors.map(
+                                      (x) => [x.id as any, true] as const,
+                                  ),
+                              ),
                 }) as const,
             [
                 pageIdx,
@@ -351,6 +376,7 @@ export namespace LogListN {
                 completionType.join("|"),
                 roundMin,
                 roundMax,
+                errors.join("|"),
             ],
         )
         useEffect(() => {

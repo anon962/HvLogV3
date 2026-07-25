@@ -115,7 +115,7 @@ export function ListTable<T>(props: {
             />
 
             {showFilter && props.filter?.content ? (
-                <div className="mx-auto p-4">{props.filter.content}</div>
+                <div className="mx-auto p-4 pt-0">{props.filter.content}</div>
             ) : (
                 <div className="h-2"></div>
             )}
@@ -440,7 +440,7 @@ const Paginator = React.memo(
         const disableNext = props.pageIndex >= pageCount - 1
 
         return (
-            <div className="flex mx-auto items-center p-4 pb-0">
+            <div className="flex mx-auto items-center p-4">
                 <div className="w-10 flex justify-center">
                     {props.allowFilter && props.filter?.trigger ? (
                         <button

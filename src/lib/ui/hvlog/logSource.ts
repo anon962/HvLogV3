@@ -25,7 +25,7 @@ export interface LogSearchRequest {
     isImperil?: boolean | null
     startDate?: string | null
     endDate?: string | null
-    errors?: Record<keyof MetaSummary["errors"], boolean | null> | null
+    errors?: Record<keyof MetaSummary["errors"] | "none", boolean | null> | null
     completionType?: string[] | null
     idUser?: string | null
     keyUser?: string | null
@@ -119,6 +119,7 @@ class LogSourceRemote {
         }
 
         if (!this.searchPending.has(k)) {
+            // console.log(req)
             const resp = fetch(this.HVDATA_URL + "/search_logs", {
                 method: "POST",
                 body: await compressGzip(

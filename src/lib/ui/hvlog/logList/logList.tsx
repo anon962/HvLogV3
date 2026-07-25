@@ -100,6 +100,7 @@ export function Table() {
                     params.ct.size > 0 ||
                     params.sp.size > 0 ||
                     params.ss.size > 0 ||
+                    params.e.size > 0 ||
                     params.i === "yes" ||
                     params.i === "no" ||
                     !!params.ds ||
@@ -151,13 +152,25 @@ function Filter() {
                         })
                     }}
                     hideAll={true}
-                    // className="max-w-[20em]"
-                    // listProps={{
-                    //     className: "grid! grid-cols-4",
-                    // }}
-                    // containerProps={{
-                    //     className: "[&:nth-child(4n)]:pr-0!",
-                    // }}
+                />
+
+                <CheckboxGroup
+                    header="Errors"
+                    options={LogListN.ERRORS.map(({ label }) => ({
+                        label,
+                    }))}
+                    checked={LogListN.ERRORS.map(({ label }) =>
+                        params.e.has(label),
+                    )}
+                    onCheckedChange={({ checked }) => {
+                        setParams({
+                            e: checked.map((x) => +x as 0 | 1),
+                        })
+                    }}
+                    hideAll={true}
+                    listProps={{
+                        className: "block! columns-2",
+                    }}
                 />
             </div>
             <div className="border-r mx-4"></div>
@@ -335,9 +348,7 @@ function MonthYearPicker(props: {
 
     return (
         <div>
-            <h2 className="text-[1.1em] font-medium pb-[0.25em]">
-                {props.label}
-            </h2>
+            <h2>{props.label}</h2>
             <div className="flex gap-1">
                 <MySelect
                     label={monthOptions[month!]?.label ?? null}
