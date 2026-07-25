@@ -100,7 +100,7 @@ function Filter() {
 
     return (
         <form className="rounded-md border flex p-4 text-xs">
-            <div className="flex flex-col">
+            <div className="flex flex-col gap-4">
                 <CheckboxGroup
                     header="Battle Type"
                     options={LogListN.BATTLE_TYPES.map(({ label }) => ({
@@ -117,6 +117,30 @@ function Filter() {
                     listProps={{
                         className: "block! columns-2",
                     }}
+                />
+
+                <CheckboxGroup
+                    header="Completion Type"
+                    direction="h"
+                    options={LogListN.COMPLETION_TYPES.map(({ label }) => ({
+                        label,
+                    }))}
+                    checked={LogListN.COMPLETION_TYPES.map(({ id }) =>
+                        params.ct.has(id),
+                    )}
+                    onCheckedChange={({ checked }) => {
+                        setParams({
+                            ct: checked.map((x) => +x as 0 | 1),
+                        })
+                    }}
+                    hideAll={true}
+                    // className="max-w-[20em]"
+                    // listProps={{
+                    //     className: "grid! grid-cols-4",
+                    // }}
+                    // containerProps={{
+                    //     className: "[&:nth-child(4n)]:pr-0!",
+                    // }}
                 />
             </div>
             <div className="border-r mx-4"></div>

@@ -165,6 +165,12 @@ export namespace LogListN {
         { ...MELEE_STYLES["Bonk"] },
     ]
 
+    export const COMPLETION_TYPES = [
+        { id: "finish", label: "Finish" },
+        { id: "flee", label: "Flee" },
+        { id: "die", label: "Die" },
+    ] as const
+
     export const PARAM_SCHEMA = {
         // Search options
         p: {
@@ -194,6 +200,15 @@ export namespace LogListN {
                 new Set<BattleType["label"]>(
                     xs
                         .map((idx) => BATTLE_TYPES[idx]?.label)
+                        .filter((x) => !!x),
+                ),
+        },
+        ct: {
+            type: "bitmask",
+            deser: (xs) =>
+                new Set<string>(
+                    xs
+                        .map((idx) => COMPLETION_TYPES[idx]?.id)
                         .filter((x) => !!x),
                 ),
         },
@@ -270,6 +285,10 @@ export namespace LogListN {
             params.ss.size > 0
                 ? STYLES.filter((style) => params["ss"].has(style.id))
                 : STYLES
+        const completionType =
+            params.ct.size > 0
+                ? COMPLETION_TYPES.filter((x) => params["ct"].has(x.id))
+                : COMPLETION_TYPES
 
         const request = useMemo(
             () =>
@@ -307,6 +326,10 @@ export namespace LogListN {
                               : null,
                     startDate: params["ds"]?.toISOString() ?? null,
                     endDate: params["de"]?.toISOString() ?? null,
+                    completionType:
+                        completionType.length === COMPLETION_TYPES.length
+                            ? null
+                            : completionType.map((x) => x.id),
                 }) as const,
             [
                 pageIdx,
@@ -321,6 +344,7 @@ export namespace LogListN {
                 params["i"],
                 params["ds"]?.toISOString(),
                 params["de"]?.toISOString(),
+                completionType.join("|"),
             ],
         )
         useEffect(() => {
