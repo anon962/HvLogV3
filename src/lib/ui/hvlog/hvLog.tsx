@@ -31,6 +31,9 @@ import { RouteLink } from "../routeLink"
 // @fixme: hover prefetch
 // @fixme: logdb, singleton
 
+// @todo: separate raw logs / parsed logs / summaries (for lazy fetch)
+// @todo: compression
+// @todo: store log bytes (to skip serde)
 // @todo: equip drop search
 // @todo: global equip drops
 // @todo: per round / avgs (config?)
@@ -38,7 +41,6 @@ import { RouteLink } from "../routeLink"
 // @todo: chart utils
 // @todo: consistent chart colors
 // @todo: profit history
-// @todo: temp search response
 
 export const HvLog: RootComponent = ({}) => {
     const routes = new CustomMap({

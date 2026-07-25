@@ -505,6 +505,7 @@ export function _summarizeCombatUsage(
                             hitCount: 1,
                             kill,
                             glance: +(event.multiplier_type === "glances"),
+                            crit: +(event.multiplier_type === "crits"),
                             partialParry: +!!event.parry,
                         })
                         break

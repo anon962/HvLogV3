@@ -131,7 +131,7 @@ const PARSERS = {
     // Dark Strike hits Tryuu, causing 822 additional points of Dark damage.
     P_NAMED_HIT: new EventParser(
         "P_NAMED_HIT",
-        `${Words("name")} ${Mult("hits", "glances")} ${Monster()}, (?:${Group("parry", "which partially parries, ")})?causing ${Num("value")} (?:additional )?points of (?:${Word("damage_type")} )?damage\\.`,
+        `${Words("name")} ${Mult("hits", "crits", "glances")} ${Monster()}, (?:${Group("parry", "which partially parries, ")})?causing ${Num("value")} (?:additional )?points of (?:${Word("damage_type")} )?damage\\.`,
         {
             name: t("string"),
             multiplier_type: t("string"),
