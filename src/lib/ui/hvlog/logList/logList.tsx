@@ -25,6 +25,7 @@ export function Table() {
         pageSizeStorage,
         setPageSizeStorage,
         fetcher: { request, data, isPending },
+        logSource,
     } = LogListN.ctx.useContext()
 
     return (
@@ -84,6 +85,12 @@ export function Table() {
                       }
                     : {}),
             })}
+            onHover={{
+                delay: 300,
+                fn: (id) => {
+                    logSource.fetchLog(id)
+                },
+            }}
         />
     )
 }

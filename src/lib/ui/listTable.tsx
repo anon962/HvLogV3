@@ -9,7 +9,13 @@ import {
 import { ReactMemo } from "@/lib/utils/miscUtils"
 import { cn } from "@/lib/utils/shadcnUtils"
 import { clamp, range, sort } from "myutils"
-import React, { ReactNode, useCallback, useEffect, useState } from "react"
+import React, {
+    ReactNode,
+    useCallback,
+    useEffect,
+    useRef,
+    useState,
+} from "react"
 import { ArrowLongDownIcon, ArrowLongUpIcon } from "./icons/tailwind"
 import { Input } from "./shadcn/input"
 import {
@@ -69,6 +75,10 @@ export function ListTable<T>(props: {
     getId: (d: T) => string
     sortCols?: Set<string>
     count: number
+    onHover?: {
+        delay: number
+        fn: (id: string) => void
+    }
     pageSize: number
     setPageSize: {
         options: number[]
@@ -113,6 +123,10 @@ const TableInner = <T,>(props: {
     getId: (d: T) => string
     rowUrl?: (d: T) => string
     sortCols?: Set<string>
+    onHover?: {
+        delay: number
+        fn: (id: string) => void
+    }
 }) => {
     const headerRow = props.cols.map((col) => {
         let icon: ReactNode = null
@@ -212,6 +226,7 @@ const TableInner = <T,>(props: {
                 onClick={(d) => props.setSelectedId(props.getId(d))}
                 getId={props.getId}
                 rowUrl={props.rowUrl}
+                onHover={props.onHover}
             />
         )
     })
@@ -242,7 +257,10 @@ const Row = ReactMemo(
         isSelected: boolean
         isNextSelected: boolean
         onClick?: (d: T) => void
-        onHover?: (d: T, enter: number, exit: number) => void
+        onHover?: {
+            delay: number
+            fn: (id: string) => void
+        }
         getId: (d: T) => string
         rowUrl?: (d: T) => string
     }) => {
@@ -269,9 +287,7 @@ const Row = ReactMemo(
             )
         })
 
-        const [enter, setEnter] = useState(0)
-        const [exit, setExit] = useState(0)
-        useEffect(() => props.onHover?.(props.d, enter, exit))
+        const hoverTimer = useRef(null as number | null)
 
         return (
             <TableRow
@@ -279,8 +295,25 @@ const Row = ReactMemo(
                 className={"py-2" + selectedClass}
                 data-id={id}
                 onClick={() => props.onClick?.(props.d)}
-                onMouseEnter={() => setEnter(new Date().getTime())}
-                onMouseLeave={() => setExit(new Date().getTime())}
+                onMouseEnter={() => {
+                    if (props.onHover) {
+                        if (hoverTimer.current !== null) {
+                            clearTimeout(hoverTimer.current)
+                        }
+
+                        const fn = props.onHover.fn
+                        const newTimer = setTimeout(() => {
+                            fn(id)
+                            hoverTimer.current = null
+                        }, props.onHover.delay)
+                        hoverTimer.current = newTimer as any as number
+                    }
+                }}
+                onMouseLeave={() => {
+                    if (hoverTimer.current !== null) {
+                        clearTimeout(hoverTimer.current)
+                    }
+                }}
             >
                 {...cells}
             </TableRow>

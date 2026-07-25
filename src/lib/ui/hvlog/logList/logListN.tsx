@@ -387,6 +387,7 @@ export namespace LogListN {
                 pageSizeStorage,
                 setPageSizeStorage,
                 fetcher,
+                logSource,
             },
             () => {},
         ]
