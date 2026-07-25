@@ -49,6 +49,19 @@
 .input-label-container button {
     grid-area: input;
     cursor: pointer;
+
+    transition: all 0.15s ease-in-out;
+}
+.input-label-container:hover {
+    color: var(--color-yellow-100);
+
+    button:not([data-state="checked"]) {
+        background-color: color-mix(
+            in oklab,
+            var(--color-gray-600),
+            transparent 50%
+        );
+    }
 }
 .input-label-container label {
     grid-area: label;

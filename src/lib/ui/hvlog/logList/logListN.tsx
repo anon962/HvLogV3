@@ -289,6 +289,8 @@ export namespace LogListN {
             params.ct.size > 0
                 ? COMPLETION_TYPES.filter((x) => params["ct"].has(x.id))
                 : COMPLETION_TYPES
+        const roundMin = params["rmn"]
+        const roundMax = params["rmx"]
 
         const request = useMemo(
             () =>
@@ -330,6 +332,8 @@ export namespace LogListN {
                         completionType.length === COMPLETION_TYPES.length
                             ? null
                             : completionType.map((x) => x.id),
+                    roundMin,
+                    roundMax,
                 }) as const,
             [
                 pageIdx,
@@ -345,6 +349,8 @@ export namespace LogListN {
                 params["ds"]?.toISOString(),
                 params["de"]?.toISOString(),
                 completionType.join("|"),
+                roundMin,
+                roundMax,
             ],
         )
         useEffect(() => {

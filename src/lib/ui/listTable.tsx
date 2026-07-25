@@ -92,7 +92,14 @@ export function ListTable<T>(props: {
         root?: string
     }
     pageUrl?: (pageIdx: number) => Record<string, string>
+    filter?: {
+        trigger: ReactNode
+        content: ReactNode
+        active: boolean
+    }
 }) {
+    const [showFilter, setShowFilter] = useState(false)
+
     return (
         <div
             className={cn(
@@ -100,7 +107,18 @@ export function ListTable<T>(props: {
                 props.className?.root,
             )}
         >
-            <Paginator {...props} />
+            <Paginator
+                {...props}
+                allowFilter={true}
+                showFilter={showFilter}
+                setShowFilter={() => setShowFilter(!showFilter)}
+            />
+
+            {showFilter && props.filter?.content ? (
+                <div className="mx-auto p-4">{props.filter.content}</div>
+            ) : (
+                <div className="h-2"></div>
+            )}
 
             <hr className="border my-2!" />
 
@@ -354,6 +372,14 @@ const Paginator = React.memo(
         setPageIndex: (x: number) => void
         isLoading?: boolean
         pageUrl?: (pageIdx: number) => Record<string, string>
+        filter?: {
+            trigger: ReactNode
+            content: ReactNode
+            active: boolean
+        }
+        allowFilter?: boolean
+        showFilter?: boolean
+        setShowFilter?: () => void
     }) => {
         const pageCount = Math.ceil(props.count / props.pageSize) || 1
 
@@ -414,66 +440,90 @@ const Paginator = React.memo(
         const disableNext = props.pageIndex >= pageCount - 1
 
         return (
-            <Pagination className="p-4! pl-12!">
-                <PaginationContent>
-                    <PaginationItem
-                        className={
-                            disablePrev
-                                ? "opacity-50 pointer-events-none"
-                                : cn("cursor-pointer")
-                        }
-                    >
-                        <PaginationFirst href={getHref(0)} />
-                    </PaginationItem>
-                    <PaginationItem
-                        className={
-                            disablePrev
-                                ? "opacity-50 pointer-events-none"
-                                : cn("cursor-pointer")
-                        }
-                    >
-                        <PaginationPrevious
-                            href={getHref(props.pageIndex - 1)}
-                        />
-                    </PaginationItem>
+            <div className="flex mx-auto items-center p-4 pb-0">
+                <div className="w-10 flex justify-center">
+                    {props.allowFilter && props.filter?.trigger ? (
+                        <button
+                            className={cn(
+                                "p-[0.5em] stroke-[2px] text-pink-400 hover:bg-foreground/10 cursor-pointer rounded-md border-[1.5px] relative",
+                                props.showFilter ? "bg-pink-500/20" : null,
+                            )}
+                            onClick={() => props.setShowFilter?.()}
+                        >
+                            {props.filter.trigger}
 
-                    {...pageEls}
-
-                    <PaginationItem
-                        className={
-                            disableNext
-                                ? "opacity-50 pointer-events-none"
-                                : cn("cursor-pointer")
-                        }
-                    >
-                        <PaginationNext href={getHref(props.pageIndex + 1)} />
-                    </PaginationItem>
-                    <PaginationItem
-                        className={
-                            disableNext
-                                ? "opacity-50 pointer-events-none"
-                                : cn("cursor-pointer")
-                        }
-                    >
-                        <PaginationLast href={getHref(pageCount - 1)} />
-                    </PaginationItem>
-                </PaginationContent>
-
-                <div className="pl-6 flex items-center gap-6">
-                    <PageSizeSelect
-                        pageSize={props.pageSize}
-                        options={props.setPageSize.options}
-                        onSelect={props.setPageSize.handler}
-                    />
-
-                    <PageJump
-                        onJump={(idx) => onSelect(idx)}
-                        pageCount={pageCount}
-                    />
-
-                    <Loader show={!!props.isLoading} />
+                            {props.filter.active ? (
+                                <span className="absolute top-0.25 right-0.25 h-2 w-2 rounded-full bg-red-500 ring-1 ring-gray-300"></span>
+                            ) : null}
+                        </button>
+                    ) : (
+                        <></>
+                    )}
                 </div>
-            </Pagination>
+
+                <Pagination className="mx-0!">
+                    <PaginationContent>
+                        <PaginationItem
+                            className={
+                                disablePrev
+                                    ? "opacity-50 pointer-events-none"
+                                    : cn("cursor-pointer")
+                            }
+                        >
+                            <PaginationFirst href={getHref(0)} />
+                        </PaginationItem>
+                        <PaginationItem
+                            className={
+                                disablePrev
+                                    ? "opacity-50 pointer-events-none"
+                                    : cn("cursor-pointer")
+                            }
+                        >
+                            <PaginationPrevious
+                                href={getHref(props.pageIndex - 1)}
+                            />
+                        </PaginationItem>
+
+                        {...pageEls}
+
+                        <PaginationItem
+                            className={
+                                disableNext
+                                    ? "opacity-50 pointer-events-none"
+                                    : cn("cursor-pointer")
+                            }
+                        >
+                            <PaginationNext
+                                href={getHref(props.pageIndex + 1)}
+                            />
+                        </PaginationItem>
+                        <PaginationItem
+                            className={
+                                disableNext
+                                    ? "opacity-50 pointer-events-none"
+                                    : cn("cursor-pointer")
+                            }
+                        >
+                            <PaginationLast href={getHref(pageCount - 1)} />
+                        </PaginationItem>
+                    </PaginationContent>
+
+                    <div className="pl-6 flex items-center gap-6">
+                        <PageSizeSelect
+                            pageSize={props.pageSize}
+                            options={props.setPageSize.options}
+                            onSelect={props.setPageSize.handler}
+                        />
+
+                        <PageJump
+                            onJump={(idx) => onSelect(idx)}
+                            pageCount={pageCount}
+                        />
+                    </div>
+                </Pagination>
+
+                <Loader show={!!props.isLoading} />
+            </div>
         )
     },
 )
@@ -546,7 +596,7 @@ function Loader(props: { show: boolean; delay?: number }) {
         <lucide.LoaderCircle
             className={cn(
                 show ? "" : "invisible",
-                "animate-spin text-blue-500 size-6",
+                "ml-4 animate-spin text-blue-500 size-6",
             )}
         />
     )

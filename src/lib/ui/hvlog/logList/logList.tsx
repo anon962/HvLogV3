@@ -6,12 +6,13 @@ import { useCallback, useMemo, useState } from "react"
 import * as Select from "../../shadcn/select"
 import { cn, range } from "myutils"
 import { CommonProps, mergeProps } from "@/lib/utils/miscUtils"
+import { Funnel, SlidersHorizontal } from "lucide-react"
+import { Input } from "../../shadcn/input"
 
 export function LogList() {
     return (
         <LogListN.ctx.Provider>
             <div className="log-list flex flex-col items-center pt-4">
-                <Filter />
                 <Table />
             </div>
         </LogListN.ctx.Provider>
@@ -90,6 +91,22 @@ export function Table() {
                 fn: (id) => {
                     logSource.fetchLog(id)
                 },
+            }}
+            filter={{
+                trigger: <SlidersHorizontal className="size-full" />,
+                content: <Filter />,
+                active:
+                    params.bt.size > 0 ||
+                    params.ct.size > 0 ||
+                    params.sp.size > 0 ||
+                    params.ss.size > 0 ||
+                    params.i === "yes" ||
+                    params.i === "no" ||
+                    !!params.ds ||
+                    !!params.de ||
+                    !!params.rmn ||
+                    !!params.rmx ||
+                    false,
             }}
         />
     )
@@ -205,6 +222,45 @@ function Filter() {
                 />
 
                 <div className="flex gap-4">
+                    <div>
+                        <h2>Min Rounds</h2>
+                        <Input
+                            type="number"
+                            className="h-[2em] w-[10ch] p-2 text-[length:inherit]"
+                            min="0"
+                            defaultValue={params.rmn || ""}
+                            onChange={(ev) => {
+                                const value = parseInt(ev.target.value)
+                                setParams({
+                                    rmn:
+                                        isNaN(value) || value <= 0
+                                            ? null
+                                            : value,
+                                })
+                            }}
+                        />
+                    </div>
+                    <div>
+                        <h2>Max Rounds</h2>
+                        <Input
+                            type="number"
+                            className="h-[2em] w-[10ch] py-0 text-inherit"
+                            min="0"
+                            defaultValue={params.rmx || ""}
+                            onChange={(ev) => {
+                                const value = parseInt(ev.target.value)
+                                setParams({
+                                    rmx:
+                                        isNaN(value) || value <= 0
+                                            ? null
+                                            : value,
+                                })
+                            }}
+                        />
+                    </div>
+                </div>
+
+                <div className="flex gap-4">
                     <MonthYearPicker
                         label="From"
                         value={params.ds}
@@ -223,8 +279,6 @@ function Filter() {
                     />
                 </div>
             </div>
-            <div className="border-r mx-4"></div>
-            <div></div>
         </form>
     )
 }
