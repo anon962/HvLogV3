@@ -136,7 +136,7 @@ export namespace LogListN {
         { label: "Item World", ids: new Set(["Item World"]) },
         { label: "SPL (A100)", ids: new Set([...btA(35)]) },
         { label: "PGC (A95)", ids: new Set([...btA(34)]) },
-        { label: "DWD (A90)", ids: new Set([...btA(33)]) },
+        { label: "DwD (A90)", ids: new Set([...btA(33)]) },
         { label: "A85 - A65", ids: new Set([...btA(26, 32)]) },
         { label: "A60 - A35", ids: new Set([...btA(17, 24)]) },
         { label: "A30 - A2", ids: new Set([...btA(0, 16)]) },
@@ -169,14 +169,14 @@ export namespace LogListN {
         // Search options
         p: {
             type: "number",
-            tfm: (x) => (x !== null && x >= 1 ? x - 1 : 0),
+            deser: (x) => (x !== null && x >= 1 ? x - 1 : 0),
         },
         n: {
             type: "number",
         },
         s: {
             type: "string",
-            tfm: (x) => (x && SORT_IDS.has(x as any) ? x : null),
+            deser: (x) => (x && SORT_IDS.has(x as any) ? x : null),
         },
         desc: {
             type: "boolean",
@@ -190,7 +190,7 @@ export namespace LogListN {
         // Filter options
         bt: {
             type: "bitmask",
-            tfm: (xs) =>
+            deser: (xs) =>
                 new Set<BattleType["label"]>(
                     xs
                         .map((idx) => BATTLE_TYPES[idx]?.label)
@@ -199,21 +199,21 @@ export namespace LogListN {
         },
         sp: {
             type: "bitmask",
-            tfm: (xs) =>
+            deser: (xs) =>
                 new Set<string>(
                     xs.map((idx) => STYLES[idx]?.id).filter((x) => !!x),
                 ),
         },
         ss: {
             type: "bitmask",
-            tfm: (xs) =>
+            deser: (xs) =>
                 new Set<string>(
                     xs.map((idx) => STYLES[idx]?.id).filter((x) => !!x),
                 ),
         },
         i: {
             type: "bitmask",
-            tfm: (xs) => {
+            deser: (xs) => {
                 const hasYes = xs.includes(0)
                 const hasNo = xs.includes(1)
                 if (hasYes && hasNo) {
@@ -267,7 +267,7 @@ export namespace LogListN {
                 ? STYLES.filter((style) => params["sp"].has(style.id))
                 : STYLES
         const secondaryStyle =
-            params.sp.size > 0
+            params.ss.size > 0
                 ? STYLES.filter((style) => params["ss"].has(style.id))
                 : STYLES
 
@@ -305,6 +305,8 @@ export namespace LogListN {
                             : params["i"] === "no"
                               ? false
                               : null,
+                    startDate: params["ds"]?.toISOString() ?? null,
+                    endDate: params["de"]?.toISOString() ?? null,
                 }) as const,
             [
                 pageIdx,
@@ -317,6 +319,8 @@ export namespace LogListN {
                 primaryStyle.join("|"),
                 secondaryStyle.join("|"),
                 params["i"],
+                params["ds"]?.toISOString(),
+                params["de"]?.toISOString(),
             ],
         )
         useEffect(() => {
@@ -328,8 +332,8 @@ export namespace LogListN {
             const get = (
                 pageIdx: number,
                 sortCriteria?: ListTable.SortCriteria,
-            ) =>
-                logSource.fetchSearch({
+            ) => {
+                return logSource.fetchSearch({
                     ...req,
                     pageIdx,
                     sort: sortCriteria
@@ -344,6 +348,7 @@ export namespace LogListN {
                             }
                           : null,
                 })
+            }
 
             const resp = await get(req.pageIdx)
 

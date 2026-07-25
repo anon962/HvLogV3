@@ -95,39 +95,40 @@ export namespace UrlParamN {
             | {
                   type: "string"
                   skipTrim?: boolean
-                  tfm?: (x: string | null) => any
+                  deser?: (x: string | null) => any
               }
             | {
                   type: "string[]"
                   skipTrim?: boolean
-                  tfm?: (x: string[]) => any
+                  deser?: (x: string[]) => any
               }
             | {
                   type: "number"
                   asFloat?: boolean
-                  tfm?: (x: number | null) => any
+                  deser?: (x: number | null) => any
               }
             | {
                   type: "number[]"
                   asFloat?: boolean
-                  tfm?: (x: number[]) => any
+                  deser?: (x: number[]) => any
               }
             | {
                   type: "boolean"
-                  tfm?: (x: boolean | null) => any
+                  deser?: (x: boolean | null) => any
               }
             | {
                   type: "boolean[]"
                   asFloat?: boolean
-                  tfm?: (x: boolean[]) => any
+                  deser?: (x: boolean[]) => any
               }
             | {
                   type: "date"
-                  tfm?: (x: Date | null) => any
+                  deser?: (x: Date | null) => any
+                  ser?: (x: Date) => string
               }
             | {
                   type: "bitmask"
-                  tfm?: (x: number[]) => any
+                  deser?: (x: number[]) => any
               }
         ) & {}
     >
@@ -145,9 +146,12 @@ export namespace UrlParamN {
             T[K]['type'] extends 'bitmask' ? Read<T[K] & { type: "bitmask" }, number[]> :
             never
     }
-    type Read<TSchema extends Schema[string], TValue> = ReadTfm<TSchema, TValue>
-    type ReadTfm<T extends Schema[string], V> = T extends {
-        tfm: infer F
+    type Read<TSchema extends Schema[string], TValue> = ReadDeser<
+        TSchema,
+        TValue
+    >
+    type ReadDeser<T extends Schema[string], V> = T extends {
+        deser: infer F
     }
         ? F extends AnyFunction
             ? ReturnType<F>
@@ -230,7 +234,7 @@ export namespace UrlParamN {
                     case "boolean":
                     case "date": {
                         // @ts-ignore
-                        const v3 = s.tfm ? s.tfm(v2) : v2
+                        const v3 = s.deser ? s.deser(v2) : v2
                         params[key] = v3
                         break
                     }
@@ -240,7 +244,7 @@ export namespace UrlParamN {
                     case "bitmask": {
                         v2 = v2 ?? []
                         // @ts-ignore
-                        const v3 = s.tfm ? s.tfm(v2) : v2
+                        const v3 = s.deser ? s.deser(v2) : v2
                         params[key] = v3
                         break
                     }
@@ -288,7 +292,7 @@ export namespace UrlParamN {
                         break
                     }
                     case "number[]": {
-                        let v2 = v as number[]
+                        const v2 = v as number[]
                         u.searchParams.set(
                             k,
                             v2.map((x) => String(x)).join(","),
@@ -296,12 +300,12 @@ export namespace UrlParamN {
                         break
                     }
                     case "boolean": {
-                        let v2 = v as boolean
+                        const v2 = v as boolean
                         u.searchParams.set(k, String(+v2))
                         break
                     }
                     case "boolean[]": {
-                        let v2 = v as boolean[]
+                        const v2 = v as boolean[]
                         u.searchParams.set(
                             k,
                             v2.map((x) => String(+v2)).join(","),
@@ -309,13 +313,16 @@ export namespace UrlParamN {
                         break
                     }
                     case "date": {
-                        let v2 = v as Date
-                        u.searchParams.set(k, v2.toISOString())
+                        const v2 = v as Date
+                        const v3 = s.ser
+                            ? s.ser(v2)
+                            : v2.toISOString().slice(0, 10)
+                        u.searchParams.set(k, v3)
                         break
                     }
                     case "bitmask": {
-                        let v2 = v as Array<0 | 1>
-                        let v3 = bitmaskToBigint(v2)
+                        const v2 = v as Array<0 | 1>
+                        const v3 = bitmaskToBigint(v2)
                         if (v3 > 0) {
                             u.searchParams.set(k, String(v3))
                         } else {
@@ -381,7 +388,7 @@ export namespace UrlParamN {
                 .flatMap((x, idx) => (x === "1" ? [idx] : []))
         }
         function parseDate(raw: string, s: Schema[string] & { type: "date" }) {
-            let x = new Date(raw)
+            let x = new Date(raw + "T00:00:00.000Z")
             if (isNaN(x.getTime())) {
                 return null
             }
