@@ -12,9 +12,8 @@ import { ROUTER, Router } from "./router"
 import { humanizeFightingType } from "@/lib/stats/combatStats"
 import { RouteLink } from "../routeLink"
 
-// @fixme: log list
-//    filter
-//    search
+// @fixme: version / reparse
+// @fixme: monsters killed
 // @fixme: mob leaderboard
 //    appearance (per million)
 //    survival rate (avg 1.34)
@@ -23,19 +22,13 @@ import { RouteLink } from "../routeLink"
 //    attack rate
 //    trainer table vs mob table (searchable)
 // @fixme: item world
-// @fixme: monsters killed
 // @fixme: income per round
-// @fixme: version / reparse
 // @fixme: price history
 // @fixme: client vs server entry points
-// @fixme: hover prefetch
-// @fixme: logdb, singleton
 
 // @todo: separate raw logs / parsed logs / summaries (for lazy fetch)
 // @todo: compression
-// @todo: store log bytes (to skip serde)
 // @todo: equip drop search
-// @todo: global equip drops
 // @todo: per round / avgs (config?)
 // @todo: effect blame
 // @todo: chart utils
