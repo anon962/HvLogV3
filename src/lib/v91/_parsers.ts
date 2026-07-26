@@ -608,6 +608,16 @@ const PARSERS = {
             value: t("string"),
         }
     ),
+    DAWN: new EventParser(
+        "DAWN",
+        `With the light of a new dawn, your experience in all things increases.`,
+        {}
+    ),
+    YGGDRASIL: new EventParser(
+        "YGGDRASIL",
+        `A shimmering light is pulsating from Yggdrasil...`,
+        {}
+    ),
     MB_USAGE: new EventParser(
         "MB_USAGE",
         `Used: ${Group("value", ".*")}`,
