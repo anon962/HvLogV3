@@ -484,9 +484,7 @@ function MiscTable({ combat, meta }: DetailsSummary) {
         {
             label: "Rounds",
             value: {
-                value: meta.round?.end
-                    ? `${meta.round.end} / ${meta.round.max}`
-                    : "1 / ???",
+                value: `${meta.round?.end ?? 1} / ${meta.round?.max ?? 1}`,
             },
         },
         {

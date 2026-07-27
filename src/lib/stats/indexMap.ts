@@ -1,3 +1,4 @@
+// @todo: rounds should be 0-indexed
 export class IndexMap {
     private logToTurn: Map<number, number> = new Map()
     private turnToLog: Map<number, number> = new Map()

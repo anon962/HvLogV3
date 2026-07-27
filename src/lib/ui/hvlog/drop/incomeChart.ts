@@ -23,10 +23,9 @@ type Series = DataSeries<{
 
 export class IncomeChart {
     series: Record<string, Series> = {}
-
     expenses: Series
-
     endRound: number
+    roundToTotalTurns: Record<number, number>
 
     constructor(
         public prices: Record<string, number>,
@@ -63,6 +62,25 @@ export class IncomeChart {
                 .map((x) => x.roundIdx),
             0,
         )
+        this.roundToTotalTurns = range(this.endRound).reduce(
+            ({ byRound: map, total }, roundIdx) => {
+                const start = this.indexMap.r2t(roundIdx + 1)!
+                let end = this.indexMap.r2t(roundIdx + 2) ?? 0
+                end = end || start // @todo: last round is 0 for some reason
+
+                total += end - start
+                map[roundIdx + 1] = total
+
+                return {
+                    byRound: map,
+                    total,
+                }
+            },
+            {
+                byRound: {} as Record<number, number>,
+                total: 0,
+            },
+        ).byRound
 
         const newSeries = () =>
             new DataSeries(
@@ -136,6 +154,7 @@ export class IncomeChart {
         const percs = this.toPercentages(
             incomePoints,
             this.expenses.mappedPoints,
+            this.roundToTotalTurns,
         )
 
         const total = sum(
@@ -212,6 +231,7 @@ export class IncomeChart {
     private toPercentages(
         points: Array<{ x: number; y: number; label: string }>,
         expensePoints: Array<{ x: number; y: number }>,
+        roundToTotalTurns: Record<number, number>,
     ) {
         const byX = groupBy(points, (pt) => pt.x)
         const expenses = groupBy(expensePoints, (pt) => pt.x)
@@ -245,6 +265,7 @@ export class IncomeChart {
                 `Costs: ${formatNumber(costs).padStart(7)}`,
                 `Net: ${formatNumber(net).padStart(7)}`,
                 `Net/R: ${(net / x).toFixed(1).padStart(7)}`,
+                `Net/T: ${(net / roundToTotalTurns[x]).toFixed(1).padStart(7)}`,
                 "",
                 ...keys.map(
                     (k) =>

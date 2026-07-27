@@ -25,7 +25,7 @@ export function DropInfo({
     return (
         <div className="drop-stats h-full overflow-auto flex flex-col">
             <div className="overview">
-                <CalculationPreview prices={prices} stats={stats} />
+                <CalculationPreview prices={prices} details={stats} />
                 <EquipSummary stats={stats} />
             </div>
 
@@ -48,10 +48,10 @@ export function DropInfo({
 }
 
 function CalculationPreview({
-    stats: { meta, drops, usage },
+    details: { meta, drops, usage },
     prices,
 }: {
-    stats: DetailsSummary
+    details: DetailsSummary
     prices: Record<string, number>
 }) {
     const { profit, income, expenses } = useMemo(
@@ -61,11 +61,21 @@ function CalculationPreview({
 
     const profitClass = profit > 0 ? "text-green-300" : "text-red-300"
     const profitStr = (profit > 0 ? "+" : "") + formatNumber(profit) + "c"
+    const perRound =
+        (profit > 0 ? "+" : "") +
+        formatNumber(profit / (meta.round?.end ?? 1)) +
+        "c"
+    const perTurn =
+        (profit > 0 ? "+" : "") +
+        formatNumber(profit / meta.turnIndices.length) +
+        "c"
 
     const incomeStr = "+" + formatNumber(income) + "c"
     const expenseStr = "-" + formatNumber(expenses) + "c"
     const maxLength = Math.max(
         profitStr.length,
+        perRound.length,
+        perTurn.length,
         incomeStr.length,
         expenseStr.length,
     )
@@ -92,6 +102,10 @@ function CalculationPreview({
 
             <span className="">Profit:</span>
             <span className={profitClass}>{profitStr}</span>
+            <span className="">Per Round:</span>
+            <span className={profitClass}>{perRound}</span>
+            <span className="">Per Turn:</span>
+            <span className={profitClass}>{perTurn}</span>
         </pre>
     )
 }
