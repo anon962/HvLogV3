@@ -15,9 +15,6 @@ import { IndexMap } from "@/lib/stats/indexMap"
 
 // @fixme: discord preview
 
-// @fixme: separate raw logs / parsed logs / summaries (for lazy fetch)
-// @fixme: log source cache eviction
-
 // @fixme: compression
 
 // @fixme: monsters killed
@@ -35,7 +32,9 @@ import { IndexMap } from "@/lib/stats/indexMap"
 // @fixme: equip drop search
 // @fixme: off by one charts
 // @fixme: event log pagination
+// @fixme: back button url should retain query params
 
+// @todo: log source cache eviction
 // @todo: per round / avgs (config?)
 // @todo: effect blame
 // @todo: chart utils

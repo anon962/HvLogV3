@@ -156,10 +156,7 @@ class LogSourceRemote {
         }
 
         if (!this.logPending.has(k)) {
-            const url =
-                this.HVDATA_URL +
-                `/battle_logs/${id}` +
-                `?raw=0&events=1&details=0&search=0`
+            const url = this.HVDATA_URL + `/battle_logs/${id}` + `?events=1`
             const resp = await fetch(url).then(async (resp) => resp.json())
 
             this.logPending.set(k, resp)
@@ -171,7 +168,7 @@ class LogSourceRemote {
             meta: {
                 start: resp.created_at.replace("+00:00", "") + "Z",
                 lastUpdate: resp.created_at.replace("+00:00", "") + "Z",
-                version: -999,
+                version: resp.version,
                 world: "persistent",
                 user_id: resp.id_user,
                 user_name: resp.name,
@@ -194,10 +191,7 @@ class LogSourceRemote {
         }
 
         if (!this.detailsPending.has(k)) {
-            const url =
-                this.HVDATA_URL +
-                `/battle_logs/${id}` +
-                `?raw=0&events=0&details=1&search=0`
+            const url = this.HVDATA_URL + `/battle_logs/${id}` + `?details=1`
             const resp = await fetch(url).then(async (resp) => resp.json())
 
             this.detailsPending.set(k, resp.parsed.details)
