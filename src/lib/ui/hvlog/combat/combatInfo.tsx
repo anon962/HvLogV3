@@ -130,7 +130,6 @@ function ActionTable({ meta, combat }: DetailsSummary) {
             }
         }
 
-        console.log("here", otherActions)
         rows.push({
             label: "Other",
             value: {

@@ -3,7 +3,7 @@ import { humanizeBattleType } from "@/lib/stats/metaStats"
 import "@/lib/ui/global.css"
 import { useAsync } from "@/lib/utils/miscUtils"
 import { RootComponent } from "@/lib/utils/userscriptUtils"
-import { CustomMap } from "myutils"
+import { CustomMap, sleep } from "myutils"
 import { StrictMode } from "react"
 import { LogDetailsPane } from "./logDetailsPane"
 import { LogList } from "./logList/logList"
@@ -13,7 +13,15 @@ import { humanizeFightingType } from "@/lib/stats/combatStats"
 import { RouteLink } from "../routeLink"
 import { IndexMap } from "@/lib/stats/indexMap"
 
+// @fixme: discord preview
+
+// @fixme: separate raw logs / parsed logs / summaries (for lazy fetch)
+// @fixme: log source cache eviction
+
+// @fixme: compression
+
 // @fixme: monsters killed
+
 // @fixme: mob leaderboard
 //    appearance (per million)
 //    survival rate (avg 1.34)
@@ -27,9 +35,7 @@ import { IndexMap } from "@/lib/stats/indexMap"
 // @fixme: equip drop search
 // @fixme: off by one charts
 // @fixme: event log pagination
-// @fixme: compression
 
-// @todo: separate raw logs / parsed logs / summaries (for lazy fetch)
 // @todo: per round / avgs (config?)
 // @todo: effect blame
 // @todo: chart utils
@@ -73,48 +79,37 @@ export const HvLog: RootComponent = ({}) => {
 
 function LogDetailsRoute(props: { id: string }) {
     const logSource = LOG_SOURCE.useContext()
-    const srcData = useAsync(async () => {
-        const log = await logSource.fetchLog(props.id)
-        const details = await logSource.fetchDetails(props.id)
-        // const s = v91.summarize(log)
-        // const stats = {
-        //     ...s,
-        //     finances: summarizeFinances(
-        //         s.meta,
-        //         s.drops,
-        //         s.usage,
-        //         apiData.prices,
-        //     ),
-        //     indexMap: new IndexMap(
-        //         s.meta.turnIndices,
-        //         s.meta.roundIndices,
-        //         s.meta.eventCount,
-        //     ),
-        // }
-        return { log, details }
+    const { data: details } = useAsync(
+        async () => await logSource.fetchDetails(props.id),
+        null,
+    )
+    const { data: log } = useAsync(async () => {
+        await sleep(500)
+        return await logSource.fetchLog(props.id)
     }, null)
-
     let title
-    let indexMap = new IndexMap([], {}, 0)
-    if (srcData.data) {
-        const d = new Date(srcData.data.log.meta.start)
-        const m = srcData.data.details.meta
+    if (log && details) {
+        const d = new Date(log.meta.start)
+        const m = details.meta
         const zfill = (x: number, n = 2) => x.toString().padStart(n, "0")
 
         title = [
             humanizeBattleType(m.battleType, m.round?.end ?? null),
-            srcData.data.log.meta.user_name ?? "(anonymous)",
-            humanizeFightingType(srcData.data.details.combat.style),
+            log.meta.user_name ?? "(anonymous)",
+            humanizeFightingType(details.combat.style),
             `${d.getFullYear()}-${zfill(d.getMonth())}-${zfill(d.getDate())} ${zfill(d.getHours())}:${zfill(d.getMinutes())}`,
         ].join(" - ")
-
-        indexMap = new IndexMap(
-            srcData.data.details.meta.turnIndices,
-            srcData.data.details.meta.roundIndices,
-            srcData.data.details.meta.eventCount,
-        )
     } else {
         title = "-"
+    }
+
+    let indexMap = new IndexMap([], {}, 0)
+    if (details) {
+        indexMap = new IndexMap(
+            details.meta.turnIndices,
+            details.meta.roundIndices,
+            details.meta.eventCount,
+        )
     }
 
     return (
@@ -131,9 +126,9 @@ function LogDetailsRoute(props: { id: string }) {
 
             <div className="w-full max-w-[60rem] h-full mx-auto">
                 <LogDetailsPane
-                    log={srcData.data?.log ?? null}
+                    log={log}
                     prices={window.HV_LOG_PRICES}
-                    details={srcData.data?.details ?? null}
+                    details={details}
                     indexMap={indexMap}
                 />
             </div>

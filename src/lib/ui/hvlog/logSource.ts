@@ -64,8 +64,11 @@ class LogSourceRemote {
 
     private SEARCH_TTL = 5 * 60 * 1000
 
-    private logCache = new Map<string, Dated<unknown>>()
-    private logPending = new Map<string, Promise<CompleteLog>>()
+    private logCache = new Map<string, Dated<CompleteLog>>()
+    private logPending = new Map<string, Promise<any>>()
+
+    private detailsCache = new Map<string, Dated<DetailsSummary>>()
+    private detailsPending = new Map<string, Promise<any>>()
 
     private searchRequestCache = new CustomMap<
         LogSearchRequest,
@@ -146,63 +149,68 @@ class LogSourceRemote {
         return result
     }
 
-    private async _fetchLog(id: string) {
+    async fetchLog(id: string) {
         const k = id
         if (this.logCache.has(k)) {
             return this.logCache.get(k)!.data
         }
 
         if (!this.logPending.has(k)) {
-            const resp = fetch(this.HVDATA_URL + `/battle_logs/${id}`).then(
-                (resp) => resp.json(),
-            )
+            const url =
+                this.HVDATA_URL +
+                `/battle_logs/${id}` +
+                `?raw=0&events=1&details=0&search=0`
+            const resp = await fetch(url).then(async (resp) => resp.json())
+
             this.logPending.set(k, resp)
         }
 
-        const result = await this.logPending.get(k)!
+        const resp = await this.logPending.get(k)!
+        const log: CompleteLog = {
+            id: resp.id,
+            meta: {
+                start: resp.created_at.replace("+00:00", "") + "Z",
+                lastUpdate: resp.created_at.replace("+00:00", "") + "Z",
+                version: -999,
+                world: "persistent",
+                user_id: resp.id_user,
+                user_name: resp.name,
+            },
+            entries: resp.parsed.events.entries,
+        }
         this.logCache.set(id, {
-            data: result,
+            data: log,
             createdAt: new Date(),
         })
         this.logPending.delete(k)
 
-        return result
-    }
-
-    async fetchLog(id: string) {
-        let result = (await this._fetchLog(id)) as any
-        const log: CompleteLog = {
-            id: result.id,
-            meta: {
-                start: result.created_at.replace("+00:00", "") + "Z",
-                lastUpdate: result.created_at.replace("+00:00", "") + "Z",
-                version: -999,
-                world: "persistent",
-                user_id: result.id_user,
-                user_name: result.name,
-            },
-            entries: result.parsed.events.entries,
-        }
         return log
     }
 
     async fetchDetails(id: string) {
-        const result = (await this._fetchLog(id)) as any
-        const d = result.parsed.details
-        return {
-            ...d,
-            finances: summarizeFinances(
-                d.meta,
-                d.drops,
-                d.usage,
-                window.HV_LOG_PRICES,
-            ),
-            indexMap: new IndexMap(
-                d.meta.turnIndices,
-                d.meta.roundIndices,
-                d.meta.eventCount,
-            ),
+        const k = id
+        if (this.detailsCache.has(k)) {
+            return this.detailsCache.get(k)!.data
         }
+
+        if (!this.detailsPending.has(k)) {
+            const url =
+                this.HVDATA_URL +
+                `/battle_logs/${id}` +
+                `?raw=0&events=0&details=1&search=0`
+            const resp = await fetch(url).then(async (resp) => resp.json())
+
+            this.detailsPending.set(k, resp.parsed.details)
+        }
+
+        const result = await this.detailsPending.get(k)!
+        this.detailsCache.set(id, {
+            data: result,
+            createdAt: new Date(),
+        })
+        this.detailsPending.delete(k)
+
+        return result
     }
 
     private toSearchKey(k: LogSearchRequest) {

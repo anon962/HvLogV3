@@ -89,7 +89,7 @@ export function Table() {
             onHover={{
                 delay: 300,
                 fn: (id) => {
-                    logSource.fetchLog(id)
+                    logSource.fetchDetails(id)
                 },
             }}
             filter={{
