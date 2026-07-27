@@ -1,5 +1,5 @@
 import { CombatSummary } from "@/lib/stats/combatStats"
-import { DetailsSummary } from "@/lib/detailsSummary"
+import { DetailsSummary } from "@/lib/summary"
 import { formatNumber } from "@/lib/utils/miscUtils"
 import { sort, sortBy, sum } from "myutils"
 import { useEffect, useRef } from "react"
@@ -501,6 +501,12 @@ function MiscTable({ combat, meta }: DetailsSummary) {
                 value: formatNumber(sparkCount),
             },
             disabled: sparkCount === 0,
+        },
+        {
+            label: "Monsters",
+            value: {
+                value: formatNumber(combat.monsterCount),
+            },
         },
         {
             label: "Riddlemasters",

@@ -1,4 +1,4 @@
-import { enumerate } from "myutils"
+import { enumerate, sum } from "myutils"
 import { CompleteLog } from "../logDb/schema"
 import {
     CombatSummary,
@@ -963,6 +963,19 @@ export function _summarizeCombatUsage(
         defend.logIdx.push(root.logIdx)
     }
 
+    const monsterCount = sum(
+        partition.start.map((seq) => {
+            let count = 0
+            for (const { event } of seq) {
+                switch (event.event_type) {
+                    case "SPAWN":
+                        count += 1
+                }
+            }
+            return count
+        }),
+    )
+
     return {
         style: summarizeStyle(spell, attack, skill) as CombatSummary["style"],
         effectBlame,
@@ -983,6 +996,7 @@ export function _summarizeCombatUsage(
         scan,
         fail,
         defend,
+        monsterCount,
     }
 }
 

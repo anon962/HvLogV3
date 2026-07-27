@@ -18,12 +18,12 @@ import {
 } from "../ui/constants"
 import { InferCollectionType } from "myutils"
 import { _ALL_PARSERS, v91 as parsers } from "./_parsers"
-import { _summarizeCombatUsage } from "./_summarizeCombatUsage"
-import { DetailsSummary } from "../detailsSummary"
+import { _summarizeCombatUsage } from "./_summarizeCombat"
+import { DetailsSummary } from "../summary"
 
 export const v91 = {
     ALL_PARSERS: _ALL_PARSERS,
-    summarize: (log: CompleteLog<parsers.HvEvent>): DetailsSummary => {
+    summarizeDetails: (log: CompleteLog<parsers.HvEvent>): DetailsSummary => {
         log = _parseScans(log)
 
         const partition = partitionLog(log)

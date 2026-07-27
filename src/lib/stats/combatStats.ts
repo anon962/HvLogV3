@@ -105,6 +105,7 @@ export type CombatSummary = {
         type: Array<string>
         name: Array<string | null>
     }
+    monsterCount: number
 }
 
 export type CombatSummaryEventMap = {

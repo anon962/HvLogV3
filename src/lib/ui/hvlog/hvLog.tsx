@@ -13,8 +13,6 @@ import { humanizeFightingType } from "@/lib/stats/combatStats"
 import { RouteLink } from "../routeLink"
 import { IndexMap } from "@/lib/stats/indexMap"
 
-// @fixme: discord preview
-
 // @fixme: compression
 
 // @fixme: monsters killed

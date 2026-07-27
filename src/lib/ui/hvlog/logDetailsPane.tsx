@@ -1,6 +1,6 @@
 import { BaseHvEvent } from "@/lib/eventParser"
 import { CompleteLog } from "@/lib/logDb/schema"
-import { DetailsSummary } from "@/lib/detailsSummary"
+import { DetailsSummary } from "@/lib/summary"
 import React from "react"
 import { Card, CardContent } from "../shadcn/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../shadcn/tabs"

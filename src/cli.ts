@@ -11,8 +11,9 @@ import {
     unlinkSync,
 } from "fs"
 import { fileURLToPath } from "url"
-import { SearchSummary, summarizeSearchStats } from "./lib/searchSummary"
-import { DetailsSummary } from "./lib/detailsSummary"
+import { SearchSummary } from "./lib/summary"
+import { summarizeSearchStats } from "./lib/summary"
+import { DetailsSummary } from "./lib/summary"
 
 export {}
 
@@ -140,7 +141,7 @@ function getDetailsSummary(opts: {
         entries: opts.entries,
     }
 
-    return v91.summarize(log)
+    return v91.summarizeDetails(log)
 }
 
 function getSearchSummary(opts: {
