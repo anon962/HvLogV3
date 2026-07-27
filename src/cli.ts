@@ -134,6 +134,8 @@ function getDetailsSummary(opts: {
             lastUpdate: "",
             version: 0,
             world: "persistent",
+            user_id: "",
+            user_name: "",
         },
         entries: opts.entries,
     }
@@ -145,13 +147,7 @@ function getSearchSummary(opts: {
     details: Omit<DetailsSummary, "finances" | "indexMap">
     prices: Record<string, number>
 }) {
-    const finances = summarizeFinances(
-        opts.details.meta,
-        opts.details.drops,
-        opts.details.usage,
-        opts.prices,
-    )
-    return summarizeSearchStats({ ...opts.details, finances })
+    return summarizeSearchStats(opts.details, opts.prices)
 }
 
 async function readLine(): Promise<string> {

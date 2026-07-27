@@ -6,28 +6,35 @@ import { useEffect, useRef } from "react"
 import { TallyTable, TallyTableProps } from "../../tallyTable"
 import { ActionChart } from "./actionChart"
 import { HealChart } from "./healChart"
+import { IndexMap } from "@/lib/stats/indexMap"
 
-export function CombatInfo({ stats }: { stats: DetailsSummary }) {
+export function CombatInfo({
+    details,
+    indexMap,
+}: {
+    details: DetailsSummary
+    indexMap: IndexMap
+}) {
     return (
         <div className="combat-info p-8 overflow-auto h-full flex flex-col gap-12">
             <div className="flex gap-8">
-                {MiscTable(stats)}
-                {ActionTable(stats)}
+                {MiscTable(details)}
+                {ActionTable(details)}
             </div>
 
-            {DamageTable(stats)}
+            {DamageTable(details)}
 
-            {stats.combat.critMults.length > 0 ? CritTable(stats) : null}
+            {details.combat.critMults.length > 0 ? CritTable(details) : null}
 
             <div className="flex gap-8">
-                {HealTable(stats)}
-                {DebuffTable(stats)}
+                {HealTable(details)}
+                {DebuffTable(details)}
             </div>
 
-            {DamageTakenTable(stats)}
+            {DamageTakenTable(details)}
 
-            <ActionChartWrapper stats={stats} />
-            <HealChartWrapper stats={stats} />
+            <ActionChartWrapper details={details} indexMap={indexMap} />
+            <HealChartWrapper details={details} indexMap={indexMap} />
         </div>
     )
 }
@@ -739,10 +746,13 @@ function HealTable({ combat }: DetailsSummary) {
     )
 }
 
-function HealChartWrapper({ stats }: { stats: DetailsSummary }) {
-    const { meta, combat, indexMap } = stats
+function HealChartWrapper(props: {
+    details: DetailsSummary
+    indexMap: IndexMap
+}) {
+    const { meta, combat } = props.details
 
-    const chart = new HealChart(combat, indexMap, meta.round?.end ?? 1)
+    const chart = new HealChart(combat, props.indexMap, meta.round?.end ?? 1)
     const el = chart.render()
 
     const container = useRef<HTMLDivElement>(null)
@@ -765,10 +775,18 @@ function HealChartWrapper({ stats }: { stats: DetailsSummary }) {
     )
 }
 
-function ActionChartWrapper({ stats }: { stats: DetailsSummary }) {
-    const { meta, combat, indexMap } = stats
+function ActionChartWrapper(props: {
+    details: DetailsSummary
+    indexMap: IndexMap
+}) {
+    const { meta, combat } = props.details
 
-    const chart = new ActionChart(combat, meta, meta.round?.end ?? 1, indexMap)
+    const chart = new ActionChart(
+        combat,
+        meta,
+        meta.round?.end ?? 1,
+        props.indexMap,
+    )
     const el = chart.render()
 
     const container = useRef<HTMLDivElement>(null)

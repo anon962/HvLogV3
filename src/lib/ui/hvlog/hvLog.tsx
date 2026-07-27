@@ -11,6 +11,7 @@ import { LOG_SOURCE } from "./logSource"
 import { ROUTER, Router } from "./router"
 import { humanizeFightingType } from "@/lib/stats/combatStats"
 import { RouteLink } from "../routeLink"
+import { IndexMap } from "@/lib/stats/indexMap"
 
 // @fixme: monsters killed
 // @fixme: mob leaderboard
@@ -26,9 +27,9 @@ import { RouteLink } from "../routeLink"
 // @fixme: equip drop search
 // @fixme: off by one charts
 // @fixme: event log pagination
+// @fixme: compression
 
 // @todo: separate raw logs / parsed logs / summaries (for lazy fetch)
-// @todo: compression
 // @todo: per round / avgs (config?)
 // @todo: effect blame
 // @todo: chart utils
@@ -94,6 +95,7 @@ function LogDetailsRoute(props: { id: string }) {
     }, null)
 
     let title
+    let indexMap = new IndexMap([], {}, 0)
     if (srcData.data) {
         const d = new Date(srcData.data.log.meta.start)
         const m = srcData.data.details.meta
@@ -105,6 +107,12 @@ function LogDetailsRoute(props: { id: string }) {
             humanizeFightingType(srcData.data.details.combat.style),
             `${d.getFullYear()}-${zfill(d.getMonth())}-${zfill(d.getDate())} ${zfill(d.getHours())}:${zfill(d.getMinutes())}`,
         ].join(" - ")
+
+        indexMap = new IndexMap(
+            srcData.data.details.meta.turnIndices,
+            srcData.data.details.meta.roundIndices,
+            srcData.data.details.meta.eventCount,
+        )
     } else {
         title = "-"
     }
@@ -126,6 +134,7 @@ function LogDetailsRoute(props: { id: string }) {
                     log={srcData.data?.log ?? null}
                     prices={window.HV_LOG_PRICES}
                     details={srcData.data?.details ?? null}
+                    indexMap={indexMap}
                 />
             </div>
         </div>

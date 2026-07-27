@@ -1,18 +1,21 @@
 import { DetailsSummary } from "@/lib/detailsSummary"
 import { formatNumber } from "@/lib/utils/miscUtils"
 import { range, sort, sum, sortBy } from "myutils"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { TallyTable, TallyTableProps } from "../../tallyTable"
 import { IncomeChart } from "./incomeChart"
-import { DROP_CATEGORIES } from "@/lib/stats/dropStats"
+import { DROP_CATEGORIES, summarizeFinances } from "@/lib/stats/dropStats"
 import { ITEM_USAGE_CATEGORIES } from "@/lib/stats/itemUsageStats"
+import { IndexMap } from "@/lib/stats/indexMap"
 
 export function DropInfo({
     prices,
     stats,
+    indexMap,
 }: {
     stats: DetailsSummary
     prices: Record<string, number>
+    indexMap: IndexMap
 }) {
     let staminaUsage = (stats.meta.round?.end ?? 1) / 50
     if (stats.meta.battleType?.category === "Grindfest") {
@@ -22,7 +25,7 @@ export function DropInfo({
     return (
         <div className="drop-stats h-full overflow-auto flex flex-col">
             <div className="overview">
-                <CalculationPreview stats={stats} />
+                <CalculationPreview prices={prices} stats={stats} />
                 <EquipSummary stats={stats} />
             </div>
 
@@ -39,13 +42,22 @@ export function DropInfo({
 
             <hr className="my-12" />
 
-            <DropChart prices={prices} stats={stats} />
+            <DropChart prices={prices} stats={stats} indexMap={indexMap} />
         </div>
     )
 }
 
-function CalculationPreview({ stats }: { stats: DetailsSummary }) {
-    const { profit, income, expenses } = stats.finances
+function CalculationPreview({
+    stats: { meta, drops, usage },
+    prices,
+}: {
+    stats: DetailsSummary
+    prices: Record<string, number>
+}) {
+    const { profit, income, expenses } = useMemo(
+        () => summarizeFinances(meta, drops, usage, prices),
+        [],
+    )
 
     const profitClass = profit > 0 ? "text-green-300" : "text-red-300"
     const profitStr = (profit > 0 ? "+" : "") + formatNumber(profit) + "c"
@@ -289,10 +301,12 @@ function UsageSummaryTable({
 
 function DropChart({
     prices,
-    stats: { meta, drops, usage, indexMap },
+    stats: { meta, drops, usage },
+    indexMap,
 }: {
     prices: Record<string, number>
     stats: DetailsSummary
+    indexMap: IndexMap
 }) {
     const [el, setEl] = useState<Element | null>(null)
     useEffect(() => {

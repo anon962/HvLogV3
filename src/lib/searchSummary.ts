@@ -1,4 +1,4 @@
-import { FinanceSummary } from "./stats/dropStats"
+import { FinanceSummary, summarizeFinances } from "./stats/dropStats"
 import { MetaSummary } from "./stats/metaStats"
 import { DetailsSummary } from "./detailsSummary"
 import { CombatSummary } from "./stats/combatStats"
@@ -13,20 +13,28 @@ export interface SearchSummary {
 const EQUIP_SUMMARY_PATT = /^(?:Magnificent|Legendary|Peerless).*$/
 
 export function summarizeSearchStats(
-    summary: Omit<DetailsSummary, "indexMap">,
+    details: Omit<DetailsSummary, "indexMap">,
+    prices: Record<string, number>,
 ): SearchSummary {
     const equips: SearchSummary["equips"] = []
 
-    for (const x of Object.values(summary.drops)) {
+    const finances = summarizeFinances(
+        details.meta,
+        details.drops,
+        details.usage,
+        prices,
+    )
+
+    for (const x of Object.values(details.drops)) {
         if (x.isEquip && EQUIP_SUMMARY_PATT.test(x.key)) {
             equips.push(x.key)
         }
     }
 
     return {
-        meta: summary.meta,
-        finances: summary.finances,
+        meta: details.meta,
+        finances,
         equips,
-        style: summary.combat.style,
+        style: details.combat.style,
     }
 }

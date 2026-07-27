@@ -1,19 +1,18 @@
+import { BaseHvEvent } from "@/lib/eventParser"
 import { CompleteLog, LogEntry } from "@/lib/logDb/schema"
 import JsonView from "@uiw/react-json-view"
-import { range, sleep, enumerate } from "myutils"
+import { enumerate, range, sleep } from "myutils"
 import { memo, ReactElement, useEffect, useRef, useState } from "react"
 import { IndexMap } from "../../stats/indexMap"
 import { XIcon } from "../icons/tailwind"
-import { BaseHvEvent } from "@/lib/eventParser"
-import { DetailsSummary } from "@/lib/detailsSummary"
 
 export function LogEventList<T extends BaseHvEvent>(props: {
     log: CompleteLog<T>
-    stats: DetailsSummary
+    indexMap: IndexMap
 }) {
     const { rows, loading, indexMap, activeIdx, setActiveIdx } = useRowsAsync(
         props.log,
-        props.stats.indexMap,
+        props.indexMap,
     )
 
     const scrollRef = useRef<HTMLDivElement>(null)
@@ -175,7 +174,7 @@ function useRowsAsync<T extends BaseHvEvent>(
 
 interface EventRowContainerProps {
     logIdx: number
-    entry: LogEntry
+    entry: LogEntry<any>
     indexMap: IndexMap
     activeLogIdx: number
     setActiveLogIdx: (logIdx: number) => void

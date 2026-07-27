@@ -8,16 +8,19 @@ import { CombatInfo } from "./combat/combatInfo"
 import { DropInfo } from "./drop/dropInfo"
 import { LogEventList } from "./logEventList"
 import { IS_REMOTE } from "../constants"
+import { IndexMap } from "@/lib/stats/indexMap"
 
 export const LogDetailsPane = React.memo(
     <T extends BaseHvEvent>({
         log,
         prices,
         details: stats,
+        indexMap,
     }: {
         log: CompleteLog<T> | null
         prices: Record<string, number>
         details: DetailsSummary | null
+        indexMap: IndexMap
     }) => {
         return (
             <div
@@ -48,7 +51,11 @@ export const LogDetailsPane = React.memo(
                         <Card className="min-h-full py-0 h-full">
                             <CardContent className="h-full p-8">
                                 {stats ? (
-                                    <DropInfo prices={prices} stats={stats} />
+                                    <DropInfo
+                                        prices={prices}
+                                        stats={stats}
+                                        indexMap={indexMap}
+                                    />
                                 ) : (
                                     ""
                                 )}
@@ -59,7 +66,14 @@ export const LogDetailsPane = React.memo(
                     <TabsContent value="combat" className="h-full min-h-0">
                         <Card className="min-h-0 h-full py-0 overflow-auto">
                             <CardContent className="p-0">
-                                {stats ? <CombatInfo stats={stats} /> : ""}
+                                {stats ? (
+                                    <CombatInfo
+                                        details={stats}
+                                        indexMap={indexMap}
+                                    />
+                                ) : (
+                                    ""
+                                )}
                             </CardContent>
                         </Card>
                     </TabsContent>
@@ -68,7 +82,10 @@ export const LogDetailsPane = React.memo(
                         <Card className="min-h-0 h-full py-0">
                             <CardContent className="p-0 min-h-0">
                                 {log && stats ? (
-                                    <LogEventList log={log} stats={stats} />
+                                    <LogEventList
+                                        log={log}
+                                        indexMap={indexMap}
+                                    />
                                 ) : (
                                     ""
                                 )}
