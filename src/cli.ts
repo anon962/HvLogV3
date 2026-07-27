@@ -74,7 +74,7 @@ async function main() {
                             entries: any[]
                             versionString: string
                         }
-                        details: Omit<DetailsSummary, "indexMap" | "finances">
+                        details: DetailsSummary
                         search: SearchSummary
                     }
 
@@ -144,7 +144,7 @@ function getDetailsSummary(opts: {
 }
 
 function getSearchSummary(opts: {
-    details: Omit<DetailsSummary, "finances" | "indexMap">
+    details: DetailsSummary
     prices: Record<string, number>
 }) {
     return summarizeSearchStats(opts.details, opts.prices)

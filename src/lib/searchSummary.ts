@@ -13,7 +13,7 @@ export interface SearchSummary {
 const EQUIP_SUMMARY_PATT = /^(?:Magnificent|Legendary|Peerless).*$/
 
 export function summarizeSearchStats(
-    details: Omit<DetailsSummary, "indexMap">,
+    details: DetailsSummary,
     prices: Record<string, number>,
 ): SearchSummary {
     const equips: SearchSummary["equips"] = []

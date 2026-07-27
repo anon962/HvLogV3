@@ -1,5 +1,3 @@
-import { CompleteLog } from "./lib/logDb/schema.ts"
-import { DetailsSummary } from "./lib/detailsSummary.ts"
 import { HvLog } from "./lib/ui/hvlog/hvLog.tsx"
 import { mountReact } from "./lib/utils/userscriptUtils.ts"
 
@@ -9,14 +7,7 @@ async function main() {
 
 declare global {
     interface Window {
-        // @todo: spaghetti
-        HV_LOG: {
-            apiData: {
-                logs?: Array<CompleteLog>
-                details: Array<Omit<DetailsSummary, "finances" | "indexMap">>
-                username?: string
-            }
-        }
+        HV_LOG_IS_REMOTE: boolean
         HV_LOG_PRICES: Record<string, number>
     }
 }

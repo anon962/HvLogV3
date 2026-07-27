@@ -85,29 +85,7 @@ class LogSourceRemote {
         fromRaw: (k) => this.fromSearchKey(k),
     })
 
-    constructor(apiData: typeof window.HV_LOG.apiData) {
-        for (const log of apiData?.logs ?? []) {
-            // this.logCache.set(log.id, {
-            //     data: {
-            //         id: log.id,
-            //         meta: {
-            //             start: log.created_at.replace("+00:00", "") + "Z",
-            //             lastUpdate: log.created_at.replace("+00:00", "") + "Z",
-            //             version: -999,
-            //             world: "persistent",
-            //             user_id: log.id_user,
-            //             user_name: log.name,
-            //         },
-            //         entries: log.parsed.events.entries,
-            //     },
-            //     createdAt: new Date(),
-            // })
-            this.logCache.set(log.id, {
-                data: log,
-                createdAt: new Date(),
-            })
-        }
-    }
+    constructor() {}
 
     private async _fetchSearch(req: LogSearchRequest) {
         const k = req
@@ -236,7 +214,7 @@ class LogSourceRemote {
 }
 
 export const LOG_SOURCE = newContext<TLogSource>(() => [
-    IS_REMOTE ? new LogSourceRemote(window.HV_LOG.apiData) : (null as any),
+    IS_REMOTE ? new LogSourceRemote() : (null as any),
     () => {},
 ])
 
