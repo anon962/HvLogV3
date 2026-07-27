@@ -98,20 +98,20 @@ function ActionTable({ meta, combat }: DetailsSummary) {
         for (const { label, count } of [
             {
                 label: "Scan",
-                count: combat.scan["scan"]?.events.logIdx.length ?? 0,
+                count: combat.scan.logIdx.length,
             },
             {
                 label: "Flee",
                 count: meta.completionType === "flee" ? 1 : 0,
             },
-            // {
-            //     label: "Defend",
-            //     count: combat.,
-            // },
-            // {
-            //     label: "Fails",
-            //     count: combat.
-            // },
+            {
+                label: "Defend",
+                count: combat.defend.logIdx.length,
+            },
+            {
+                label: "Fails",
+                count: combat.fail.logIdx.length,
+            },
         ]) {
             if (count > 0) {
                 otherActions.push({
@@ -122,6 +122,18 @@ function ActionTable({ meta, combat }: DetailsSummary) {
                 })
             }
         }
+
+        console.log("here", otherActions)
+        rows.push({
+            label: "Other",
+            value: {
+                count: sum(otherActions.map((x) => x.count)),
+                countRound: sum(otherActions.map((x) => x.count)) / roundCount,
+            },
+            subValues: otherActions.length > 0 ? otherActions : undefined,
+            selectable: otherActions.length > 0,
+            disabled: otherActions.length === 0,
+        })
     }
 
     // if (group.label === "Times Sparked" && subRows.length) {

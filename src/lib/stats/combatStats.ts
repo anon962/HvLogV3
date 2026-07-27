@@ -92,6 +92,19 @@ export type CombatSummary = {
         }
     >
     critMults: Array<{ count: number }>
+    scan: {
+        logIdx: Array<number>
+        monster: Array<string>
+        trainer: Array<string | null>
+    }
+    defend: {
+        logIdx: Array<number>
+    }
+    fail: {
+        logIdx: Array<number>
+        type: Array<string>
+        name: Array<string | null>
+    }
 }
 
 export type CombatSummaryEventMap = {
@@ -105,7 +118,6 @@ export type CombatSummaryEventMap = {
     skill: SkillEvent
     passiveAttack: PassiveAttackEvent
     riddlemaster: RiddlemasterEvent
-    scan: ScanEvent
 }
 
 type SpellEvent = {
@@ -160,10 +172,6 @@ type PassiveAttackEvent = {
     kill: number
 }
 type RiddlemasterEvent = {}
-type ScanEvent = {
-    monster: string
-    trainer: string | null
-}
 
 export const MAGE_STYLES = {
     "Dark Mage": {

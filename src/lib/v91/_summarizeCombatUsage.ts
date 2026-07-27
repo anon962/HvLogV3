@@ -894,7 +894,11 @@ export function _summarizeCombatUsage(
         }
     }
 
-    const scan: CombatSummary["scan"] = {}
+    const scan: CombatSummary["scan"] = {
+        logIdx: [],
+        monster: [],
+        trainer: [],
+    }
     for (const [root, ...effects] of partition.scan) {
         let trainer = null
         for (const { event } of effects) {
@@ -905,24 +909,58 @@ export function _summarizeCombatUsage(
             }
         }
 
-        pushCombatEvent<"scan">(
-            scan,
-            "scan",
-            root.logIdx,
-            {
-                monster: root.event.monster,
-                trainer,
-            },
-            () => ({
-                logIdx: [],
-                monster: [],
-                trainer: [],
-            }),
-            () => ({
-                monster: "",
-                trainer: "",
-            }),
-        )
+        scan.logIdx.push(root.logIdx)
+        scan.monster.push(root.event.monster)
+        scan.trainer.push(trainer)
+    }
+
+    const fail: CombatSummary["fail"] = {
+        logIdx: [],
+        type: [],
+        name: [],
+    }
+    for (const [root, ...effects] of partition.fail) {
+        fail.logIdx.push(root.logIdx)
+
+        let type
+        let name
+        switch (root.event.event_type) {
+            case "SKILL_FAIL":
+                fail.type.push("skill")
+                fail.name.push(root.event.skill)
+                break
+            case "STANCE_FAIL":
+                fail.type.push("stance")
+                fail.name.push("Spirit Stance")
+                break
+            case "CAST_FAIL":
+                fail.type.push("cast")
+                fail.name.push(root.event.spell)
+                break
+            case "ITEM_FAIL":
+                fail.type.push("item")
+                fail.name.push(null)
+                break
+            case "ATTACK_FAIL":
+                fail.type.push("attack")
+                fail.name.push("Attack")
+                break
+            case "ATTACK_FAIL_2":
+                fail.type.push("attack")
+                fail.name.push("Attack")
+                break
+            default:
+                fail.type.push("???")
+                fail.name.push(null)
+                break
+        }
+    }
+
+    const defend: CombatSummary["defend"] = {
+        logIdx: [],
+    }
+    for (const [root, ...effects] of partition.defend) {
+        defend.logIdx.push(root.logIdx)
     }
 
     return {
@@ -943,6 +981,8 @@ export function _summarizeCombatUsage(
         damageTaken,
         critMults,
         scan,
+        fail,
+        defend,
     }
 }
 
