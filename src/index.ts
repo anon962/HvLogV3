@@ -1,5 +1,5 @@
 import { CompleteLog } from "./lib/logDb/schema.ts"
-import { DetailsSummary } from "./lib/summary"
+import { DetailsSummary } from "./lib/detailsSummary.ts"
 import { HvLog } from "./lib/ui/hvlog/hvLog.tsx"
 import { mountReact } from "./lib/utils/userscriptUtils.ts"
 

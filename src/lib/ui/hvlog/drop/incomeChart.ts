@@ -1,4 +1,4 @@
-import { DataSeries } from "@/lib/charts/dataSeries"
+import { DataSeries } from "@/lib/dataSeries"
 import { DROP_CATEGORIES, DropSummary } from "@/lib/stats/dropStats"
 import { ItemUsageSummary } from "@/lib/stats/itemUsageStats"
 import { formatNumber } from "@/lib/utils/miscUtils"

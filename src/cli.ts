@@ -6,7 +6,7 @@ import { createWriteStream } from "fs"
 import { fileURLToPath } from "url"
 import { SearchSummary, summarizeSearchStats } from "./lib/searchSummary"
 import { summarizeFinances } from "./lib/stats/dropStats"
-import { DetailsSummary } from "./lib/summary"
+import { DetailsSummary } from "./lib/detailsSummary"
 
 export {}
 

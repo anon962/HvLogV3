@@ -1,6 +1,6 @@
 import { FinanceSummary } from "./stats/dropStats"
 import { MetaSummary } from "./stats/metaStats"
-import { DetailsSummary } from "./summary"
+import { DetailsSummary } from "./detailsSummary"
 import { CombatSummary } from "./stats/combatStats"
 
 export interface SearchSummary {

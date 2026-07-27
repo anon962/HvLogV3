@@ -5,7 +5,7 @@ import { memo, ReactElement, useEffect, useRef, useState } from "react"
 import { IndexMap } from "../../stats/indexMap"
 import { XIcon } from "../icons/tailwind"
 import { BaseHvEvent } from "@/lib/eventParser"
-import { DetailsSummary } from "@/lib/summary"
+import { DetailsSummary } from "@/lib/detailsSummary"
 
 export function LogEventList<T extends BaseHvEvent>(props: {
     log: CompleteLog<T>

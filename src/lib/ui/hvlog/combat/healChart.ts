@@ -1,4 +1,4 @@
-import { DataSeries } from "@/lib/charts/dataSeries"
+import { DataSeries } from "@/lib/dataSeries"
 import { CombatSummary } from "@/lib/stats/combatStats"
 import { IndexMap } from "@/lib/stats/indexMap"
 import * as Plot from "@observablehq/plot"

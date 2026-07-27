@@ -1,5 +1,5 @@
 import { CombatSummary } from "@/lib/stats/combatStats"
-import { DetailsSummary } from "@/lib/summary"
+import { DetailsSummary } from "@/lib/detailsSummary"
 import { formatNumber } from "@/lib/utils/miscUtils"
 import { sort, sortBy, sum } from "myutils"
 import { useEffect, useRef } from "react"

@@ -1,4 +1,4 @@
-import { DetailsSummary } from "@/lib/summary"
+import { DetailsSummary } from "@/lib/detailsSummary"
 import { formatNumber } from "@/lib/utils/miscUtils"
 import { range, sort, sum, sortBy } from "myutils"
 import { useEffect, useRef, useState } from "react"
