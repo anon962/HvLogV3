@@ -287,9 +287,6 @@ export function _summarizeCombatUsage(
                     case "P_DEBUFF_RESIST":
                         partialResistCount += 1
                         break
-                    // case "P_DEBUFF_MISS":
-                    //     resistCount += 1
-                    //     break
                     case "P_SPELL_RESIST":
                         resistCount += 1
                         break
@@ -460,6 +457,15 @@ export function _summarizeCombatUsage(
                         parry: 1,
                     })
                     break
+                case "P_ARCANE_BLOW":
+                    buffer.push("Arcane Blow", {
+                        hitCount: 1,
+                        value: realRoot.event.value,
+                        partialParry: +!!realRoot.event.partial_parry,
+                        crit: +(realRoot.event.multiplier_type === "crits"),
+                        glance: +(realRoot.event.multiplier_type === "glances"),
+                    })
+                    break
                 default:
                     throw new Error()
             }
@@ -506,7 +512,7 @@ export function _summarizeCombatUsage(
                             kill,
                             glance: +(event.multiplier_type === "glances"),
                             crit: +(event.multiplier_type === "crits"),
-                            partialParry: +!!event.parry,
+                            partialParry: +!!event.partial_parry,
                         })
                         break
                     case "P_COUNTER":
@@ -521,6 +527,14 @@ export function _summarizeCombatUsage(
                             value: event.value,
                             hitCount: 1,
                             kill,
+                            parry: +!!event.parry,
+                            partialParry: +!!event.partial_parry,
+                        })
+                        break
+                    case "P_OFFHAND_MISS":
+                        buffer.push("Offhand", {
+                            hitCount: 1,
+                            miss: 1,
                         })
                         break
                 }
@@ -872,11 +886,43 @@ export function _summarizeCombatUsage(
                     case "P_HIT":
                     case "P_ATTACK":
                     case "P_OFFHAND":
+                    case "P_ARCANE_BLOW":
                         push(ev.crit_mult ?? 1)
                         break
                 }
             }
         }
+    }
+
+    const scan: CombatSummary["scan"] = {}
+    for (const [root, ...effects] of partition.scan) {
+        let trainer = null
+        for (const { event } of effects) {
+            switch (event.event_type) {
+                case "SCAN_3":
+                    trainer = event.trainer
+                    break
+            }
+        }
+
+        pushCombatEvent<"scan">(
+            scan,
+            "scan",
+            root.logIdx,
+            {
+                monster: root.event.monster,
+                trainer,
+            },
+            () => ({
+                logIdx: [],
+                monster: [],
+                trainer: [],
+            }),
+            () => ({
+                monster: "",
+                trainer: "",
+            }),
+        )
     }
 
     return {
@@ -896,6 +942,7 @@ export function _summarizeCombatUsage(
         hasDupeError,
         damageTaken,
         critMults,
+        scan,
     }
 }
 

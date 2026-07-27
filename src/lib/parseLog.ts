@@ -90,7 +90,8 @@ export function parseLog(
                     type: "error",
                     detail: errors.length
                         ? errors.join("\n")
-                        : `No matching parser for ${ln}`,
+                        : `No matching parser`,
+                    line: ln,
                 })
             }
         }

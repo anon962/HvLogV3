@@ -1,6 +1,6 @@
-import { findNext, last, sort, zip } from "myutils"
+import { findNext, last, range, sort, zip } from "myutils"
 import { EventGrammar, filterEvents, takeEvents } from "../eventGrammar"
-import { CompleteLog } from "../logDb/schema"
+import { CompleteLog, LogEntry } from "../logDb/schema"
 import { summarizeItemDrops } from "../stats/dropStats"
 import { summarizeItemUsage } from "../stats/itemUsageStats"
 import { MetaSummary, parseBattleType } from "../stats/metaStats"
@@ -23,6 +23,8 @@ import { _summarizeCombatUsage } from "./_summarizeCombatUsage"
 export const v91 = {
     ALL_PARSERS: _ALL_PARSERS,
     summarize: (log: CompleteLog<parsers.HvEvent>) => {
+        log = _parseScans(log)
+
         const partition = partitionLog(log)
 
         const meta = _summarizeMeta(log, partition)
@@ -32,6 +34,7 @@ export const v91 = {
             partition,
         )
         meta.errors.dupes ||= hasDupeError
+        meta.errors.unknownSequence ||= partition.unknown.length > 0
 
         return {
             meta,
@@ -77,8 +80,9 @@ function _summarizeMeta(
         enchants: [],
         errors: {
             ...battleTypeErrors,
-            dupes: false,
             parsing: log.entries.some((x) => x.type === "error"),
+            dupes: false,
+            unknownSequence: false,
         },
     }
 
@@ -132,7 +136,9 @@ function _summarizeMeta(
                     "attack",
                     "skill",
                     "stance",
-                    "skillError",
+                    "fail",
+                    "scan",
+                    "defend",
                     // "unknown",
                     // "start",
                     // "end",
@@ -377,7 +383,9 @@ function partitionLog(log: CompleteLog<parsers.HvEvent>): v91.LogPartition {
         "attack",
         "skill",
         "stance",
-        "skillError",
+        "fail",
+        "scan",
+        "defend",
         // "start",
         // "end",
         // "enemy",
@@ -492,7 +500,10 @@ function partitionLog(log: CompleteLog<parsers.HvEvent>): v91.LogPartition {
         }
 
         if (!seq) {
-            seq = pushSequencedEvents("start", logIdx, [{ refs: ["start"] }])
+            seq = pushSequencedEvents("start", logIdx, [
+                { refs: ["start"] },
+                { refs: ["enemy"] },
+            ])
         }
         if (!seq) {
             seq = pushSequencedEvents("end", logIdx, [{ refs: ["end"] }])
@@ -509,6 +520,7 @@ function partitionLog(log: CompleteLog<parsers.HvEvent>): v91.LogPartition {
         if (!seq && x.type === "event") {
             const pp = (xs: any[]) => (xs ? xs.map((x) => x.event) : null)
             console.debug(
+                "context for unknown",
                 logIdx,
                 // @ts-ignore
                 log.entries[logIdx].event,
@@ -527,7 +539,7 @@ function partitionLog(log: CompleteLog<parsers.HvEvent>): v91.LogPartition {
     }
 
     if (partition.unknown.length > 0) {
-        console.warn("Unknowns in log partition", partition)
+        console.warn("Unknowns in log partition", partition.unknown)
     }
 
     const errors = log.entries.flatMap((x, logIdx) =>
@@ -587,7 +599,9 @@ export namespace v91 {
         start: Array<PartitionSequence<AGKeys<"start", 0>, AGKeys<"start", 1>>>
         end: Array<PartitionSequence<AGKeys<"end", 0>, AGKeys<"end", 1>>>
         flee: Array<PartitionSequence<AGKeys<"flee", 0>, AGKeys<"flee", 1>>>
-        skillError: Array<PartitionSequence<AGKeys<"skillError", 0>, never>>
+        fail: Array<PartitionSequence<AGKeys<"fail", 0>, never>>
+        scan: Array<PartitionSequence<AGKeys<"scan", 0>, AGKeys<"scan", 1>>>
+        defend: Array<PartitionSequence<AGKeys<"defend", 0>, never>>
         unknown: PartitionEntry[][]
     }
     export type LogPartitionEntry<T extends string> = {
@@ -606,6 +620,7 @@ const ACTION_GRAMMAR = {
                 "P_SPELL_RESIST",
                 "P_ABSORB",
                 "P_BUFF_EFFECT",
+                "DISPEL",
                 "P_EXPLOSION",
                 "P_CURE_RESTORE",
                 "P_NAMED_HIT",
@@ -627,7 +642,12 @@ const ACTION_GRAMMAR = {
             },
         },
         {
-            keys: ["P_ATTACK", "P_MELEE_PARRY", "P_MELEE_MISS"],
+            keys: [
+                "P_ATTACK",
+                "P_MELEE_PARRY",
+                "P_MELEE_MISS",
+                "P_ARCANE_BLOW",
+            ],
         },
         {
             refs: ["hit"],
@@ -643,7 +663,8 @@ const ACTION_GRAMMAR = {
             },
         },
         {
-            keys: ["P_NAMED_HIT", "P_OFFHAND"],
+            refs: ["hit"],
+            keys: ["P_NAMED_HIT", "P_OFFHAND", "P_OFFHAND_MISS"],
             repeat: {
                 min: 0,
                 max: 50,
@@ -687,8 +708,11 @@ const ACTION_GRAMMAR = {
                 "P_HIT",
                 "P_DEBUFF_HIT",
                 "P_DEBUFF_RESIST",
-                // "P_DEBUFF_MISS",
                 "MONSTER_DEATH",
+                "YGGDRASIL_BUFF_2",
+                "YGGDRASIL_BUFF_3",
+                "YGGDRASIL_BUFF_4",
+                "YGGDRASIL_BUFF_5",
                 "GEM",
                 // Channeling
                 "P_BUFF_EFFECT",
@@ -700,6 +724,7 @@ const ACTION_GRAMMAR = {
             keys: [
                 "P_COUNTER",
                 "P_SPIKE_SHIELD",
+                "P_STANCE_END",
                 "SPIRIT_SHIELD",
                 "E_ATTACK",
                 "E_ATTACK_PARTIAL",
@@ -714,7 +739,14 @@ const ACTION_GRAMMAR = {
                 "E_SPELL_HIT",
                 "E_SKILL_HIT",
                 "MONSTER_DEATH",
+                "YGGDRASIL_HEAL",
+                "YGGDRASIL_BUFF_2",
+                "YGGDRASIL_BUFF_3",
+                "YGGDRASIL_BUFF_4",
+                "YGGDRASIL_BUFF_5",
                 "GEM",
+                "SPARK_FAIL",
+                "DEFEAT",
                 // Spike shields can debuff
                 "P_DEBUFF_HIT",
                 // Spark + Cloak of the Fallen buff
@@ -732,11 +764,16 @@ const ACTION_GRAMMAR = {
                 "EFFECT_EXPIRE",
                 "P_STANCE_END",
                 "P_CD_EXPIRE",
+                "P_DEBUFF_EXPIRE",
                 // Status effects cause damage outside of enemy attack phase
                 // Ripened Soul hits Emerald Giant for 14646 damage.
                 "P_NAMED_HIT_2",
                 "P_DRAIN",
                 "MONSTER_DEATH",
+                "YGGDRASIL_BUFF_2",
+                "YGGDRASIL_BUFF_3",
+                "YGGDRASIL_BUFF_4",
+                "YGGDRASIL_BUFF_5",
                 "GEM",
             ],
             repeat: {
@@ -756,6 +793,9 @@ const ACTION_GRAMMAR = {
                 "RIDDLE_RESTORE",
                 "P_BUFF_EFFECT",
                 "P_STANCE_END",
+                // Ygg buffing other mobs with Absorbing Ward
+                "YGGDRASIL",
+                "YGGDRASIL_BUFF",
             ],
             repeat: {
                 min: 1,
@@ -785,26 +825,137 @@ const ACTION_GRAMMAR = {
                 "MASTERY_GAIN",
                 "POTENCY_GAIN",
                 "ENCHANT_GAIN",
+                "DAWN",
+                "REPAIR",
+                "REPAIR_2",
+                "CHARM_WEAR",
                 "MB_USAGE",
                 "JPX_TURN_DIVIDER",
                 "JPX_ROUND_DIVIDER",
-                "DEFEAT",
+                // There's probably a final phase that happens at after turn end + round end?
+                "P_STANCE_END",
             ],
             repeat: {
-                min: 1,
+                min: 0,
                 max: 50,
             },
         },
     ],
-    skillError: [
-        { keys: ["SKILL_FAIL", "STANCE_FAIL"], repeat: { min: 0, max: 10 } },
+    fail: [
+        {
+            keys: [
+                "SKILL_FAIL",
+                "STANCE_FAIL",
+                "CAST_FAIL",
+                "ITEM_FAIL",
+                "ATTACK_FAIL",
+                "ATTACK_FAIL_2",
+            ],
+            repeat: { min: 0, max: 10 },
+        },
     ],
     flee: [
         {
+            // Round start grammar can consume the Fleeing buff but whatever
             keys: ["P_BUFF_EFFECT"],
+            repeat: { min: 0, max: 1 },
         },
         {
             keys: ["FLEE"],
         },
     ],
+    scan: [
+        { keys: ["SCAN_1"] },
+        {
+            keys: [
+                "SCAN_2",
+                "SCAN_3",
+                "SCAN_4",
+                "SCAN_5",
+                "SCAN_6",
+                "SCAN_7",
+                "SCAN_8",
+                "SCAN_9",
+                "SCAN_10",
+                "SCAN_11",
+                "SCAN_12",
+                "SCAN_13",
+            ],
+            repeat: {
+                min: 1,
+                max: 20,
+            },
+        },
+    ],
+    defend: [
+        {
+            keys: ["P_DEFEND"],
+        },
+    ],
 } as const satisfies EventGrammar<parsers.HvEvent["event_type"]>
+
+function _parseScans(
+    log: CompleteLog<parsers.HvEvent>,
+): CompleteLog<parsers.HvEvent> {
+    const SCAN_EVENTS = new Set([
+        "SCAN_1",
+        "SCAN_2",
+        "SCAN_3",
+        "SCAN_4",
+        "SCAN_5",
+        "SCAN_6",
+        "SCAN_7",
+        "SCAN_8",
+        "SCAN_9",
+        "SCAN_10",
+        "SCAN_11",
+        "SCAN_12",
+        "SCAN_13",
+    ])
+
+    const isScanEvent = (x?: LogEntry<parsers.HvEvent>) =>
+        x && x.type === "event" && SCAN_EVENTS.has(x.event.event_type)
+
+    // Log lines are normally newest first but scans span multiple lines and are oldest first (when submitting this is reversed)
+    // Anyways this finds and flips the scan events to make parse grammar easier
+    // Also trainer name in scan is always an error (not parseable without seeing nearby lines in log)
+    // So parse that here
+    for (let idx = 1; idx < log.entries.length; idx++) {
+        const startIdx = idx
+        const start = log.entries[startIdx]
+        if (!isScanEvent(start)) {
+            continue
+        }
+
+        const scanEntries = [start]
+        while (true) {
+            const next = log.entries[idx + 1]
+            const next2 = log.entries[idx + 2]
+            if (isScanEvent(next)) {
+                scanEntries.push(next)
+                idx += 1
+            } else if (
+                next2.type === "event" &&
+                next2.event.event_type === "SCAN_2"
+            ) {
+                scanEntries.push({
+                    type: "event",
+                    event: {
+                        event_type: "SCAN_3",
+                        trainer: next.type === "error" ? next.line : null,
+                    },
+                })
+                idx += 1
+            } else {
+                break
+            }
+        }
+
+        scanEntries.reverse()
+        for (const idx of range(scanEntries.length)) {
+            log.entries[startIdx + idx] = scanEntries[idx]
+        }
+    }
+
+    return log
+}

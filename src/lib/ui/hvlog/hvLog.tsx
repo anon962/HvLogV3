@@ -12,7 +12,7 @@ import { ROUTER, Router } from "./router"
 import { humanizeFightingType } from "@/lib/stats/combatStats"
 import { RouteLink } from "../routeLink"
 
-// @fixme: version / reparse
+// @fixme: select with version filter
 // @fixme: monsters killed
 // @fixme: mob leaderboard
 //    appearance (per million)
@@ -25,15 +25,17 @@ import { RouteLink } from "../routeLink"
 // @fixme: income per round
 // @fixme: price history
 // @fixme: client vs server entry points
+// @fixme: equip drop search
+// @fixme: off by one charts
 
 // @todo: separate raw logs / parsed logs / summaries (for lazy fetch)
 // @todo: compression
-// @todo: equip drop search
 // @todo: per round / avgs (config?)
 // @todo: effect blame
 // @todo: chart utils
 // @todo: consistent chart colors
 // @todo: profit history
+// @todo: rotate web cli log
 
 export const HvLog: RootComponent = ({}) => {
     const routes = new CustomMap({

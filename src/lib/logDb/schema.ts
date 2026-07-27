@@ -22,4 +22,4 @@ export interface CompleteLog<T extends BaseHvEvent = BaseHvEvent> {
 
 export type LogEntry<TEvent extends BaseHvEvent> =
     | { type: "event"; event: TEvent }
-    | { type: "error"; detail: string }
+    | { type: "error"; detail: string; line: string }

@@ -63,12 +63,8 @@ export function takeEvents<TEvent extends BaseHvEvent>(
         }
 
         const entryIdx = startIdx + result.length + numErrors
-        const entry = entries[entryIdx]
-        if (!entry) {
-            donePaths.add(pathKey)
-            continue
-        }
-        if (entry.type === "error") {
+        const entry = entries[entryIdx] as LogEntry<TEvent> | undefined
+        if (entry?.type === "error") {
             toCheckUpdate.push({
                 rule,
                 result,
@@ -76,14 +72,13 @@ export function takeEvents<TEvent extends BaseHvEvent>(
             })
             continue
         }
-        const ev = entry.event
 
         const termIdx = result.length
-
         const head = rule.slice(0, termIdx)
         const [term, ...tail] = rule.slice(termIdx)
 
-        let isMatch = term.keys?.includes(ev.event_type)
+        const ev = entry?.event
+        let isMatch = ev && term.keys?.includes(ev.event_type)
         if (term.repeat) {
             if (!term.refs?.length && term.keys?.length) {
                 debugInc("peekRepeat", 1, 0)

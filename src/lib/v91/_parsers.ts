@@ -1,5 +1,5 @@
+import { sort, ValueOf } from "myutils"
 import { BaseHvEvent, EventParser, t } from "../eventParser"
-import { ValueOf } from "myutils"
 
 export namespace v91 {
     export type HvEvent = ValueOf<HvEventMap>
@@ -54,7 +54,7 @@ const PARSERS = {
             monster: t("string")
         }
     ),
-    P_SPELL_ABSORB: new EventParser(
+    P_ABSORB: new EventParser(
         "P_ABSORB",
         `${Monster()} gets hit, but the spell is absorbed\\.`,
         {
@@ -77,13 +77,6 @@ const PARSERS = {
             monster: t("string")
         }
     ),
-    // P_DEBUFF_MISS: new EventParser(
-    //     "P_DEBUFF_MISS",
-    //     `${Monster()} resists your spell\\.`,
-    //     {
-    //         monster: t("string"),
-    //     }
-    // ),
     P_DEBUFF_EXPIRE: new EventParser(
         "P_DEBUFF_EXPIRE",
         `The effect ${Words("effect")} on ${Monster()} has worn off\\.`,
@@ -126,17 +119,16 @@ const PARSERS = {
             damage_type: t("string"),
         }
     ),
-    // Arcane Blow glances Ikuta Minami, which partially parries, causing 1246 points of Crushing damage
-    // Arcane Blow glances Tryuu, causing 2879 points of Crushing damage.
     // Dark Strike hits Tryuu, causing 822 additional points of Dark damage.
     P_NAMED_HIT: new EventParser(
         "P_NAMED_HIT",
-        `${Words("name")} ${Mult("hits", "crits", "glances")} ${Monster()}, (?:${Group("parry", "which partially parries, ")})?causing ${Num("value")} (?:additional )?points of (?:${Word("damage_type")} )?damage\\.`,
+        `${Words("name")} ${CritMult()}${Mult("hits", "crits", "glances")} (?!you)${Monster()}, (?:${Group("partial_parry", "which partially parries, ")})?causing ${Num("value")} (?:additional )?points of (?:${Word("damage_type")} )?damage\\.`,
         {
             name: t("string"),
+            crit_mult: t("number").optional(),
             multiplier_type: t("string"),
             monster: t("string"),
-            parry: t("boolean").optional(),
+            partial_parry: t("boolean").optional(),
             value: t("number"),
             damage_type: t("string").optional(),
         }
@@ -174,15 +166,25 @@ const PARSERS = {
             damage_type: t("string"),
         }
     ),
+    // Your offhand attack glances Luminous Giant, which parries, causing 1 points of Void damage.
     P_OFFHAND: new EventParser(
         "P_OFFHAND",
-        `Your offhand attack ${CritMult()}${Mult("hits", "crits")} ${Monster()}, causing ${Num("value")} points of ${Word("damage_type")} damage\\.`,
+        `Your offhand attack ${CritMult()}${Mult("glances", "hits", "crits")} ${Monster()}, (?:${Group("partial_parry", "which partially parries, ")})?(?:${Group("parry", "which parries, ")})?causing ${Num("value")} points of ${Word("damage_type")} damage\\.`,
         {
             crit_mult: t("number").optional(),
             multiplier_type: t('string'),
             monster: t("string"),
+            partial_parry: t("boolean").optional(),
+            parry: t("boolean").optional(),
             value: t("number"),
             damage_type: t("string"),
+        }
+    ),
+    P_OFFHAND_MISS: new EventParser(
+        "P_OFFHAND_MISS",
+        `${Monster()} evades your offhand attack\\.`,
+        {
+            monster: t("string"),
         }
     ),
     P_CD_EXPIRE: new EventParser(
@@ -239,6 +241,133 @@ const PARSERS = {
         {
             value: t("number"),
             type: t("string"),
+        }
+    ),
+    // This is separate from P_NAMED_HIT to help our jank ass parser
+    // (specifically because staff attacks arent preceded by P_ATTACK)
+    // Arcane Blow glances Ikuta Minami, which partially parries, causing 1246 points of Crushing damage
+    // Arcane Blow glances Tryuu, causing 2879 points of Crushing damage.
+    P_ARCANE_BLOW: new EventParser(
+        "P_ARCANE_BLOW",
+        `Arcane Blow ${CritMult()}${Mult("hits", "crits", "glances")} ${Monster()}, (?:${Group("parry", "which partially parries, ")})?causing ${Num("value")} (?:additional )?points of (?:${Word("damage_type")} )?damage\\.`,
+        {
+            crit_mult: t("number").optional(),
+            multiplier_type: t("string"),
+            monster: t("string"),
+            partial_parry: t("boolean").optional(),
+            value: t("number"),
+            damage_type: t("string").optional(),
+        }
+    ),
+    // Same deal as arcane blow
+    P_DEFEND: new EventParser(
+        "P_DEFEND",
+        `You gain the effect Defending\\.`,
+        {}
+    ),
+    // Scanning Peerlesssss2 Leather... HP: 228843 / 229060 MP: 19% SP: 22%
+    SCAN_1: new EventParser(
+        "SCAN_1",
+        `Scanning ${Monster()}... HP: ${Num("hp_min")} / ${Num("hp_max")} MP: ${Num("mp_perc")}% SP: ${Num("sp_perc")}%`,
+        {
+            monster: t("string"),
+            hp_min: t("number"),
+            hp_max: t("number"),
+            mp_perc: t("number"),
+            sp_perc: t("number"),
+        }
+    ),
+    SCAN_2: new EventParser(
+        "SCAN_2",
+        `Monster Trainer:`,
+        {}
+    ),
+    // sssss2
+    SCAN_3: new EventParser(
+        "SCAN_3",
+        `placeholder_for_trainer`,
+        { trainer: t("string").optional() }
+    ),
+    SCAN_4: new EventParser(
+        "SCAN_4",
+        `Monster Class:`,
+        {}
+    ),
+    // Dragonkin, Power Level 2250
+    SCAN_5: new EventParser(
+        "SCAN_5",
+        `${Words("class")}, Power Level ${Num("pl")}`,
+        {
+            class: t("string"),
+            pl: t("number"),
+        }
+    ),
+    SCAN_6: new EventParser(
+        "SCAN_6",
+        `Melee Attack:`,
+        {
+        }
+    ),
+    // Piercing; Accuracy 339.0 (30.9% hit chance against player)
+    SCAN_7: new EventParser(
+        "SCAN_7",
+        `${Words("type")}; Accuracy ${Float("accuracy")} \\(${Float("hit_chance")}% hit chance against player\\)`,
+        {
+            type: t("string"),
+            accuracy: t("number"),
+            hit_chance: t("number"),
+        }
+    ),
+    SCAN_8: new EventParser(
+        "SCAN_8",
+        `Avoidance:`,
+        {}
+    ),
+    // Evade 934.0 (29.6% base chance vs player attack, 12.9% base chance vs player magic)
+    SCAN_9: new EventParser(
+        "SCAN_9",
+        `Evade ${Float("evade")} \\(${Float("phys_chance")}% base chance vs player attack, ${Float("magic_chance")}% base chance vs player magic\\)`,
+        {
+            evade: t("number"),
+            phys_chance: t("number"),
+            magic_chance: t("number"),
+        }
+    ),
+    SCAN_10: new EventParser(
+        "SCAN_10",
+        `Intercept:`,
+        {}
+    ),
+    // Parry 1250 (39.9% base chance vs player attack) Resist 1250 (8.6% base chance vs player magic)
+    SCAN_11: new EventParser(
+        "SCAN_11",
+        `Parry ${Float("parry")} \\(${Float("phys_chance")}% base chance vs player attack\\) Resist ${Float("resist")} \\(${Float("magic_chance")}% base chance vs player magic\\)`,
+        {
+            parry: t("number"),
+            phys_chance: t("number"),
+            resist: t("number"),
+            magic_chance: t("number"),
+        }
+    ),
+    SCAN_12: new EventParser(
+        "SCAN_12",
+        `Resists:`,
+        {}
+    ),
+    // Fire:+35%Cold:+0%Elec:+35%Wind:+10%Holy:+62%Dark:+37%Crushing:+25%Slashing:+25%Piercing:+0%
+    SCAN_13: new EventParser(
+        "SCAN_13",
+        `Fire:\\+${Float("fire")}%Cold:\\+${Float("cold")}%Elec:\\+${Float("elec")}%Wind:\\+${Float("wind")}%Holy:\\+${Float("holy")}%Dark:\\+${Float("dark")}%Crushing:\\+${Float("crushing")}%Slashing:\\+${Float("slashing")}%Piercing:\\+${Float("piercing")}%`,
+        {
+            fire: t("number"),
+            cold: t("number"),
+            elec: t("number"),
+            wind: t("number"),
+            holy: t("number"),
+            dark: t("number"),
+            crushing: t("number"),
+            slashing: t("number"),
+            piercing: t("number"),
         }
     ),
 
@@ -369,7 +498,56 @@ const PARSERS = {
             damage_type: t("string"),
         }
     ),
-
+    YGGDRASIL: new EventParser(
+        "YGGDRASIL",
+        `A shimmering light is pulsating from Yggdrasil...`,
+        {}
+    ),
+    // Yggdrasil casts Healing Roots, healing Real Life for 12 points of health.
+    YGGDRASIL_HEAL: new EventParser(
+        "YGGDRASIL_HEAL",
+        `Yggdrasil casts Healing Roots, healing ${Monster()} for ${Num('value')} points of health.`,
+        {
+            monster: t('string'),
+            value: t('number')
+        }
+    ),
+    // Verdandi gains the effect Absorbing Ward.
+    YGGDRASIL_BUFF: new EventParser(
+        "YGGDRASIL_BUFF",
+        `${Monster()} gains the effect Absorbing Ward\\.`,
+        {
+            monster: t("string"),
+        }
+    ),
+    YGGDRASIL_BUFF_2: new EventParser(
+        "YGGDRASIL_BUFF_2",
+        `${Monster()} gains the effect Fury of the Sisters\\.`,
+        {
+            monster: t("string"),
+        }
+    ),
+    YGGDRASIL_BUFF_3: new EventParser(
+        "YGGDRASIL_BUFF_3",
+        `${Monster()} gains the effect Lamentations of the Future\\.`,
+        {
+            monster: t("string"),
+        }
+    ),
+    YGGDRASIL_BUFF_4: new EventParser(
+        "YGGDRASIL_BUFF_4",
+        `${Monster()} gains the effect Wails of the Present\\.`,
+        {
+            monster: t("string"),
+        }
+    ),
+    YGGDRASIL_BUFF_5: new EventParser(
+        "YGGDRASIL_BUFF_5",
+        `${Monster()} gains the effect Screams of the Past\\.`,
+        {
+            monster: t("string"),
+        }
+    ),
     // Effects
     RIDDLE_RESTORE: new EventParser(
         "RIDDLE_RESTORE",
@@ -403,6 +581,11 @@ const PARSERS = {
         `Spark of Life saves you from the brink of defeat!`,
         {}
     ),
+    SPARK_FAIL: new EventParser(
+        "SPARK_FAIL",
+        `Spark of Life fails due to insufficient Spirit!`,
+        {}
+    ),
     DISPEL: new EventParser(
         "DISPEL",
         `The effect ${Words("effect")} was dispelled\\.`,
@@ -428,8 +611,29 @@ const PARSERS = {
     STANCE_FAIL: new EventParser(
         "STANCE_FAIL",
         `Insufficient overcharge or spirit for Spirit Stance.`,
+        {}
+    ),
+    CAST_FAIL: new EventParser(
+        "CAST_FAIL",
+        `Cooldown is still pending for (${Words('spell')}).`,
         {
+            spell: t('string')
         }
+    ),
+    ITEM_FAIL: new EventParser(
+        "ITEM_FAIL",
+        `Slot is currently not usable.`,
+        {}
+    ),
+    ATTACK_FAIL: new EventParser(
+        "ATTACK_FAIL",
+        `Stop beating dead ponies.`,
+        {}
+    ),
+    ATTACK_FAIL_2: new EventParser(
+        "ATTACK_FAIL_2",
+        `Stop kicking the dead horse.`,
+        {}
     ),
     // Info
     ROUND_START: new EventParser(
@@ -613,10 +817,28 @@ const PARSERS = {
         `With the light of a new dawn, your experience in all things increases.`,
         {}
     ),
-    YGGDRASIL: new EventParser(
-        "YGGDRASIL",
-        `A shimmering light is pulsating from Yggdrasil...`,
-        {}
+    REPAIR: new EventParser(
+        "REPAIR",
+        `Your ${Words("equip")} is low on energy, and should be repaired soon.`,
+        {
+            equip: t("string")
+        }
+    ),
+    REPAIR_2: new EventParser(
+        "REPAIR_2",
+        `Your ${Words('equip')} is damaged, and should be repaired soon.`,
+        {
+            equip: t("string")
+        }
+    ),
+    // The Juggernaut Charm) on your Legendary Radiant Phase Cap of Heimdall is wearing out, and should be replaced.
+    CHARM_WEAR: new EventParser(
+        "CHARM_WEAR",
+        `The ${Words("charm")} Charm\\)? on your ${Words("equip")} is wearing out, and should be replaced.`,
+        {
+            charm: t("string"),
+            equip: t("string")
+        }
     ),
     MB_USAGE: new EventParser(
         "MB_USAGE",
@@ -629,55 +851,27 @@ const PARSERS = {
     JPX_ROUND_DIVIDER: new EventParser("JPX_ROUND_DIVIDER", `\\++`, {}),
 } as const
 
-export const _ALL_PARSERS = Object.values(PARSERS)
-
-// Run most likely parsers first
+// ~~Run most likely parsers first~~
+// Override run order
 const parserFrequency = {
-    DEBUFF: 13619,
-    E_MISS: 11264,
-    P_ATTACK: 10311,
-    P_ATTACK_2: 10311,
-    SPAWN: 8383,
-    MONSTER_DEATH: 8383,
-    P_MELEE: 6326,
-    P_SKILL: 6326,
-    E_BASIC: 5235,
-    DROP: 4580,
-    EFFECT_RESTORE: 4316,
-    COOLDOWN_EXPIRE: 2065,
-    SPIRIT_SHIELD: 1274,
-    ROUND_START: 1000,
-    ROUND_END: 1000,
-    EXPERIENCE: 1000,
-    CURE_RESTORE: 958,
-    E_MISS_2: 851,
-    E_MISS_3: 851,
-    E_SKILL_MISS: 851,
-    E_SKILL_MISS_2: 851,
-    P_BUFF: 640,
-    RESIST: 558,
-    P_ITEM: 465,
-    ITEM_RESTORE: 413,
-    E_SKILL_SUCCESS: 374,
-    DEBUFF_EXPIRE: 125,
-    AUTO_SELL: 117,
-    DISPEL: 96,
-    SPARK_TRIGGER: 81,
-    PROFICIENCY: 29,
-    E_ABSORB: 26,
-    RIDDLE_MASTER: 14,
-    RIDDLE_RESTORE: 14,
-    GEM: 1,
-    CREDITS: 1,
-    P_SPIKE_SHIELD: 1,
-    EXPLOSION: 1,
-} as Record<string, number>
+    P_NAMED_HIT: -1,
+    ARCANE_BLOW: 99,
+    P_OFFHAND: 99,
 
-_ALL_PARSERS
-    .sort(
-        (a, b) =>
-            (parserFrequency[a.name] ?? 0) - (parserFrequency[b.name] ?? 0),
-    )
-    .reverse()
+    P_DEBUFF_HIT: -1,
+    YGGDRASIL_BUFF: 99,
+    YGGDRASIL_BUFF_2: 99,
+    YGGDRASIL_BUFF_3: 99,
+    YGGDRASIL_BUFF_4: 99,
+    YGGDRASIL_BUFF_5: 99,
+
+    P_BUFF_EFFECT: -1,
+    P_DEFEND: 99,
+} as Record<string, number>
+export const _ALL_PARSERS = sort(
+    Object.values(PARSERS),
+    (p) => parserFrequency[p.name] ?? 0,
+    true,
+)
 
 type _P = typeof PARSERS

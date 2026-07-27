@@ -173,11 +173,12 @@ export namespace LogListN {
 
     export const ERRORS = [
         { id: "none", label: "(none)" },
-        { id: "inconsistentBattleTypes", label: "inconsistent" },
+        { id: "inconsistentBattleTypes", label: "battleType" },
         { id: "parsing", label: "parsing" },
-        { id: "missingStart", label: "missingStart" },
-        { id: "missingEnd", label: "missingEnd" },
+        { id: "missingStart", label: "noStart" },
+        { id: "missingEnd", label: "noEnd" },
         { id: "dupes", label: "dupes" },
+        { id: "unknownSequence", label: "unkSeq" },
     ]
 
     export const PARAM_SCHEMA = {

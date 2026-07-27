@@ -53,6 +53,7 @@ export interface MetaSummary {
         missingStart: boolean
         missingEnd: boolean
         dupes: boolean
+        unknownSequence: boolean
     }
 }
 

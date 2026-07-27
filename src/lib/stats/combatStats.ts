@@ -105,6 +105,7 @@ export type CombatSummaryEventMap = {
     skill: SkillEvent
     passiveAttack: PassiveAttackEvent
     riddlemaster: RiddlemasterEvent
+    scan: ScanEvent
 }
 
 type SpellEvent = {
@@ -159,6 +160,10 @@ type PassiveAttackEvent = {
     kill: number
 }
 type RiddlemasterEvent = {}
+type ScanEvent = {
+    monster: string
+    trainer: string | null
+}
 
 export const MAGE_STYLES = {
     "Dark Mage": {

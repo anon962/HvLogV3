@@ -12,7 +12,7 @@ export function CombatInfo({ stats }: { stats: DetailsSummary }) {
         <div className="combat-info p-8 overflow-auto h-full flex flex-col gap-12">
             <div className="flex gap-8">
                 {MiscTable(stats)}
-                {CastTable(stats)}
+                {ActionTable(stats)}
             </div>
 
             {DamageTable(stats)}
@@ -37,12 +37,10 @@ type CastTableData = TallyTableProps<
     { label: string; count: number; countRound: number; uptime: number }
 >
 
-function CastTable({ meta, combat }: DetailsSummary) {
+function ActionTable({ meta, combat }: DetailsSummary) {
     let rows = [] as CastTableData["rows"]
 
-    const ti = new Set(meta.turnIndices)
-    const blame = {} as any
-
+    const roundCount = meta.round?.end ?? 1
     for (const action of [
         { label: "Heals", data: combat.heal, showSub: true },
         { label: "Buffs", data: combat.buff, showSub: true },
@@ -55,12 +53,11 @@ function CastTable({ meta, combat }: DetailsSummary) {
             Object.values(action.data).map((xs) => ({
                 label: xs.key,
                 count: xs.events.logIdx.length,
-                countRound: xs.events.logIdx.length / (meta.round?.end ?? 1),
+                countRound: xs.events.logIdx.length / roundCount,
                 uptime:
                     xs.key in combat.downtime
-                        ? ((meta.round?.end ?? 1) -
-                              (combat.downtime[xs.key] ?? 0)) /
-                          (meta.round?.end ?? 1)
+                        ? (roundCount - (combat.downtime[xs.key] ?? 0)) /
+                          roundCount
                         : -1,
             })),
             [{ fn: (r) => r.count }, { fn: (r) => r.label, reverse: true }],
@@ -94,6 +91,37 @@ function CastTable({ meta, combat }: DetailsSummary) {
             selectable: action.showSub ? binned.length > 0 : false,
             disabled: binned.length === 0,
         })
+    }
+
+    {
+        const otherActions = []
+        for (const { label, count } of [
+            {
+                label: "Scan",
+                count: combat.scan["scan"]?.events.logIdx.length ?? 0,
+            },
+            {
+                label: "Flee",
+                count: meta.completionType === "flee" ? 1 : 0,
+            },
+            // {
+            //     label: "Defend",
+            //     count: combat.,
+            // },
+            // {
+            //     label: "Fails",
+            //     count: combat.
+            // },
+        ]) {
+            if (count > 0) {
+                otherActions.push({
+                    label,
+                    count,
+                    countRound: count / roundCount,
+                    uptime: -1,
+                })
+            }
+        }
     }
 
     // if (group.label === "Times Sparked" && subRows.length) {
