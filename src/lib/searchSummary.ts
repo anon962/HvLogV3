@@ -4,7 +4,11 @@ import { DetailsSummary } from "./detailsSummary"
 import { CombatSummary } from "./stats/combatStats"
 
 export interface SearchSummary {
-    meta: MetaSummary
+    meta: Omit<MetaSummary, "turnIndices" | "roundIndices"> & {
+        turnCount: number
+        turnIndices: undefined
+        roundIndices: undefined
+    }
     finances: FinanceSummary
     equips: string[]
     style: CombatSummary["style"]
@@ -32,7 +36,12 @@ export function summarizeSearchStats(
     }
 
     return {
-        meta: details.meta,
+        meta: {
+            ...details.meta,
+            turnCount: details.meta.turnIndices.length,
+            turnIndices: undefined,
+            roundIndices: undefined,
+        },
         finances,
         equips,
         style: details.combat.style,

@@ -44,7 +44,7 @@ export namespace LogListN {
             header: { content: "Turns" },
             align: "text-right",
             cell: (x) => ({
-                content: `${formatNumber(x.search.meta.turnIndices.length)} turns`,
+                content: `${formatNumber(x.search.meta.turnCount)} turns`,
                 className: "turns",
             }),
         },

@@ -2,10 +2,16 @@ import path from "path"
 import { CompleteLog, LogEntry } from "./lib/logDb/schema"
 import { parseLog } from "./lib/parseLog"
 import { v91 } from "./lib/v91/v91"
-import { createWriteStream } from "fs"
+import {
+    createWriteStream,
+    existsSync,
+    readdirSync,
+    renameSync,
+    statSync,
+    unlinkSync,
+} from "fs"
 import { fileURLToPath } from "url"
 import { SearchSummary, summarizeSearchStats } from "./lib/searchSummary"
-import { summarizeFinances } from "./lib/stats/dropStats"
 import { DetailsSummary } from "./lib/detailsSummary"
 
 export {}
@@ -14,14 +20,8 @@ const write = (x: string) => process.stdout.write(x + "\n")
 
 const __file__ = fileURLToPath(import.meta.url)
 const ROOT_DIR = path.dirname(path.dirname(path.dirname(__file__)))
-const logFile = path.join(
-    // process.cwd(),
-    // "web_cli.log",
-    ROOT_DIR,
-    "data",
-    "logs",
-    "web_cli.log",
-)
+const logDir = path.join(ROOT_DIR, "data", "logs")
+const logFile = path.join(logDir, "web_cli.log")
 const logStream = createWriteStream(logFile, { flags: "a", flush: true })
 
 for (const level of ["log", "info", "warn", "debug", "error"] as const) {
