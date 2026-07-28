@@ -1,9 +1,10 @@
-import { findNext, last, range, sort, zip } from "myutils"
+import { findNext, InferCollectionType, last, range, sort, zip } from "myutils"
 import { EventGrammar, filterEvents, takeEvents } from "../eventGrammar"
 import { CompleteLog, LogEntry } from "../logDb/schema"
 import { summarizeItemDrops } from "../stats/dropStats"
 import { summarizeItemUsage } from "../stats/itemUsageStats"
 import { MetaSummary, parseBattleType } from "../stats/metaStats"
+import { DetailsSummary, MonsterSummary } from "../summary"
 import {
     BUBBLE_VASE,
     CONSUMABLES,
@@ -16,32 +17,30 @@ import {
     SPIRIT_ITEMS,
     TROPHIES,
 } from "../ui/constants"
-import { InferCollectionType } from "myutils"
 import { _ALL_PARSERS, v91 as parsers } from "./_parsers"
-import { _summarizeCombatUsage } from "./_summarizeCombat"
-import { DetailsSummary } from "../summary"
+import { _summarizeCombat } from "./_summarizeCombat"
+import { _summarizeMonsters } from "./_summarizeMonsters"
 
 export const v91 = {
     ALL_PARSERS: _ALL_PARSERS,
-    summarizeDetails: (log: CompleteLog<parsers.HvEvent>): DetailsSummary => {
-        log = _parseScans(log)
+    summarizeDetails: (
+        entries: CompleteLog<parsers.HvEvent>["entries"],
+    ): DetailsSummary => {
+        entries = _parseScans(entries)
 
-        const partition = partitionLog(log)
+        const partition = partitionLog(entries)
 
-        const meta = _summarizeMeta(log, partition)
+        const meta = _summarizeMeta(entries, partition)
 
-        const { hasDupeError, ...combat } = _summarizeCombatUsage(
-            log,
-            partition,
-        )
+        const { hasDupeError, ...combat } = _summarizeCombat(entries, partition)
         meta.errors.dupes ||= hasDupeError
         meta.errors.unknownSequence ||= partition.unknown.length > 0
 
-        return {
+        const details = {
             meta,
-            drops: _summarizeItemDrops(log),
+            drops: _summarizeItemDrops(entries),
             usage: summarizeItemUsage(
-                log,
+                entries,
                 (ev) =>
                     ev.event_type === "P_ITEM_OR_SKILL"
                         ? [{ key: ev.name, count: 1 }]
@@ -57,11 +56,20 @@ export const v91 = {
             ),
             combat,
         }
+
+        return details
+    },
+    summarizeMonsters: (
+        entries: CompleteLog<parsers.HvEvent>["entries"],
+    ): MonsterSummary => {
+        const partition = partitionLog(entries)
+        const monsters = _summarizeMonsters(entries, partition)
+        return monsters
     },
 }
 
 function _summarizeMeta(
-    log: CompleteLog<parsers.HvEvent>,
+    entries: CompleteLog<parsers.HvEvent>["entries"],
     partition: v91.LogPartition,
 ): MetaSummary {
     const completionType = getCompletionType()
@@ -77,19 +85,19 @@ function _summarizeMeta(
         round,
         roundIndices: getRoundIndices(),
         turnIndices: getTurnIndices(),
-        eventCount: log.entries.length,
+        eventCount: entries.length,
         enchants: [],
         errors: {
             ...battleTypeErrors,
-            parsing: log.entries.some((x) => x.type === "error"),
+            parsing: entries.some((x) => x.type === "error"),
             dupes: false,
             unknownSequence: false,
         },
     }
 
     function getBattleType(completionType: MetaSummary["completionType"]) {
-        const starts = filterEvents(log.entries, ["ROUND_START"])
-        const ends = filterEvents(log.entries, ["ROUND_END"])
+        const starts = filterEvents(entries, ["ROUND_START"])
+        const ends = filterEvents(entries, ["ROUND_END"])
 
         const battleType = starts[0]?.battle_type
             ? parseBattleType(starts[0].battle_type)
@@ -167,7 +175,7 @@ function _summarizeMeta(
     }
 
     function getCompletionType(): MetaSummary["completionType"] {
-        const evs = filterEvents(log.entries, null)
+        const evs = filterEvents(entries, null)
 
         // Find ROUND_END
         const endMarkers = new Set(["ROUND_END", "DEFEAT", "FLEE"] as const)
@@ -195,9 +203,9 @@ function _summarizeMeta(
     }
 }
 
-function _summarizeItemDrops(log: CompleteLog<parsers.HvEvent>) {
+function _summarizeItemDrops(entries: CompleteLog<parsers.HvEvent>["entries"]) {
     return summarizeItemDrops(
-        log,
+        entries,
         (ev: parsers.HvEvent) => {
             switch (ev.event_type) {
                 case "AUTO_SALVAGE": {
@@ -377,7 +385,9 @@ function _summarizeItemDrops(log: CompleteLog<parsers.HvEvent>) {
     )
 }
 
-function partitionLog(log: CompleteLog<parsers.HvEvent>): v91.LogPartition {
+function partitionLog(
+    entries: CompleteLog<parsers.HvEvent>["entries"],
+): v91.LogPartition {
     const actionKeys = [
         "cast",
         "item",
@@ -417,7 +427,7 @@ function partitionLog(log: CompleteLog<parsers.HvEvent>): v91.LogPartition {
         let start, end
         if (parseTimes) start = performance.now()
 
-        const result = takeEvents(ACTION_GRAMMAR, log.entries, logIdx, rootRef)
+        const result = takeEvents(ACTION_GRAMMAR, entries, logIdx, rootRef)
         if (!result[0]) {
             return null
         }
@@ -461,7 +471,7 @@ function partitionLog(log: CompleteLog<parsers.HvEvent>): v91.LogPartition {
             // Also can't distinguish between debuff proc'd by cast and one proc'd by attack
             // (Because debuffs for attack occur before the actual hit lol)
             const lastEvent = last(seq)!
-            const nextSeqStart = log.entries[lastEvent.logIdx + 1]
+            const nextSeqStart = entries[lastEvent.logIdx + 1]
             const nextSeqStartEvent =
                 nextSeqStart?.type === "event" ? nextSeqStart.event : null
             if (
@@ -485,7 +495,7 @@ function partitionLog(log: CompleteLog<parsers.HvEvent>): v91.LogPartition {
     }
 
     let prevSeq: any = null
-    for (let logIdx = 0; logIdx < log.entries.length; logIdx += 1) {
+    for (let logIdx = 0; logIdx < entries.length; logIdx += 1) {
         let seq = null
         let _ = null
         let seqAction = null
@@ -517,16 +527,16 @@ function partitionLog(log: CompleteLog<parsers.HvEvent>): v91.LogPartition {
             logIdx = last(seq)!.logIdx
         }
 
-        const x = log.entries[logIdx]
+        const x = entries[logIdx]
         if (!seq && x.type === "event") {
             const pp = (xs: any[]) => (xs ? xs.map((x) => x.event) : null)
             console.debug(
                 "context for unknown",
                 logIdx,
                 // @ts-ignore
-                log.entries[logIdx].event,
+                entries[logIdx].event,
                 pp(prevSeq),
-                pp(log.entries.slice(logIdx, logIdx + 30)),
+                pp(entries.slice(logIdx, logIdx + 30)),
             )
             partition["unknown"].push([
                 {
@@ -543,7 +553,7 @@ function partitionLog(log: CompleteLog<parsers.HvEvent>): v91.LogPartition {
         console.warn("Unknowns in log partition", partition.unknown)
     }
 
-    const errors = log.entries.flatMap((x, logIdx) =>
+    const errors = entries.flatMap((x, logIdx) =>
         x.type === "error" ? [{ logIdx, ...x }] : [],
     )
     if (errors.length > 0) {
@@ -624,7 +634,7 @@ const ACTION_GRAMMAR = {
                 "DISPEL",
                 "P_EXPLOSION",
                 "P_CURE_RESTORE",
-                "P_NAMED_HIT",
+                // "P_NAMED_HIT",
                 "P_NAMED_HIT_2",
             ],
             repeat: {
@@ -896,8 +906,8 @@ const ACTION_GRAMMAR = {
 } as const satisfies EventGrammar<parsers.HvEvent["event_type"]>
 
 function _parseScans(
-    log: CompleteLog<parsers.HvEvent>,
-): CompleteLog<parsers.HvEvent> {
+    entries: CompleteLog<parsers.HvEvent>["entries"],
+): CompleteLog<parsers.HvEvent>["entries"] {
     const SCAN_EVENTS = new Set([
         "SCAN_1",
         "SCAN_2",
@@ -921,17 +931,17 @@ function _parseScans(
     // Anyways this finds and flips the scan events to make parse grammar easier
     // Also trainer name in scan is always an error (not parseable without seeing nearby lines in log)
     // So parse that here
-    for (let idx = 1; idx < log.entries.length; idx++) {
+    for (let idx = 1; idx < entries.length; idx++) {
         const startIdx = idx
-        const start = log.entries[startIdx]
+        const start = entries[startIdx]
         if (!isScanEvent(start)) {
             continue
         }
 
         const scanEntries = [start]
         while (true) {
-            const next = log.entries[idx + 1]
-            const next2 = log.entries[idx + 2]
+            const next = entries[idx + 1]
+            const next2 = entries[idx + 2]
             if (isScanEvent(next)) {
                 scanEntries.push(next)
                 idx += 1
@@ -954,9 +964,9 @@ function _parseScans(
 
         scanEntries.reverse()
         for (const idx of range(scanEntries.length)) {
-            log.entries[startIdx + idx] = scanEntries[idx]
+            entries[startIdx + idx] = scanEntries[idx]
         }
     }
 
-    return log
+    return entries
 }

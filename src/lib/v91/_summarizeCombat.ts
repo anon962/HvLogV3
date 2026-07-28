@@ -23,8 +23,8 @@ const enemyActions = new Set([
     "E_SKILL_HIT",
 ])
 
-export function _summarizeCombatUsage(
-    log: CompleteLog<parsers.HvEvent>,
+export function _summarizeCombat(
+    entries: CompleteLog<parsers.HvEvent>["entries"],
     partition: v91.LogPartition,
 ): CombatSummary & { hasDupeError: boolean } {
     const effectBlame: Record<string, string> = {}
@@ -661,7 +661,7 @@ export function _summarizeCombatUsage(
     const confirmedCd = new Set<string>()
     const downtime: Record<string, number> = {}
     let hasDupeError = false
-    for (const [idx, x] of enumerate(log.entries)) {
+    for (const [idx, x] of enumerate(entries)) {
         if (x.type === "error") {
             continue
         }
@@ -683,7 +683,7 @@ export function _summarizeCombatUsage(
                     // console.log(
                     //     "del",
                     //     k,
-                    //     log.entries.slice(idx - 50, idx + 50).map((x) => x.event),
+                    //     entries.slice(idx - 50, idx + 50).map((x) => x.event),
                     // )
                 }
             } else {
@@ -774,7 +774,7 @@ export function _summarizeCombatUsage(
             }
         }
 
-        for (const [idx, entry] of enumerate(log.entries)) {
+        for (const [idx, entry] of enumerate(entries)) {
             if (entry.type === "error") {
                 continue
             }

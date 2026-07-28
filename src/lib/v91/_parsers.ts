@@ -241,6 +241,7 @@ const PARSERS = {
         {
             value: t("number"),
             type: t("string"),
+            monster: t("string"),
         }
     ),
     // This is separate from P_NAMED_HIT to help our jank ass parser
@@ -662,7 +663,7 @@ const PARSERS = {
     ),
     SPAWN: new EventParser(
         "SPAWN",
-        `Spawned Monster ${Group("letter", "[A-Z]")}: MID=${Num("mid")} \\\(${Monster()}\\\) LV=${Num("level")} HP=${Num("hp")}`,
+        `Spawned Monster ${Group("letter", "[A-Z]")}: MID=${Num("mid")} \\(${Monster()}\\) LV=${Num("level")} HP=${Num("hp")}`,
         {
             letter: t("string"),
             mid: t("number"),

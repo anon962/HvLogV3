@@ -25,7 +25,6 @@ import { IndexMap } from "@/lib/stats/indexMap"
 //    attack rate
 //    trainer table vs mob table (searchable)
 // @fixme: item world
-// @fixme: income per round
 // @fixme: client vs server entry points
 // @fixme: equip drop search
 // @fixme: off by one charts
@@ -76,6 +75,11 @@ export const HvLog: RootComponent = ({}) => {
 
 function LogDetailsRoute(props: { id: string }) {
     const logSource = LOG_SOURCE.useContext()
+
+    const { data: prices } = useAsync(
+        async () => await logSource.fetchPrices(),
+        null,
+    )
     const { data: details } = useAsync(
         async () => await logSource.fetchDetails(props.id),
         null,
@@ -84,6 +88,7 @@ function LogDetailsRoute(props: { id: string }) {
         await sleep(500)
         return await logSource.fetchLog(props.id)
     }, null)
+
     let title
     if (log && details) {
         const d = new Date(log.meta.start)
@@ -122,12 +127,14 @@ function LogDetailsRoute(props: { id: string }) {
             </div>
 
             <div className="w-full max-w-[60rem] h-full mx-auto">
-                <LogDetailsPane
-                    log={log}
-                    prices={window.HV_LOG_PRICES}
-                    details={details}
-                    indexMap={indexMap}
-                />
+                {prices && (
+                    <LogDetailsPane
+                        log={log}
+                        prices={prices}
+                        details={details}
+                        indexMap={indexMap}
+                    />
+                )}
             </div>
         </div>
     )

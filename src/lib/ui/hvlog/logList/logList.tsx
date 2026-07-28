@@ -89,6 +89,7 @@ export function Table() {
             onHover={{
                 delay: 300,
                 fn: (id) => {
+                    logSource.fetchPrices()
                     logSource.fetchDetails(id)
                 },
             }}

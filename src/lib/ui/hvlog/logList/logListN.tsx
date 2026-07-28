@@ -315,8 +315,8 @@ export namespace LogListN {
                 ({
                     pageIdx,
                     pageSize,
-                    id_user: params["id_user"],
-                    key_user: params["key_user"],
+                    idUser: params["id_user"],
+                    keyUser: params["key_user"],
                     sortCriteria: sortCid
                         ? {
                               cid: sortCid,

@@ -37,7 +37,7 @@ export type DropSummary = Record<
 
 // Classify drops
 export function summarizeItemDrops<T extends BaseHvEvent>(
-    log: CompleteLog<T>,
+    entries: CompleteLog<T>["entries"],
     count: (ev: T) => Array<{
         key: string
         name?: string
@@ -49,7 +49,7 @@ export function summarizeItemDrops<T extends BaseHvEvent>(
 ): DropSummary {
     const drops: DropSummary = {}
 
-    for (const [logIdx, entry] of enumerate(log.entries)) {
+    for (const [logIdx, entry] of enumerate(entries)) {
         if (entry.type !== "event") {
             continue
         }

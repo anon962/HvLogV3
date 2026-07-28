@@ -30,7 +30,7 @@ export type ItemUsageSummary = Record<
 >
 
 export function summarizeItemUsage<T extends BaseHvEvent>(
-    log: CompleteLog<T>,
+    entries: CompleteLog<T>["entries"],
     count: (ev: T) => Array<{
         key: string
         name?: string
@@ -44,7 +44,7 @@ export function summarizeItemUsage<T extends BaseHvEvent>(
 ): ItemUsageSummary {
     const summary: ItemUsageSummary = {}
 
-    for (const [logIdx, entry] of enumerate(log.entries)) {
+    for (const [logIdx, entry] of enumerate(entries)) {
         if (entry.type !== "event") {
             continue
         }

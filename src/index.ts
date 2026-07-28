@@ -8,7 +8,6 @@ async function main() {
 declare global {
     interface Window {
         HV_LOG_IS_REMOTE: boolean
-        HV_LOG_PRICES: Record<string, number>
     }
 }
 

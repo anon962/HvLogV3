@@ -1,14 +1,13 @@
 import { CompleteLog, LogMeta } from "@/lib/logDb/schema"
-import { SearchSummary } from "@/lib/summary"
-import { summarizeFinances } from "@/lib/stats/dropStats"
-import { IndexMap } from "@/lib/stats/indexMap"
 import { MetaSummary } from "@/lib/stats/metaStats"
-import { DetailsSummary } from "@/lib/summary"
+import { DetailsSummary, SearchSummary } from "@/lib/summary"
 import { newContext } from "@/lib/utils/miscUtils"
-import { compressGzip, CustomMap, sleep, zip } from "myutils"
+import { compressGzip, CustomMap } from "myutils"
 import { IS_REMOTE } from "../constants"
 
 export interface TLogSource {
+    fetchPrices: () => Promise<Record<string, number>>
+    fetchGlobalMonsterSummary: () => Promise<any>
     fetchLog: (id: string) => Promise<CompleteLog<any>>
     fetchDetails: (id: string) => Promise<DetailsSummary>
     fetchSearch: (req: LogSearchRequest) => Promise<LogSearchResponse>
@@ -87,6 +86,9 @@ class LogSourceRemote {
         toRaw: (k) => this.toSearchKey(k),
         fromRaw: (k) => this.fromSearchKey(k),
     })
+
+    private prices: Promise<Record<string, number>> | null = null
+    private globalMonsterSummary: Promise<any> | null = null
 
     constructor() {}
 
@@ -212,6 +214,26 @@ class LogSourceRemote {
     }
     private fromSearchKey(raw: string): LogSearchRequest {
         return JSON.parse(raw)
+    }
+
+    async fetchPrices() {
+        if (!this.prices) {
+            const url = this.HVDATA_URL + `/battle_logs/prices.json`
+            this.prices = fetch(url).then(async (resp) => resp.json())
+        }
+
+        return this.prices
+    }
+
+    async fetchGlobalMonsterSummary() {
+        if (!this.prices) {
+            const url = this.HVDATA_URL + `/battle_logs/monsters_summary.json`
+            this.globalMonsterSummary = fetch(url).then(async (resp) =>
+                resp.json(),
+            )
+        }
+
+        return this.globalMonsterSummary
     }
 }
 

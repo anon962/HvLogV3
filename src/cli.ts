@@ -1,19 +1,14 @@
+import { createWriteStream } from "fs"
 import path from "path"
-import { CompleteLog, LogEntry } from "./lib/logDb/schema"
-import { parseLog } from "./lib/parseLog"
-import { v91 } from "./lib/v91/v91"
-import {
-    createWriteStream,
-    existsSync,
-    readdirSync,
-    renameSync,
-    statSync,
-    unlinkSync,
-} from "fs"
 import { fileURLToPath } from "url"
-import { SearchSummary } from "./lib/summary"
-import { summarizeSearchStats } from "./lib/summary"
-import { DetailsSummary } from "./lib/summary"
+import { parseLog } from "./lib/parseLog"
+import {
+    DetailsSummary,
+    MonsterSummary,
+    SearchSummary,
+    summarizeSearchStats,
+} from "./lib/summary"
+import { v91 } from "./lib/v91/v91"
 
 export {}
 
@@ -55,6 +50,7 @@ console.log(
 )
 
 async function main() {
+    let cmd = {} as any
     try {
         while (true) {
             const stdin = await readLine()
@@ -62,14 +58,14 @@ async function main() {
                 return
             }
 
-            const cmd = JSON.parse(stdin)
-            console.log(cmd["type"], "start")
+            cmd = JSON.parse(stdin)
             switch (cmd.type) {
                 case "parse": {
                     let result = {
                         events: cmd.events ?? null,
                         details: cmd.details ?? null,
-                        search: cmd.search ?? null,
+                        search: null,
+                        monsters: null,
                     } as any as {
                         events: {
                             entries: any[]
@@ -77,6 +73,7 @@ async function main() {
                         }
                         details: DetailsSummary
                         search: SearchSummary
+                        monsters: MonsterSummary
                     }
 
                     const stages = new Set<string>(cmd["stages"])
@@ -87,16 +84,20 @@ async function main() {
                         })
                     }
                     if (stages.has("details")) {
-                        result.details = getDetailsSummary({
-                            version: result.events.versionString,
-                            entries: result.events.entries,
-                        })
+                        result.details = v91.summarizeDetails(
+                            result.events.entries,
+                        )
                     }
                     if (stages.has("search")) {
-                        result.search = getSearchSummary({
-                            details: result.details,
-                            prices: cmd.prices,
-                        })
+                        result.search = summarizeSearchStats(
+                            result.details,
+                            cmd.prices,
+                        )
+                    }
+                    if (stages.has("monsters")) {
+                        result.monsters = v91.summarizeMonsters(
+                            result.events.entries,
+                        )
                     }
 
                     write(JSON.stringify(result))
@@ -106,10 +107,14 @@ async function main() {
                     console.error(process.argv)
                     throw new Error(`Unknown command ${cmd}`)
             }
-            console.log(cmd["type"], "end")
         }
     } catch (e) {
         console.error(e)
+
+        delete cmd["log"]
+        delete cmd["events"]
+        console.error(cmd)
+
         write("")
         throw e
     }
@@ -122,33 +127,6 @@ function getEvents(opts: { logText: string; createdAt?: string }) {
     }
 
     return parseLog(opts.logText, createdAtDate)
-}
-
-function getDetailsSummary(opts: {
-    version: string
-    entries: Array<LogEntry<any>>
-}) {
-    const log: CompleteLog<any> = {
-        id: "",
-        meta: {
-            start: "",
-            lastUpdate: "",
-            version: 0,
-            world: "persistent",
-            user_id: "",
-            user_name: "",
-        },
-        entries: opts.entries,
-    }
-
-    return v91.summarizeDetails(log)
-}
-
-function getSearchSummary(opts: {
-    details: DetailsSummary
-    prices: Record<string, number>
-}) {
-    return summarizeSearchStats(opts.details, opts.prices)
 }
 
 async function readLine(): Promise<string> {

@@ -57,4 +57,21 @@ export interface SearchSummary {
     style: CombatSummary["style"]
 }
 
-export interface MobSummary {}
+export type MonsterSummary = {
+    roundCount: number
+    mid: Array<number>
+    name: Array<string>
+    hp: Array<number>
+    level: Array<number>
+    appearances: Array<number>
+    damage: Record<
+        "taken" | "given",
+        Record<
+            "attack" | "skill" | "spell" | "other",
+            {
+                count: Array<number>
+                total: Array<number>
+            }
+        >
+    >
+}
