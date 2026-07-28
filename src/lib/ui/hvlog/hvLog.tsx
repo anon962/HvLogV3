@@ -12,6 +12,8 @@ import { ROUTER, Router } from "./router"
 import { humanizeFightingType } from "@/lib/stats/combatStats"
 import { RouteLink } from "../routeLink"
 import { IndexMap } from "@/lib/stats/indexMap"
+import { Sidebar, SidebarItem } from "../sidebar"
+import * as lucide from "lucide-react"
 
 // @fixme: compression
 
@@ -48,25 +50,43 @@ export const HvLog: RootComponent = ({}) => {
             [
                 [
                     "logs/*",
-                    (parts: string[], url: URL) => (
-                        <LogDetailsRoute id={parts[1]} />
-                    ),
+                    (parts: string[], url: URL) => ({
+                        component: <LogDetailsRoute id={parts[1]} />,
+                    }),
                 ],
                 [
                     "logs",
-                    (parts: string[], url: URL) => {
-                        return <LogList />
-                    },
+                    (parts: string[], url: URL) => ({
+                        component: <LogList />,
+                    }),
                 ],
             ] as const
         ).map((kv) => [kv[0].split("/"), kv[1]] as const),
     })
 
+    const sidebarItems: Array<SidebarItem> = [
+        {
+            icon: <lucide.ScrollText />,
+            path: "/logs/",
+            isActive: (url) => url.pathname.startsWith("/logs"),
+            isDisabled: (url) => url.pathname === "/logs/",
+        },
+        {
+            icon: "ML",
+            path: "/logs/",
+        },
+    ]
+
     return (
         <StrictMode>
             <ROUTER.Provider>
                 <LOG_SOURCE.Provider>
-                    <Router routes={routes} />
+                    <Router
+                        routes={routes}
+                        defaultSidebar={({ children }) => (
+                            <Sidebar items={sidebarItems}>{children}</Sidebar>
+                        )}
+                    />
                 </LOG_SOURCE.Provider>
             </ROUTER.Provider>
         </StrictMode>

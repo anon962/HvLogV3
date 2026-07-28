@@ -67,19 +67,19 @@ export function _summarizeMonsters(
             const d = byMid[mid].damage.given
             if (given.attack !== undefined) {
                 d.attack.count += 1
-                d.attack.total += given.attack / hp
+                d.attack.total += given.attack / 1000
             }
             if (given.skill !== undefined) {
                 d.skill.count += 1
-                d.skill.total += given.skill / hp
+                d.skill.total += given.skill / 1000
             }
             if (given.spell !== undefined) {
                 d.spell.count += 1
-                d.spell.total += given.spell / hp
+                d.spell.total += given.spell / 1000
             }
             if (given.other !== undefined) {
                 d.other.count += 1
-                d.other.total += given.other / hp
+                d.other.total += given.other / 1000
             }
         }
         if (taken) {

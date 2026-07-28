@@ -12,7 +12,7 @@ import { Input } from "../../shadcn/input"
 export function LogList() {
     return (
         <LogListN.ctx.Provider>
-            <div className="log-list flex flex-col items-center pt-4">
+            <div className="log-list w-full flex flex-col items-center pt-4">
                 <Table />
             </div>
         </LogListN.ctx.Provider>

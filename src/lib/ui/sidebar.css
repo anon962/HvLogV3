@@ -1,0 +1,62 @@
+.sidebar {
+    --bg: color-mix(in oklab, var(--background), var(--foreground) 3%);
+    --bg-button: color-mix(in oklab, var(--background), var(--foreground) 10%);
+    --hover: color-mix(in oklab, var(--background), var(--foreground) 5%);
+    --border: color-mix(in oklab, var(--background), var(--foreground) 20%);
+    --active: var(--background);
+    --inactive-foreground: color-mix(
+        in oklab,
+        var(--foreground),
+        var(--background) 50%
+    );
+    --inactive-foreground-hover: color-mix(
+        in oklab,
+        var(--url),
+        var(--background) 50%
+    );
+    --active-foreground: color-mix(in oklab, var(--url), var(--background) 10%);
+    --active-foreground-decoration: color-mix(
+        in oklab,
+        var(--url),
+        var(--background) 10%
+    );
+
+    background-color: var(--bg);
+
+    a {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        cursor: pointer;
+        height: 3.5em;
+        width: 3.5em;
+        font-size: 1.1em;
+        font-weight: 500;
+        color: var(--inactive-foreground);
+        background-color: var(--bg-button);
+
+        transition: all 0.05s ease-in-out;
+    }
+    .sidebar-button:hover:not(.active) a {
+        background-color: var(--hover);
+        text-decoration: underline;
+        color: var(--inactive-foreground-hover);
+        /* text-decoration-thickness: 0.125rem; */
+    }
+    .sidebar-button.active a {
+        background-color: var(--active);
+        color: var(--active-foreground);
+        text-decoration: underline;
+        text-decoration-thickness: 0.15rem;
+        font-weight: bold;
+        text-decoration-color: var(--active-foreground);
+    }
+
+    .sidebar-button.disabled a {
+        pointer-events: none;
+    }
+
+    hr {
+        border-color: var(--border);
+    }
+}

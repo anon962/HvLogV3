@@ -2,7 +2,7 @@ import { CompleteLog, LogMeta } from "@/lib/logDb/schema"
 import { MetaSummary } from "@/lib/stats/metaStats"
 import { DetailsSummary, SearchSummary } from "@/lib/summary"
 import { newContext } from "@/lib/utils/miscUtils"
-import { compressGzip, CustomMap } from "myutils"
+import { compressGzip, CustomMap, sleep } from "myutils"
 import { IS_REMOTE } from "../constants"
 
 export interface TLogSource {
@@ -226,11 +226,21 @@ class LogSourceRemote {
     }
 
     async fetchGlobalMonsterSummary() {
-        if (!this.prices) {
-            const url = this.HVDATA_URL + `/battle_logs/monsters_summary.json`
-            this.globalMonsterSummary = fetch(url).then(async (resp) =>
-                resp.json(),
-            )
+        if (this.globalMonsterSummary === null) {
+            const url = this.HVDATA_URL + `/battle_logs/monsters.json`
+            async function doFetch() {
+                while (true) {
+                    const resp = await fetch(url)
+                    const data = await resp.json()
+                    if (data !== null) {
+                        return data
+                    } else {
+                        await sleep(1000)
+                    }
+                }
+            }
+
+            this.globalMonsterSummary = doFetch()
         }
 
         return this.globalMonsterSummary

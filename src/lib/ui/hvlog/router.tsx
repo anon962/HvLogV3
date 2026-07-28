@@ -1,31 +1,44 @@
 import { newContext } from "@/lib/utils/miscUtils"
 import { readUrl } from "@/lib/utils/userscriptUtils"
-import { AnyFunction, bitmaskToBigint, CustomMap, Fn, range } from "myutils"
-import { ReactNode, useEffect, useMemo, useState } from "react"
+import { AnyFunction, bitmaskToBigint, CustomMap, range } from "myutils"
+import { FC, ReactNode, useEffect, useMemo, useState } from "react"
+
+type RouteSelection = { component: ReactNode; hideSidebar?: boolean }
+type Sidebar = FC<{ children: ReactNode }>
 
 export function Router(props: {
     routes: CustomMap<
         string[],
-        (parts: string[], url: URL) => ReactNode,
+        (patt: string[], url: URL) => RouteSelection,
         string
     >
-    defaultRoute?: () => ReactNode
+    defaultSidebar?: Sidebar
+    defaultRoute?: () => RouteSelection
 }) {
     let { parts, url } = ROUTER.useContext()
 
+    let sel
     for (const [patt, factory] of props.routes.entries()) {
         if (!isRouteMatch(patt, parts)) {
             continue
         }
 
-        return factory(parts, url)
+        sel = factory(parts, url)
     }
 
-    console.error("Invalid route", parts)
-    if (props.defaultRoute) {
-        return props.defaultRoute()
+    if (!sel) {
+        console.error("Invalid route", parts)
+        if (props.defaultRoute) {
+            sel = props.defaultRoute()
+        } else {
+            sel = { component: <></> }
+        }
+    }
+
+    if (sel.hideSidebar || !props.defaultSidebar) {
+        return sel.component
     } else {
-        return <></>
+        return <props.defaultSidebar>{sel.component}</props.defaultSidebar>
     }
 
     function isRouteMatch(patt: string[], parts: string[]) {

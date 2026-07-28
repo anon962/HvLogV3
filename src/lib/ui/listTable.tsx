@@ -103,7 +103,7 @@ export function ListTable<T>(props: {
     return (
         <div
             className={cn(
-                "list-table-container overflow-auto w-full pb-0! flex flex-col",
+                "list-table-container w-full pb-0! flex flex-col",
                 props.className?.root,
             )}
         >
