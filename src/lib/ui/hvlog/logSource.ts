@@ -103,7 +103,7 @@ class LogSourceRemote {
 
         if (!this.searchPending.has(k)) {
             // console.log(req)
-            const resp = fetch(this.HVDATA_URL + "/search_logs", {
+            const resp = fetch(this.HVDATA_URL + "/api/search_logs", {
                 method: "POST",
                 body: await compressGzip(
                     JSON.stringify({
@@ -158,7 +158,7 @@ class LogSourceRemote {
         }
 
         if (!this.logPending.has(k)) {
-            const url = this.HVDATA_URL + `/battle_logs/${id}` + `?events=1`
+            const url = this.HVDATA_URL + `/api/battle_logs/${id}` + `?events=1`
             const resp = await fetch(url).then(async (resp) => resp.json())
 
             this.logPending.set(k, resp)
@@ -193,7 +193,8 @@ class LogSourceRemote {
         }
 
         if (!this.detailsPending.has(k)) {
-            const url = this.HVDATA_URL + `/battle_logs/${id}` + `?details=1`
+            const url =
+                this.HVDATA_URL + `/api/battle_logs/${id}` + `?details=1`
             const resp = await fetch(url).then(async (resp) => resp.json())
 
             this.detailsPending.set(k, resp.parsed.details)
@@ -218,7 +219,7 @@ class LogSourceRemote {
 
     async fetchPrices() {
         if (!this.prices) {
-            const url = this.HVDATA_URL + `/battle_logs/prices.json`
+            const url = this.HVDATA_URL + `/api/battle_logs/prices.json`
             this.prices = fetch(url).then(async (resp) => resp.json())
         }
 
@@ -227,7 +228,7 @@ class LogSourceRemote {
 
     async fetchGlobalMonsterSummary() {
         if (this.globalMonsterSummary === null) {
-            const url = this.HVDATA_URL + `/battle_logs/monsters.json`
+            const url = this.HVDATA_URL + `/api/battle_logs/monsters.json`
             async function doFetch() {
                 while (true) {
                     const resp = await fetch(url)

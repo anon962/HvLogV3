@@ -34,7 +34,7 @@ export function Sidebar(props: {
                 <SidebarLink
                     target="_blank"
                     item={{
-                        path: "https://github.com/anon962/HvLogV3/",
+                        path: "https://github.com/anon962/AmyBotV2/",
                         icon: (
                             <div className="size-full p-[1.125rem]">
                                 <svg
