@@ -95,7 +95,7 @@ export function ListTable<T>(
         }
         pageIndex: number
         setPageIndex?: (pg: number) => void
-        pageUrl?: (pageIdx: number) => Record<string, string>
+        pageUrl?: (pageIdx: number) => Record<string, string | null>
         rowUrl?: (d: T) => string
         isLoading?: boolean
         filter?: {
@@ -407,7 +407,7 @@ const Paginator = React.memo(
         pageIndex: number
         setPageIndex?: (x: number) => void
         isLoading?: boolean
-        pageUrl?: (pageIdx: number) => Record<string, string>
+        pageUrl?: (pageIdx: number) => Record<string, string | null>
         filter?: {
             trigger: ReactNode
             content: ReactNode
@@ -458,7 +458,9 @@ const Paginator = React.memo(
             const url = new URL(window.location.href)
             const params = props.pageUrl(idx)
             for (const [k, v] of Object.entries(params)) {
-                url.searchParams.set(k, v)
+                if (v !== null) {
+                    url.searchParams.set(k, v)
+                }
             }
             return url.href
         }
@@ -589,7 +591,7 @@ function PageJump(props: { onJump: (idx: number) => void; pageCount: number }) {
             {/* <span className="text-xs">Jump to</span> */}
             <Input
                 type="number"
-                placeholder={String(props.pageCount)}
+                placeholder={String(props.pageCount) + " pgs"}
                 className="w-[12ch]"
                 min="1"
                 max={props.pageCount}

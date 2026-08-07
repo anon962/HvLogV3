@@ -1,0 +1,333 @@
+import { formatNumber, newContext, useAsync } from "@/lib/utils/miscUtils"
+import { lucide } from "../constants"
+import { ListTable } from "../listTable"
+import { LOG_SOURCE } from "./logSource"
+import { UrlParamN } from "./router"
+import { useMemo } from "react"
+import { clamp, range, sortBy, sum } from "myutils"
+
+// region cols
+const COLS_ = {
+    mid: {
+        id: "mid",
+        header: { content: "ID", className: "text-center" },
+        align: "text-right",
+        cell: (x) => ({
+            content: x.mid,
+            className: "mid",
+        }),
+    },
+    name: {
+        id: "name",
+        header: { content: "Name" },
+        align: "text-right",
+        cell: (x) => ({
+            content: x.name,
+            className: "name",
+        }),
+    },
+    frequency: {
+        id: "frequency",
+        header: {
+            content: <lucide.Eye />,
+            tooltip: "Number of appearances (all-time).",
+        },
+        align: "text-right",
+        cell: (x) => ({
+            content: Math.round(x.appearances),
+        }),
+    },
+    dtaken: {
+        id: "dtaken",
+        header: {
+            content: <lucide.Shield />,
+            tooltip:
+                "Monster's average damage taken per hit as percentage of max HP.",
+        },
+        align: "text-right",
+        cell: (x) => ({
+            content: formatNumber(100 * x.damage.taken) + "%",
+            className: "taken",
+        }),
+    },
+    dgiven: {
+        id: "dgiven",
+        header: {
+            content: <lucide.Sword />,
+            tooltip: "Average damage per appearance.",
+        },
+        align: "text-right",
+        cell: (x) => ({
+            content: Math.round(1000 * x.damage.given),
+            className: "given",
+        }),
+    },
+    trainer: {
+        id: "trainer",
+        header: { content: "Trainer" },
+        align: "text-right",
+        cell: (x) => ({
+            content: x.trainer !== null ? x.trainer || "-" : "???",
+            className: "trainer",
+        }),
+    },
+    pl: {
+        id: "pl",
+        header: { content: "Level" },
+        align: "text-right",
+        cell: (x) => ({
+            content: x.pl !== null ? x.pl || "-" : "???",
+            className: "pl",
+        }),
+    },
+    race: {
+        id: "race",
+        header: { content: "Race" },
+        align: "text-right",
+        cell: (x) => ({
+            content: x.race !== null ? x.race || "-" : "???",
+            className: "race",
+        }),
+    },
+} as const satisfies Record<string, ListTable.Column<MonsterPageN.Row, any>>
+
+// region params
+const PARAM_SCHEMA = {
+    // Search options
+    p: {
+        type: "number",
+        deser: (x) => (x !== null && x >= 1 ? x - 1 : 0),
+    },
+    n: {
+        type: "number",
+    },
+    s: {
+        type: "string",
+        deser: (x) =>
+            Object.values(COLS_).find((v) => v.id === x?.toLowerCase()) ?? null,
+    },
+    d: {
+        type: "boolean",
+    },
+    // Filter options
+    nm: {
+        type: "string[]",
+        deser: (xs) => xs.map((x) => new RegExp(".*" + x + ".*", "i")),
+    },
+    tr: {
+        type: "string[]",
+        deser: (xs) => xs.map((x) => new RegExp(".*" + x + ".*", "i")),
+    },
+    rc: {
+        type: "string[]",
+        deser: (xs) => xs.map((x) => new RegExp(".*" + x + ".*", "i")),
+    },
+    lv: {
+        type: "number",
+    },
+    va: {
+        type: "number",
+    },
+    aa: {
+        type: "number",
+    },
+    da: {
+        type: "number",
+    },
+} as const satisfies UrlParamN.Schema
+
+// region namespace
+export namespace MonsterPageN {
+    export const COLS = COLS_
+
+    export type Row = {
+        mid: number
+        name: string
+        hp: number
+        level: number
+        appearances: number
+        globalCount: number
+        damage: {
+            taken: number
+            given: number
+        }
+
+        trainer: string | null
+        race: string | null
+        pl: number | null
+    }
+
+    export const ctx = newContext(() => {
+        const logSource = LOG_SOURCE.useContext()
+        const mobQuery = useAsync(
+            async () => await logSource.fetchGlobalMonsterSummary(),
+            {},
+        )
+        const monlabQuery = useAsync(
+            async () => await logSource.fetchMonlab(),
+            {},
+        )
+
+        const [params, setParams, rawParams] = UrlParamN.useUrlParams({
+            schema: PARAM_SCHEMA,
+        })
+
+        const allRows: Array<MonsterPageN.Row> = useMemo(() => {
+            if (!mobQuery.data) {
+                return []
+            }
+
+            const d = mobQuery.data.find((x) => x.days === null)!
+            const m = d.monsters
+
+            const rows: Array<MonsterPageN.Row> = []
+            let totalAppearances = 0
+            for (let idx = 0; idx < m.mid.length; idx++) {
+                totalAppearances += m.appearances[idx]
+
+                const mid = parseInt(m.mid[idx])
+                const ml = monlabQuery.data?.[mid]
+
+                rows.push({
+                    mid,
+                    name: m.name[idx],
+                    appearances: m.appearances[idx],
+                    globalCount: 0,
+                    hp: m.hp[idx],
+                    level: m.level[idx],
+                    damage: {
+                        given:
+                            sum(
+                                Object.values(m.damage.given).map(
+                                    (v) => v.total[idx],
+                                ),
+                            ) / m.appearances[idx],
+                        taken:
+                            sum(
+                                Object.values(m.damage.taken).map(
+                                    (v) => v.total[idx],
+                                ),
+                            ) /
+                            sum(
+                                Object.values(m.damage.taken).map(
+                                    (v) => v.count[idx],
+                                ),
+                            ),
+                    },
+                    trainer: ml?.trainer ?? null,
+                    race: ml?.monsterClass ?? null,
+                    pl: ml?.plvl ?? null,
+                })
+            }
+
+            for (const r of rows) {
+                r.globalCount = totalAppearances
+            }
+
+            return rows
+        }, [mobQuery.data, monlabQuery.data])
+
+        const filtered = useMemo(() => {
+            let xs = range(allRows.length)
+
+            if (params.nm.length > 0) {
+                xs = xs.filter((x) =>
+                    params.nm.some((patt) => patt.test(allRows[x].name)),
+                )
+            }
+            if (params.tr.length > 0) {
+                xs = xs.filter((x) =>
+                    params.tr.some((patt) =>
+                        patt.test(allRows[x].trainer ?? ""),
+                    ),
+                )
+            }
+            if (params.rc.length > 0) {
+                xs = xs.filter((x) =>
+                    params.rc.some((patt) => patt.test(allRows[x].race ?? "")),
+                )
+            }
+            if (Number.isInteger(params.lv)) {
+                xs = xs.filter((x) => allRows[x].level > params.lv!)
+            }
+            if (Number.isInteger(params.va)) {
+                xs = xs.filter((x) => allRows[x].appearances > params.va!)
+            }
+            if (Number.isInteger(params.aa)) {
+                xs = xs.filter(
+                    (x) => allRows[x].damage.given * 1000 > params.aa!,
+                )
+            }
+            if (Number.isInteger(params.da)) {
+                xs = xs.filter((x) => allRows[x].damage.taken > params.da!)
+            }
+
+            return xs
+        }, [
+            allRows,
+            params.nm,
+            params.tr,
+            params.rc,
+            params.lv,
+            params.va,
+            params.aa,
+            params.da,
+        ])
+
+        const sorted = useMemo(() => {
+            const cid = params.s?.id ?? COLS_.frequency.id
+            const reverse = params.d !== null ? params.d : true
+            let xs = filtered
+
+            xs = sortBy(xs, [
+                {
+                    fn: (x) => {
+                        switch (cid) {
+                            case "mid":
+                                return allRows[x].mid
+                            case "name":
+                                return allRows[x].name
+                            case "frequency":
+                                return allRows[x].appearances
+                            case "dtaken":
+                                return allRows[x].damage.taken
+                            case "dgiven":
+                                return allRows[x].damage.given
+                            case "trainer":
+                                return allRows[x].trainer ?? ""
+                            case "pl":
+                                return allRows[x].pl ?? 0
+                            case "race":
+                                return allRows[x].race ?? ""
+                        }
+                    },
+                    reverse,
+                },
+            ])
+
+            return xs
+        }, [filtered, params.s, params.d])
+
+        const pageSize = params.n ?? 25
+        const pageCount = Math.ceil(sorted.length / pageSize) || 1
+        const pageIndex = clamp(params.p, 0, pageCount - 1)
+        const data = useMemo(() => {
+            const st = pageIndex * pageSize
+            return sorted.slice(st, st + pageSize).map((idx) => allRows[idx])
+        }, [sorted, pageSize, pageIndex])
+
+        return [
+            {
+                data,
+                pageIndex,
+                pageSize,
+                pageCount,
+                params,
+                setParams,
+                rawParams,
+                sortCol: params.s,
+            },
+            () => {},
+        ]
+    })
+}

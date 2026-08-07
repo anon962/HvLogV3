@@ -195,15 +195,19 @@ export namespace UrlParamN {
     }): [
         Object<T>,
         (update: Partial<UpdateObject<T>>, opts?: UpdateOpts) => void,
+        Record<string, string>,
     ] {
         const { url } = ROUTER.useContext()
 
-        const params = useMemo(() => {
-            const params = {} as any
+        const [parsedParams, rawParams] = useMemo(() => {
+            const raw = {} as any
+            const parsed = {} as any
             for (const [key, s] of Object.entries(opts.schema)) {
                 let v = url.searchParams.get(key)
                 let v2: any
                 if (v !== null) {
+                    raw[key] = v
+
                     switch (s.type) {
                         case "string":
                             v2 = parseString(v, s)
@@ -239,32 +243,45 @@ export namespace UrlParamN {
                             v2 = parseBitmask(v, s)
                             break
                     }
-                }
 
+                    parsed[key] = v2
+                }
+            }
+
+            return [parsed, raw]
+        }, [url.href])
+
+        const params = useMemo(() => {
+            const x = { ...parsedParams }
+
+            for (const [key, s] of Object.entries(opts.schema)) {
                 switch (s.type) {
                     case "string":
                     case "number":
                     case "boolean":
                     case "date": {
-                        // @ts-ignore
-                        const v3 = s.deser ? s.deser(v2) : v2
-                        params[key] = v3
+                        if (key in x && s.deser) {
+                            x[key] = s.deser(x[key])
+                        } else if (!(key in x)) {
+                            x[key] = null
+                        }
                         break
                     }
                     case "string[]":
                     case "number[]":
                     case "boolean[]":
                     case "bitmask": {
-                        v2 = v2 ?? []
-                        // @ts-ignore
-                        const v3 = s.deser ? s.deser(v2) : v2
-                        params[key] = v3
+                        if (key in x && s.deser) {
+                            x[key] = s.deser(x[key])
+                        } else if (!(key in x)) {
+                            x[key] = []
+                        }
                         break
                     }
                 }
             }
 
-            return params
+            return x
         }, [url.href])
 
         const setParams = (
@@ -353,7 +370,7 @@ export namespace UrlParamN {
             }
         }
 
-        return [params, setParams] as any
+        return [params, setParams, rawParams] as any
 
         function parseString(
             raw: string,
