@@ -108,11 +108,13 @@ export namespace UrlParamN {
             | {
                   type: "string"
                   skipTrim?: boolean
+                  allowEmpty?: boolean
                   deser?: (x: string | null) => any
               }
             | {
                   type: "string[]"
                   skipTrim?: boolean
+                  allowEmpty?: boolean
                   deser?: (x: string[]) => any
               }
             | {
@@ -271,10 +273,11 @@ export namespace UrlParamN {
                     case "number[]":
                     case "boolean[]":
                     case "bitmask": {
-                        if (key in x && s.deser) {
-                            x[key] = s.deser(x[key])
-                        } else if (!(key in x)) {
+                        if (!(key in x)) {
                             x[key] = []
+                        }
+                        if (s.deser) {
+                            x[key] = s.deser(x[key])
                         }
                         break
                     }
@@ -311,7 +314,7 @@ export namespace UrlParamN {
                         const v2 = v as string[]
                         const v3 = v2
                             .map((x) => (s.skipTrim ? x : x.trim()))
-                            .filter((x) => x.length > 0)
+                            .filter((x) => x.length > 0 || s.allowEmpty)
                             .join(",")
                         u.searchParams.set(k, v3)
                         break
@@ -380,7 +383,7 @@ export namespace UrlParamN {
             if (!s.skipTrim) {
                 x = x.trim()
             }
-            return x.length > 0 ? x : null
+            return x.length > 0 || s.allowEmpty ? x : null
         }
         function parseNumber(
             raw: string,

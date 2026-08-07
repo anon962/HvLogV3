@@ -106,7 +106,7 @@ export function ListTable<T>(
         tableProps?: CommonProps
     } & CommonProps,
 ) {
-    const [showFilter, setShowFilter] = useState(false)
+    const [showFilter, setShowFilter] = useState(true)
 
     return (
         <div

@@ -17,6 +17,7 @@
     },
     "type": "module",
     "dependencies": {
+        "@base-ui/react": "^1.7.0",
         "@bokuweb/zstd-wasm": "^0.0.27",
         "@observablehq/plot": "^0.6.17",
         "@radix-ui/react-checkbox": "^1.1.5",

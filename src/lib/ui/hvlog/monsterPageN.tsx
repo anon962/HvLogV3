@@ -3,8 +3,8 @@ import { lucide } from "../constants"
 import { ListTable } from "../listTable"
 import { LOG_SOURCE } from "./logSource"
 import { UrlParamN } from "./router"
-import { useMemo } from "react"
-import { clamp, range, sortBy, sum } from "myutils"
+import { useMemo, useState } from "react"
+import { alphabetical, clamp, range, sortBy, sum } from "myutils"
 
 // region cols
 const COLS_ = {
@@ -112,26 +112,35 @@ const PARAM_SCHEMA = {
     // Filter options
     nm: {
         type: "string[]",
-        deser: (xs) => xs.map((x) => new RegExp(".*" + x + ".*", "i")),
+        // deser: (xs) => xs.map((x) => (x.length > 0 ? x : null)),
+        allowEmpty: true,
+        skipTrim: true,
     },
     tr: {
         type: "string[]",
-        deser: (xs) => xs.map((x) => new RegExp(".*" + x + ".*", "i")),
+        // deser: (xs) => xs.map((x) => (x.length > 0 ? x : null)),
+        allowEmpty: true,
+        skipTrim: true,
     },
     rc: {
         type: "string[]",
-        deser: (xs) => xs.map((x) => new RegExp(".*" + x + ".*", "i")),
+        // deser: (xs) => xs.map((x) => (x.length > 0 ? x : null)),
+        allowEmpty: true,
+        skipTrim: true,
     },
-    lv: {
+    l0: {
         type: "number",
     },
-    va: {
+    l1: {
         type: "number",
     },
-    aa: {
+    v0: {
         type: "number",
     },
-    da: {
+    a0: {
+        type: "number",
+    },
+    d0: {
         type: "number",
     },
 } as const satisfies UrlParamN.Schema
@@ -139,6 +148,7 @@ const PARAM_SCHEMA = {
 // region namespace
 export namespace MonsterPageN {
     export const COLS = COLS_
+    export const SCHEMA = PARAM_SCHEMA
 
     export type Row = {
         mid: number
@@ -230,36 +240,64 @@ export namespace MonsterPageN {
         const filtered = useMemo(() => {
             let xs = range(allRows.length)
 
-            if (params.nm.length > 0) {
+            const nm = params.nm
+                .map((x) => x.trim().toLowerCase())
+                .filter((x) => x.length > 0)
+            if (nm.length > 0) {
                 xs = xs.filter((x) =>
-                    params.nm.some((patt) => patt.test(allRows[x].name)),
-                )
-            }
-            if (params.tr.length > 0) {
-                xs = xs.filter((x) =>
-                    params.tr.some((patt) =>
-                        patt.test(allRows[x].trainer ?? ""),
+                    nm.some(
+                        (patt) =>
+                            patt.trim().length > 0 &&
+                            allRows[x].name
+                                .toLowerCase()
+                                .includes(patt.toLowerCase()),
                     ),
                 )
             }
-            if (params.rc.length > 0) {
+            const tr = params.tr
+                .map((x) => x.trim().toLowerCase())
+                .filter((x) => x.length > 0)
+            if (tr.length > 0) {
                 xs = xs.filter((x) =>
-                    params.rc.some((patt) => patt.test(allRows[x].race ?? "")),
+                    tr.some(
+                        (patt) =>
+                            patt.trim().length > 0 &&
+                            (allRows[x].trainer ?? "")
+                                .toLowerCase()
+                                .includes(patt.toLowerCase()),
+                    ),
                 )
             }
-            if (Number.isInteger(params.lv)) {
-                xs = xs.filter((x) => allRows[x].level > params.lv!)
+            const rc = params.rc
+                .map((x) => x.trim().toLowerCase())
+                .filter((x) => x.length > 0)
+            if (rc.length > 0) {
+                xs = xs.filter((x) =>
+                    rc.some(
+                        (patt) =>
+                            patt.trim().length > 0 &&
+                            (allRows[x].race ?? "")
+                                .toLowerCase()
+                                .includes(patt.toLowerCase()),
+                    ),
+                )
             }
-            if (Number.isInteger(params.va)) {
-                xs = xs.filter((x) => allRows[x].appearances > params.va!)
+            if (Number.isInteger(params.l0)) {
+                xs = xs.filter((x) => allRows[x].pl ?? 0 >= params.l0!)
             }
-            if (Number.isInteger(params.aa)) {
+            if (Number.isInteger(params.l1)) {
+                xs = xs.filter((x) => allRows[x].pl ?? 0 <= params.l1!)
+            }
+            if (Number.isInteger(params.v0)) {
+                xs = xs.filter((x) => allRows[x].appearances >= params.v0!)
+            }
+            if (Number.isInteger(params.a0)) {
                 xs = xs.filter(
-                    (x) => allRows[x].damage.given * 1000 > params.aa!,
+                    (x) => allRows[x].damage.given * 1000 >= params.a0!,
                 )
             }
-            if (Number.isInteger(params.da)) {
-                xs = xs.filter((x) => allRows[x].damage.taken > params.da!)
+            if (Number.isInteger(params.d0)) {
+                xs = xs.filter((x) => allRows[x].damage.taken >= params.d0!)
             }
 
             return xs
@@ -268,10 +306,11 @@ export namespace MonsterPageN {
             params.nm,
             params.tr,
             params.rc,
-            params.lv,
-            params.va,
-            params.aa,
-            params.da,
+            params.l0,
+            params.l1,
+            params.v0,
+            params.a0,
+            params.d0,
         ])
 
         const sorted = useMemo(() => {
@@ -316,6 +355,42 @@ export namespace MonsterPageN {
             return sorted.slice(st, st + pageSize).map((idx) => allRows[idx])
         }, [sorted, pageSize, pageIndex])
 
+        const options = useMemo(() => {
+            return {
+                name: alphabetical(
+                    Array.from(
+                        new Set(
+                            allRows.flatMap((x) =>
+                                x.name.length > 0 ? [x.name] : [],
+                            ),
+                        ),
+                    ),
+                ),
+                trainer: alphabetical(
+                    Array.from(
+                        new Set(
+                            allRows.flatMap((x) =>
+                                x.trainer ? [x.trainer] : [],
+                            ),
+                        ),
+                    ),
+                ),
+                race: alphabetical(
+                    Array.from(
+                        new Set(
+                            allRows.flatMap((x) => (x.race ? [x.race] : [])),
+                        ),
+                    ),
+                ),
+                maxLevel: Math.max(...allRows.map((x) => x.pl ?? 0)),
+                maxAppearances: Math.max(
+                    ...allRows.map((x) => x.appearances ?? 0),
+                ),
+                maxAttack: Math.max(...allRows.map((x) => x.damage.given)),
+                maxDefense: Math.max(...allRows.map((x) => x.damage.taken)),
+            }
+        }, [allRows])
+
         return [
             {
                 data,
@@ -326,6 +401,7 @@ export namespace MonsterPageN {
                 setParams,
                 rawParams,
                 sortCol: params.s,
+                options,
             },
             () => {},
         ]

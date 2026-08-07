@@ -32,4 +32,20 @@
             transparent
         ) !important;
     }
+
+    .input-container {
+        display: flex;
+        flex-flow: column;
+        gap: 0.5em;
+
+        label {
+            font-weight: 600;
+        }
+
+        input[type="number"] {
+            height: max-content;
+            padding: 0.4em 0.5em;
+            line-height: 0;
+        }
+    }
 }

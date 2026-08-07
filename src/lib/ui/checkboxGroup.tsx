@@ -160,9 +160,7 @@ export function LabeledCheckbox({
                 }
                 {...inputProps}
             />
-            <label {...mergeProps({ className: "select-none" }, labelProps)}>
-                {label}
-            </label>
+            <label {...labelProps}>{label}</label>
         </div>
     )
 }

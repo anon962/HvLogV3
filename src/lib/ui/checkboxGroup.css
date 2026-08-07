@@ -66,6 +66,7 @@
 .input-label-container label {
     grid-area: label;
     cursor: pointer;
+    user-select: none;
 }
 .input-label-container p {
     grid-area: desc;

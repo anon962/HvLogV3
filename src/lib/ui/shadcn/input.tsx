@@ -7,7 +7,7 @@ type InputProps = Omit<
     "onChange" | "onInput"
 > & {
     onChange?: (event: Event & { target: HTMLInputElement }) => void
-    onInput?: (event: InputEvent) => void
+    onInput?: (event: InputEvent & { target: HTMLInputElement }) => void
 }
 
 function Input({ className, type, ...props }: InputProps) {
