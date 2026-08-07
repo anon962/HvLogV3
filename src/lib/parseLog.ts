@@ -29,7 +29,6 @@ export function parseLog(
 ): {
     entries: Array<LogEntry<any>>
     versionString: "v91"
-    version: typeof v91
     errorCount: number
 } {
     // Split log into lines
@@ -60,7 +59,6 @@ export function parseLog(
     let best = {
         entries: null,
         errorCount: Number.POSITIVE_INFINITY,
-        versionString: null,
         version: null,
     } as unknown as ReturnType<typeof parseLog>
     while (true) {
@@ -100,7 +98,6 @@ export function parseLog(
             best = {
                 entries,
                 errorCount,
-                version: v,
                 versionString: candidate,
             }
         }

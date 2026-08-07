@@ -69,8 +69,9 @@ function SidebarLink({
 } & CommonProps) {
     const curr = new URL(window.location.href)
 
-    const isActive = item.isActive?.(curr) ?? false
-    const isDisabled = item.isDisabled?.(curr, isActive) ?? isActive
+    const isActive = item.isActive?.(curr) ?? curr.pathname === item.path
+    const isDisabled =
+        item.isDisabled?.(curr, isActive) ?? curr.pathname === item.path
 
     return (
         <MyTooltip

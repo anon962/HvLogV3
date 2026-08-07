@@ -44,7 +44,6 @@ export function Table() {
             getId={(d) => d.id}
             sortCols={new Set(LogListN.SORT_IDS)}
             pageIndex={request.pageIdx}
-            setPageIndex={(idx) => {}}
             setPageSize={{
                 options: [15, 50, 100, 1000],
                 handler: (pageSize: number) => {
@@ -56,8 +55,6 @@ export function Table() {
                 },
             }}
             pageSize={data?.pageSize ?? 1}
-            selectedId=""
-            setSelectedId={() => {}}
             sortCriteria={request.sortCriteria}
             setSortCriteria={(crit) => {
                 setParams(
@@ -74,7 +71,7 @@ export function Table() {
             }}
             rowUrl={(d) => `/logs/${d.id}`}
             isLoading={isPending}
-            className={{ root: "text-sm" }}
+            className="text-sm"
             pageUrl={(pageIdx) => ({
                 p: String(pageIdx + 1),
                 n: String(request.pageSize),

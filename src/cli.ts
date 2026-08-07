@@ -1,4 +1,6 @@
 import { createWriteStream } from "fs"
+import { compressGzip } from "myutils"
+import * as Zstd2 from "@bokuweb/zstd-wasm"
 import path from "path"
 import { fileURLToPath } from "url"
 import { parseLog } from "./lib/parseLog"
@@ -61,51 +63,16 @@ async function main() {
             cmd = JSON.parse(stdin)
             switch (cmd.type) {
                 case "parse": {
-                    let result = {
-                        events: cmd.events ?? null,
-                        details: cmd.details ?? null,
-                        search: null,
-                        monsters: null,
-                    } as any as {
-                        events: {
-                            entries: any[]
-                            versionString: string
-                        }
-                        details: DetailsSummary
-                        search: SearchSummary
-                        monsters: MonsterSummary
-                    }
-
-                    const stages = new Set<string>(cmd["stages"])
-                    if (stages.has("events")) {
-                        result.events = getEvents({
-                            logText: cmd.log,
-                            createdAt: cmd.createdAt,
-                        })
-                    }
-                    if (stages.has("details")) {
-                        result.details = v91.summarizeDetails(
-                            result.events.entries,
-                        )
-                    }
-                    if (stages.has("search")) {
-                        result.search = summarizeSearchStats(
-                            result.details,
-                            cmd.prices,
-                        )
-                    }
-                    if (stages.has("monsters")) {
-                        result.monsters = v91.summarizeMonsters(
-                            result.events.entries,
-                        )
-                    }
-
-                    write(JSON.stringify(result))
+                    handleParse(cmd)
+                    break
+                }
+                case "compress": {
+                    await handleCompress(cmd)
                     break
                 }
                 default:
                     console.error(process.argv)
-                    throw new Error(`Unknown command ${cmd}`)
+                    throw new Error(`Unknown command ${cmd.type}`)
             }
         }
     } catch (e) {
@@ -120,13 +87,52 @@ async function main() {
     }
 }
 
-function getEvents(opts: { logText: string; createdAt?: string }) {
-    let createdAtDate: Date | null = null
-    if (opts.createdAt) {
-        createdAtDate = new Date(opts.createdAt)
+function handleParse(cmd: any) {
+    let result = {
+        events: cmd.events ?? null,
+        details: cmd.details ?? null,
+        search: null,
+        monsters: null,
+    } as any as {
+        events: {
+            entries: any[]
+            versionString: string
+        }
+        details: DetailsSummary
+        search: SearchSummary
+        monsters: MonsterSummary
     }
 
-    return parseLog(opts.logText, createdAtDate)
+    const stages = new Set<string>(cmd["stages"])
+    if (stages.has("events")) {
+        let createdAtDate: Date | null = null
+        if (cmd.createdAt) {
+            createdAtDate = new Date(cmd.createdAt)
+        }
+
+        result.events = parseLog(cmd.log, createdAtDate)
+    }
+    if (stages.has("details")) {
+        result.details = v91.summarizeDetails(result.events.entries)
+    }
+    if (stages.has("search")) {
+        result.search = summarizeSearchStats(result.details, cmd.prices)
+    }
+    if (stages.has("monsters")) {
+        result.monsters = v91.summarizeMonsters(result.events.entries)
+    }
+
+    write(JSON.stringify(result))
+}
+
+await Zstd2.init()
+async function handleCompress(cmd: { data: string }) {
+    const dataBytes = new TextEncoder().encode(cmd.data)
+    const result = Zstd2.compress(dataBytes, 19)
+    // const result = await compressGzip(cmd.data)
+
+    const result64 = Buffer.from(result).toString("base64")
+    write(result64)
 }
 
 async function readLine(): Promise<string> {

@@ -429,10 +429,10 @@ export function _summarizeMonsters(
         }
     }
 
-    const soaTemplate = {
+    const soaTemplate = () => ({
         count: [],
         total: [],
-    }
+    })
     const monsters: MonsterSummary = {
         roundCount,
         mid: [],
@@ -442,16 +442,16 @@ export function _summarizeMonsters(
         appearances: [],
         damage: {
             taken: {
-                attack: { ...soaTemplate },
-                skill: { ...soaTemplate },
-                spell: { ...soaTemplate },
-                other: { ...soaTemplate },
+                attack: { ...soaTemplate() },
+                skill: { ...soaTemplate() },
+                spell: { ...soaTemplate() },
+                other: { ...soaTemplate() },
             },
             given: {
-                attack: { ...soaTemplate },
-                skill: { ...soaTemplate },
-                spell: { ...soaTemplate },
-                other: { ...soaTemplate },
+                attack: { ...soaTemplate() },
+                skill: { ...soaTemplate() },
+                spell: { ...soaTemplate() },
+                other: { ...soaTemplate() },
             },
         },
     }

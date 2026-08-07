@@ -42,8 +42,9 @@ function PaginationItem({ ...props }: React.ComponentProps<"li">) {
 
 type PaginationLinkProps = {
     isActive?: boolean
+    href: null | string
 } & Pick<React.ComponentProps<typeof Button>, "size"> &
-    React.ComponentProps<"a">
+    Omit<React.ComponentProps<"a">, "href">
 
 function PaginationLink({
     className,
@@ -51,21 +52,25 @@ function PaginationLink({
     size = "icon",
     ...props
 }: PaginationLinkProps) {
-    return (
-        <RouteLink
-            aria-current={isActive ? "page" : undefined}
-            data-slot="pagination-link"
-            data-active={isActive}
-            className={cn(
-                buttonVariants({
-                    variant: isActive ? "outline" : "ghost",
-                    size,
-                }),
-                isActive ? "active" : null,
-                className,
-            )}
-            {...props}
-        />
+    const propsResolved = {
+        "aria-current": isActive ? "page" : undefined,
+        "data-slot": "pagination-link",
+        "data-active": isActive,
+        className: cn(
+            buttonVariants({
+                variant: isActive ? "outline" : "ghost",
+                size,
+            }),
+            isActive ? "active" : null,
+            className,
+        ),
+        ...props,
+    } as any
+
+    return props.href ? (
+        <RouteLink {...propsResolved} />
+    ) : (
+        <button {...propsResolved}> {props.children} </button>
     )
 }
 

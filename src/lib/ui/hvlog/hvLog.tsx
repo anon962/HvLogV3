@@ -14,6 +14,7 @@ import { RouteLink } from "../routeLink"
 import { IndexMap } from "@/lib/stats/indexMap"
 import { Sidebar, SidebarItem } from "../sidebar"
 import * as lucide from "lucide-react"
+import { MonsterPage } from "./monsterPage"
 
 // @fixme: compression
 
@@ -60,6 +61,12 @@ export const HvLog: RootComponent = ({}) => {
                         component: <LogList />,
                     }),
                 ],
+                [
+                    "mobs",
+                    (parts: string[], url: URL) => ({
+                        component: <MonsterPage />,
+                    }),
+                ],
             ] as const
         ).map((kv) => [kv[0].split("/"), kv[1]] as const),
     })
@@ -68,12 +75,12 @@ export const HvLog: RootComponent = ({}) => {
         {
             icon: <lucide.ScrollText />,
             path: "/logs/",
-            isActive: (url) => url.pathname.startsWith("/logs"),
+            isActive: (url) => url.pathname.startsWith("/logs/"),
             isDisabled: (url) => url.pathname === "/logs/",
         },
         {
             icon: "ML",
-            path: "/logs/",
+            path: "/mobs",
         },
     ]
 

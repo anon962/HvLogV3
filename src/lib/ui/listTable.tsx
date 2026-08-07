@@ -6,7 +6,7 @@ import {
     TableHeader,
     TableRow,
 } from "@/lib/ui/shadcn/table"
-import { ReactMemo } from "@/lib/utils/miscUtils"
+import { CommonProps, ReactMemo } from "@/lib/utils/miscUtils"
 import { cn } from "@/lib/utils/shadcnUtils"
 import { clamp, range, sort } from "myutils"
 import React, {
@@ -43,10 +43,9 @@ export namespace ListTable {
         id: string
         align?: "text-left" | "text-right" | "text-center"
         header: {
-            content: string
+            content: ReactNode
             className?: string
         }
-        preprocess?: (xs: Array<TValue>) => Array<TImpureValue>
         // cell() should be pure, hooks go in preprocess
         cell: (
             x: TValue,
@@ -56,6 +55,8 @@ export namespace ListTable {
             className?: string
             title?: string
         }
+        // generates the y arg for each cell() in this col
+        preprocess?: (xs: Array<TValue>) => Array<TImpureValue>
         sort?: (xs: Array<TValue>) => Array<TValue>
     }
 
@@ -65,46 +66,46 @@ export namespace ListTable {
     }
 }
 
-export function ListTable<T>(props: {
-    data: Array<T>
-    cols: Array<ListTable.Column<T, any>>
-    sortCriteria: ListTable.SortCriteria | null
-    setSortCriteria: (crit: ListTable.SortCriteria | null) => void
-    selectedId: string
-    setSelectedId: (id: string) => void
-    getId: (d: T) => string
-    sortCols?: Set<string>
-    count: number
-    onHover?: {
-        delay: number
-        fn: (id: string) => void
-    }
-    pageSize: number
-    setPageSize: {
-        options: number[]
-        handler: (x: number) => void
-    }
-    pageIndex: number
-    setPageIndex: (pg: number) => void
-    rowUrl?: (d: T) => string
-    isLoading?: boolean
-    className?: {
-        root?: string
-    }
-    pageUrl?: (pageIdx: number) => Record<string, string>
-    filter?: {
-        trigger: ReactNode
-        content: ReactNode
-        active: boolean
-    }
-}) {
+export function ListTable<T>(
+    props: {
+        data: Array<T>
+        cols: Array<ListTable.Column<T, any>>
+        sortCriteria: ListTable.SortCriteria | null
+        setSortCriteria: (crit: ListTable.SortCriteria | null) => void
+        selectedId?: string
+        setSelectedId?: (id: string) => void
+        getId: (d: T) => string
+        sortCols?: Set<string>
+        count: number
+        onHover?: {
+            delay: number
+            fn: (id: string) => void
+        }
+        pageSize: number
+        setPageSize: {
+            options: number[]
+            handler: (x: number) => void
+        }
+        pageIndex: number
+        setPageIndex?: (pg: number) => void
+        pageUrl?: (pageIdx: number) => Record<string, string>
+        rowUrl?: (d: T) => string
+        isLoading?: boolean
+        filter?: {
+            trigger: ReactNode
+            content: ReactNode
+            active: boolean
+        }
+        tableProps?: CommonProps
+    } & CommonProps,
+) {
     const [showFilter, setShowFilter] = useState(false)
 
     return (
         <div
             className={cn(
                 "list-table-container w-full pb-0! flex flex-col",
-                props.className?.root,
+                props.className,
             )}
         >
             <Paginator
@@ -122,7 +123,7 @@ export function ListTable<T>(props: {
 
             <hr className="border my-2!" />
 
-            <TableInner {...props} />
+            <TableInner {...props} {...props.tableProps} />
 
             <hr className="border my-2!" />
 
@@ -131,21 +132,23 @@ export function ListTable<T>(props: {
     )
 }
 
-const TableInner = <T,>(props: {
-    data: Array<T>
-    cols: Array<ListTable.Column<T, any>>
-    sortCriteria: ListTable.SortCriteria | null
-    setSortCriteria: (crit: ListTable.SortCriteria | null) => void
-    selectedId: string
-    setSelectedId: (id: string) => void
-    getId: (d: T) => string
-    rowUrl?: (d: T) => string
-    sortCols?: Set<string>
-    onHover?: {
-        delay: number
-        fn: (id: string) => void
-    }
-}) => {
+const TableInner = <T,>(
+    props: {
+        data: Array<T>
+        cols: Array<ListTable.Column<T, any>>
+        sortCriteria: ListTable.SortCriteria | null
+        setSortCriteria: (crit: ListTable.SortCriteria | null) => void
+        selectedId?: string
+        setSelectedId?: (id: string) => void
+        getId: (d: T) => string
+        rowUrl?: (d: T) => string
+        sortCols?: Set<string>
+        onHover?: {
+            delay: number
+            fn: (id: string) => void
+        }
+    } & CommonProps,
+) => {
     const headerRow = props.cols.map((col) => {
         let icon: ReactNode = null
         let onClick = () => {}
@@ -191,15 +194,21 @@ const TableInner = <T,>(props: {
             "text-left": "justify-start",
             "text-right": "justify-end",
         }
+        const flexAlign = {
+            "text-center": "items-center",
+            "text-left": "items-start",
+            "text-right": "items-end",
+        }
 
         return (
             <TableHead className={cn(col.header.className)}>
                 <div
                     onClick={onClick}
                     className={cn(
-                        "flex items-center",
+                        "flex",
                         props.sortCols?.has(col.id) ? "cursor-pointer" : "",
                         flexJustify[col.align ?? "text-center"],
+                        flexAlign[col.align ?? "text-center"],
                     )}
                 >
                     {col.header.content}
@@ -241,7 +250,7 @@ const TableInner = <T,>(props: {
                 cols={props.cols}
                 isSelected={isSelected}
                 isNextSelected={isNextSelected}
-                onClick={(d) => props.setSelectedId(props.getId(d))}
+                onClick={(d) => props.setSelectedId?.(props.getId(d))}
                 getId={props.getId}
                 rowUrl={props.rowUrl}
                 onHover={props.onHover}
@@ -255,7 +264,12 @@ const TableInner = <T,>(props: {
             : ""
 
     return (
-        <Table className="list-table w-auto min-h-0 mx-auto text-[length:inherit]">
+        <Table
+            className={cn(
+                "list-table w-auto min-h-0 mx-auto text-[length:inherit]",
+                props.className,
+            )}
+        >
             <TableHeader>
                 <TableRow className={cn(headerSelected)}>
                     {...preprocs}
@@ -349,7 +363,7 @@ const Cell = ReactMemo(
         if (props.href) {
             child = <RouteLink href={props.href}>{props.content}</RouteLink>
         } else {
-            child = <span>{props.content}</span>
+            child = <div>{props.content}</div>
         }
 
         return (
@@ -369,7 +383,7 @@ const Paginator = React.memo(
             handler: (x: number) => void
         }
         pageIndex: number
-        setPageIndex: (x: number) => void
+        setPageIndex?: (x: number) => void
         isLoading?: boolean
         pageUrl?: (pageIdx: number) => Record<string, string>
         filter?: {
@@ -404,7 +418,7 @@ const Paginator = React.memo(
 
         const onSelect = useCallback(
             (idx: number) => {
-                props.setPageIndex(idx)
+                props.setPageIndex?.(idx)
 
                 const href = getHref(idx)
                 if (href) {
@@ -415,8 +429,12 @@ const Paginator = React.memo(
         )
 
         const getHref = (idx: number) => {
+            if (!props.pageUrl) {
+                return null
+            }
+
             const url = new URL(window.location.href)
-            const params = props.pageUrl ? props.pageUrl(idx) : {}
+            const params = props.pageUrl(idx)
             for (const [k, v] of Object.entries(params)) {
                 url.searchParams.set(k, v)
             }
@@ -429,6 +447,7 @@ const Paginator = React.memo(
                     <PaginationLink
                         href={getHref(idx)}
                         isActive={idx === props.pageIndex}
+                        onClick={() => props.setPageIndex?.(idx)}
                     >
                         {idx + 1}
                     </PaginationLink>
@@ -470,7 +489,10 @@ const Paginator = React.memo(
                                     : cn("cursor-pointer")
                             }
                         >
-                            <PaginationFirst href={getHref(0)} />
+                            <PaginationFirst
+                                href={getHref(0)}
+                                onClick={() => props.setPageIndex?.(0)}
+                            />
                         </PaginationItem>
                         <PaginationItem
                             className={
@@ -481,6 +503,9 @@ const Paginator = React.memo(
                         >
                             <PaginationPrevious
                                 href={getHref(props.pageIndex - 1)}
+                                onClick={() =>
+                                    props.setPageIndex?.(props.pageIndex - 1)
+                                }
                             />
                         </PaginationItem>
 
@@ -495,6 +520,9 @@ const Paginator = React.memo(
                         >
                             <PaginationNext
                                 href={getHref(props.pageIndex + 1)}
+                                onClick={() =>
+                                    props.setPageIndex?.(props.pageIndex + 1)
+                                }
                             />
                         </PaginationItem>
                         <PaginationItem
@@ -504,7 +532,12 @@ const Paginator = React.memo(
                                     : cn("cursor-pointer")
                             }
                         >
-                            <PaginationLast href={getHref(pageCount - 1)} />
+                            <PaginationLast
+                                href={getHref(pageCount - 1)}
+                                onClick={() =>
+                                    props.setPageIndex?.(pageCount - 1)
+                                }
+                            />
                         </PaginationItem>
                     </PaginationContent>
 

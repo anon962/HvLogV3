@@ -17,6 +17,7 @@
     },
     "type": "module",
     "dependencies": {
+        "@bokuweb/zstd-wasm": "^0.0.27",
         "@observablehq/plot": "^0.6.17",
         "@radix-ui/react-checkbox": "^1.1.5",
         "@radix-ui/react-label": "^2.1.13",
@@ -33,6 +34,7 @@
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
         "date-fns": "^4.4.0",
+        "fflate": "^0.8.3",
         "hold-event": "^1.1.0",
         "idb": "^8.0.2",
         "lucide-react": "^0.483.0",
@@ -45,6 +47,7 @@
         "sonner": "^2.0.3",
         "tailwind-merge": "^3.0.2",
         "tailwindcss": "^4.0.15",
-        "tw-animate-css": "^1.2.4"
+        "tw-animate-css": "^1.2.4",
+        "zstd-codec": "^0.1.5"
     }
 }

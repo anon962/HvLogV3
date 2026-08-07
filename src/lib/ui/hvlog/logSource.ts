@@ -1,13 +1,17 @@
 import { CompleteLog, LogMeta } from "@/lib/logDb/schema"
 import { MetaSummary } from "@/lib/stats/metaStats"
-import { DetailsSummary, SearchSummary } from "@/lib/summary"
+import {
+    DetailsSummary,
+    GlobalMonsterSummary,
+    SearchSummary,
+} from "@/lib/summary"
 import { newContext } from "@/lib/utils/miscUtils"
 import { compressGzip, CustomMap, sleep } from "myutils"
 import { IS_REMOTE } from "../constants"
 
 export interface TLogSource {
     fetchPrices: () => Promise<Record<string, number>>
-    fetchGlobalMonsterSummary: () => Promise<any>
+    fetchGlobalMonsterSummary: () => Promise<GlobalMonsterSummary>
     fetchLog: (id: string) => Promise<CompleteLog<any>>
     fetchDetails: (id: string) => Promise<DetailsSummary>
     fetchSearch: (req: LogSearchRequest) => Promise<LogSearchResponse>
@@ -58,7 +62,7 @@ interface Dated<T> {
 }
 
 class LogSourceRemote {
-    private HVDATA_URL = "https://hvdata.gisadan.dev"
+    private HVDATA_URL = ""
     // private HVDATA_URL = "http://localhost:4546" // @DEBUG
 
     private SEARCH_TTL = 5 * 60 * 1000

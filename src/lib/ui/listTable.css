@@ -4,10 +4,15 @@
     th {
         padding: 0;
     }
-    td > *,
     th > * {
-        padding-left: calc(0.25em * 6);
-        padding-right: calc(0.25em * 6);
+        padding-left: calc(0.25em * 4);
+        padding-right: calc(0.25em * 4);
+        padding-top: calc(0.25em * 2);
+        padding-bottom: calc(0.25em * 2);
+    }
+    td > * {
+        padding-left: calc(0.25em * 8);
+        padding-right: calc(0.25em * 8);
         padding-top: calc(0.25em * 2);
         padding-bottom: calc(0.25em * 2);
     }

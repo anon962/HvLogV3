@@ -1,0 +1,31 @@
+.monster-list {
+    font-size: 0.85em;
+
+    h2 {
+        font-size: 1em;
+        font-weight: 500;
+    }
+
+    td > * {
+        padding-top: calc(0.25em * 1);
+        padding-bottom: calc(0.25em * 1);
+    }
+
+    tbody tr {
+        border: 0;
+    }
+    tbody tr:nth-child(2n + 2) {
+        background-color: color-mix(
+            in oklab,
+            var(--color-muted) 35%,
+            transparent
+        ) !important;
+    }
+    tbody tr:hover:not(.selected) {
+        background-color: color-mix(
+            in oklab,
+            var(--color-muted) 85%,
+            transparent
+        ) !important;
+    }
+}

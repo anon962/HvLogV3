@@ -1,3 +1,4 @@
+import { ISODate } from "./logDb/schema"
 import { CombatSummary } from "./stats/combatStats"
 import {
     DropSummary,
@@ -75,3 +76,24 @@ export type MonsterSummary = {
         >
     >
 }
+
+export type GlobalMonsterSummary = Array<{
+    days: number | null
+    round_count: number
+    mid_to_idx: Record<string, number>
+    expiry: Array<[string, ISODate]>
+    monsters: {
+        mid: Array<string>
+        name: Array<string>
+        hp: Array<number>
+        level: Array<number>
+        appearances: Array<number>
+        damage: Record<
+            "taken" | "given",
+            Record<
+                "attack" | "skill" | "spell" | "other",
+                { count: Array<number>; total: Array<number> }
+            >
+        >
+    }
+}>

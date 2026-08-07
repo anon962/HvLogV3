@@ -1,3 +1,5 @@
+import * as _lucide from "lucide-react"
+
 export const IS_BROWSER = typeof window !== "undefined"
 export const IS_REMOTE = IS_BROWSER ? !!window.HV_LOG_IS_REMOTE : true
 
@@ -493,3 +495,5 @@ export const SHARDS = new Set<PriceKey>([
 ])
 
 export const ARTIFACTS = new Set<PriceKey>(["Precursor Artifact"])
+
+export const lucide = _lucide
