@@ -4,7 +4,8 @@ import { ListTable } from "../listTable"
 import { LOG_SOURCE } from "./logSource"
 import { UrlParamN } from "./router"
 import { useMemo, useState } from "react"
-import { alphabetical, clamp, range, sortBy, sum } from "myutils"
+import { alphabetical, clamp, dedupe, range, sortBy, sum } from "myutils"
+import { NgramSearch } from "@/lib/ngramSearch"
 
 // region cols
 const COLS_ = {
@@ -237,6 +238,34 @@ export namespace MonsterPageN {
             return rows
         }, [mobQuery.data, monlabQuery.data])
 
+        const [namePool, nameGrams] = useMemo(() => {
+            const names = allRows.map((x) => x.name)
+            const namePool = alphabetical(
+                names.flatMap((x) => (x.length > 0 ? [x] : [])),
+            )
+            const nameGrams = new NgramSearch({
+                items: names.map((x, idx) => ({ id: idx, text: x })),
+                cacheSize: 2,
+            })
+            return [namePool, nameGrams]
+        }, [allRows])
+
+        const [trainerPool, trainerGrams] = useMemo(() => {
+            const trainers = allRows.map((x) => x.trainer)
+            const trainerPool = alphabetical(
+                trainers.flatMap((x) =>
+                    x !== null && x.length > 0 ? [x] : [],
+                ),
+            )
+            const nameGrams = new NgramSearch({
+                items: trainers.flatMap((x, idx) =>
+                    x !== null ? [{ id: idx, text: x }] : [],
+                ),
+                cacheSize: 2,
+            })
+            return [trainerPool, nameGrams]
+        }, [allRows])
+
         const filtered = useMemo(() => {
             let xs = range(allRows.length)
 
@@ -244,30 +273,22 @@ export namespace MonsterPageN {
                 .map((x) => x.trim().toLowerCase())
                 .filter((x) => x.length > 0)
             if (nm.length > 0) {
-                xs = xs.filter((x) =>
-                    nm.some(
-                        (patt) =>
-                            patt.trim().length > 0 &&
-                            allRows[x].name
-                                .toLowerCase()
-                                .includes(patt.toLowerCase()),
-                    ),
-                )
+                xs = dedupe(
+                    nm.flatMap((patt) => nameGrams.find(patt)),
+                    (x) => x.id,
+                )[0].map((x) => x.id)
             }
+
             const tr = params.tr
                 .map((x) => x.trim().toLowerCase())
                 .filter((x) => x.length > 0)
             if (tr.length > 0) {
-                xs = xs.filter((x) =>
-                    tr.some(
-                        (patt) =>
-                            patt.trim().length > 0 &&
-                            (allRows[x].trainer ?? "")
-                                .toLowerCase()
-                                .includes(patt.toLowerCase()),
-                    ),
-                )
+                xs = dedupe(
+                    tr.flatMap((patt) => trainerGrams.find(patt)),
+                    (x) => x.id,
+                )[0].map((x) => x.id)
             }
+
             const rc = params.rc
                 .map((x) => x.trim().toLowerCase())
                 .filter((x) => x.length > 0)
@@ -283,10 +304,10 @@ export namespace MonsterPageN {
                 )
             }
             if (Number.isInteger(params.l0)) {
-                xs = xs.filter((x) => allRows[x].pl ?? 0 >= params.l0!)
+                xs = xs.filter((x) => (allRows[x].pl ?? 0) >= params.l0!)
             }
             if (Number.isInteger(params.l1)) {
-                xs = xs.filter((x) => allRows[x].pl ?? 0 <= params.l1!)
+                xs = xs.filter((x) => (allRows[x].pl ?? 0) <= params.l1!)
             }
             if (Number.isInteger(params.v0)) {
                 xs = xs.filter((x) => allRows[x].appearances >= params.v0!)
@@ -357,24 +378,10 @@ export namespace MonsterPageN {
 
         const options = useMemo(() => {
             return {
-                name: alphabetical(
-                    Array.from(
-                        new Set(
-                            allRows.flatMap((x) =>
-                                x.name.length > 0 ? [x.name] : [],
-                            ),
-                        ),
-                    ),
-                ),
-                trainer: alphabetical(
-                    Array.from(
-                        new Set(
-                            allRows.flatMap((x) =>
-                                x.trainer ? [x.trainer] : [],
-                            ),
-                        ),
-                    ),
-                ),
+                namePool,
+                nameGrams,
+                trainerPool,
+                trainerGrams,
                 race: alphabetical(
                     Array.from(
                         new Set(

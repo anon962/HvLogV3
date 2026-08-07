@@ -1,19 +1,17 @@
-import { useMemo, useState } from "react"
-import { ListTable } from "../listTable"
-import { MonsterPageN } from "./monsterPageN"
 import {
     Autocomplete,
     AutocompleteContent,
-    AutocompleteEmpty,
     AutocompleteInput,
     AutocompleteItem,
     AutocompleteList,
 } from "@/components/reui/autocomplete"
 import { lucide } from "@/lib/ui/constants"
-import { LabeledCheckbox } from "../checkboxGroup"
 import { CommonProps } from "@/lib/utils/miscUtils"
+import { useMemo } from "react"
+import { ListTable } from "../listTable"
 import { Input } from "../shadcn/input"
-import { X } from "lucide-react"
+import { MonsterPageN } from "./monsterPageN"
+import { NgramSearch } from "@/lib/ngramSearch"
 
 export function MonsterPage(props: {}) {
     return (
@@ -95,19 +93,9 @@ function Table() {
                 filter={{
                     trigger: <lucide.SlidersHorizontal className="size-full" />,
                     content: <Filter />,
-                    active:
-                        // params.bt.size > 0 ||
-                        // params.ct.size > 0 ||
-                        // params.sp.size > 0 ||
-                        // params.ss.size > 0 ||
-                        // params.e.size > 0 ||
-                        // params.i === "yes" ||
-                        // params.i === "no" ||
-                        // !!params.ds ||
-                        // !!params.de ||
-                        // !!params.rmn ||
-                        // !!params.rmx ||
-                        false,
+                    active: Object.entries(params).some(
+                        ([k, v]) => !"pnsd".includes(k) && v !== null,
+                    ),
                 }}
             />
         </div>
@@ -115,7 +103,7 @@ function Table() {
 }
 
 function Filter() {
-    const { params, setParams, options } = MonsterPageN.ctx.useContext()
+    const { options } = MonsterPageN.ctx.useContext()
 
     return (
         <form className="rounded-md border p-4 text-xs flex flex-col gap-2">
@@ -123,7 +111,8 @@ function Filter() {
                 <label>Name</label>
                 <MultiSelect
                     param="nm"
-                    options={Array.from(options.name)}
+                    options={options.namePool}
+                    ngramSearch={options.nameGrams}
                     placeholder="konata, yggdrasil"
                 />
             </div>
@@ -132,7 +121,8 @@ function Filter() {
                 <label>Trainer</label>
                 <MultiSelect
                     param="tr"
-                    options={Array.from(options.trainer)}
+                    options={options.trainerPool}
+                    ngramSearch={options.trainerGrams}
                     placeholder="tenboro, snowflake"
                 />
             </div>
@@ -141,7 +131,7 @@ function Filter() {
                 <label>Race</label>
                 <MultiSelect
                     param="rc"
-                    options={Array.from(options.race)}
+                    options={options.race}
                     placeholder="giant, undead"
                 />
             </div>
@@ -179,6 +169,7 @@ function MultiSelect(
         param: "nm" | "tr" | "rc"
         options: string[]
         placeholder?: string
+        ngramSearch?: NgramSearch<unknown>
     } & CommonProps,
 ) {
     const { params, setParams } = MonsterPageN.ctx.useContext()
@@ -187,10 +178,15 @@ function MultiSelect(
     const currValue =
         sources.length > 0 ? sources[sources.length - 1].toLowerCase() : ""
 
-    const filtered = useMemo(
-        () => props.options.filter((x) => x.toLowerCase().includes(currValue)),
-        [props.options, currValue],
-    )
+    const filtered = useMemo(() => {
+        if (!props.ngramSearch) {
+            return props.options.filter((x) =>
+                x.toLowerCase().includes(currValue),
+            )
+        } else {
+            return props.ngramSearch.find(currValue).map((x) => x.text)
+        }
+    }, [props.options, props.ngramSearch, currValue])
 
     return (
         <Autocomplete
