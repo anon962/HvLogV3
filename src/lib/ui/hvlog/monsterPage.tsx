@@ -74,9 +74,9 @@ function Table() {
     const cols = [
         mode === "monsters" && MonsterPageN.COLS.name,
         MonsterPageN.COLS.trainer,
-        mode === "monsters" && MonsterPageN.COLS.pl,
-        mode === "monsters" && MonsterPageN.COLS.race,
         mode === "trainers" && MonsterPageN.COLS.mobcount,
+        MonsterPageN.COLS.pl,
+        mode === "monsters" && MonsterPageN.COLS.race,
         MonsterPageN.COLS.frequency,
         MonsterPageN.COLS.dgiven,
         MonsterPageN.COLS.dtaken,

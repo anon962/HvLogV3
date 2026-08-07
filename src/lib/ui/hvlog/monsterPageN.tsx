@@ -85,10 +85,25 @@ const COLS_ = {
         id: "pl",
         header: { content: "Level" },
         align: "text-right",
-        cell: (x) => ({
-            content: x.pl !== null ? x.pl || "-" : "???",
-            className: "pl",
-        }),
+        cell: (x) => {
+            let pl
+            if (x.pl === null) {
+                pl = "???"
+            } else if (x.pl === 0) {
+                pl = "-"
+            } else {
+                if (x.hp < 0) {
+                    pl = (x.pl / x.filterIds.size).toFixed(1)
+                } else {
+                    pl = String(x.pl)
+                }
+            }
+
+            return {
+                content: pl,
+                className: "pl",
+            }
+        },
     },
     race: {
         id: "race",
@@ -292,6 +307,7 @@ export namespace MonsterPageN {
                             takenHits: 0,
                             given: 0,
                         },
+                        pl: 0,
                     }
                     trainerMap.set(r.trainer, t)
                 } else {
@@ -299,6 +315,7 @@ export namespace MonsterPageN {
                 }
 
                 t.filterIds.add(r.mid)
+                t.pl = (t.pl ?? 0) + (r.pl ?? 0)
                 t.appearances += r.appearances
                 t.damage.taken += r.damage.taken
                 t.damage.takenHits += r.damage.takenHits
@@ -448,7 +465,9 @@ export namespace MonsterPageN {
                             case "trainer":
                                 return r.trainer ?? ""
                             case "pl":
-                                return r.pl ?? 0
+                                return r.pl !== null
+                                    ? r.pl / r.filterIds.size
+                                    : 0
                             case "race":
                                 return r.race ?? ""
                             case "mobcount":
