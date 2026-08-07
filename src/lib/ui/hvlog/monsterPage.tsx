@@ -11,16 +11,53 @@ import { useMemo } from "react"
 import { ListTable } from "../listTable"
 import { Input } from "../shadcn/input"
 import { MonsterPageN } from "./monsterPageN"
-import { NgramSearch } from "@/lib/ngramSearch"
+import { cn, mapEntries, NgramSearch } from "myutils"
+import * as Tabs from "../shadcn/tabs"
 
 export function MonsterPage(props: {}) {
     return (
         <MonsterPageN.ctx.Provider>
-            <Table />
+            <Inner />
         </MonsterPageN.ctx.Provider>
     )
 }
 
+function Inner() {
+    const { mode, setMode, params, setParams } = MonsterPageN.ctx.useContext()
+    return (
+        <Tabs.Tabs
+            className="px-16 py-8 gap-0"
+            defaultValue={mode}
+            onValueChange={(x) => {
+                setMode(x)
+                setParams({
+                    ...mapEntries(params, ([k, v]) => ({ [k]: null })),
+                    m: x[0],
+                })
+            }}
+        >
+            <Tabs.TabsList className="grid grid-cols-2 w-full">
+                <Tabs.TabsTrigger value="monsters" className="font-bold py-1">
+                    Monsters
+                </Tabs.TabsTrigger>
+
+                <Tabs.TabsTrigger value="trainers" className="font-bold py-1">
+                    Trainers
+                </Tabs.TabsTrigger>
+            </Tabs.TabsList>
+
+            <Tabs.TabsContent value="monsters" className="h-full min-h-0">
+                <Table />
+            </Tabs.TabsContent>
+
+            <Tabs.TabsContent value="trainers" className="h-full min-h-0">
+                <Table />
+            </Tabs.TabsContent>
+        </Tabs.Tabs>
+    )
+}
+
+// region: table
 function Table() {
     const {
         data,
@@ -31,24 +68,28 @@ function Table() {
         setParams,
         rawParams,
         sortCol,
+        mode,
     } = MonsterPageN.ctx.useContext()
+
+    const cols = [
+        mode === "monsters" && MonsterPageN.COLS.name,
+        MonsterPageN.COLS.trainer,
+        mode === "monsters" && MonsterPageN.COLS.pl,
+        mode === "monsters" && MonsterPageN.COLS.race,
+        mode === "trainers" && MonsterPageN.COLS.mobcount,
+        MonsterPageN.COLS.frequency,
+        MonsterPageN.COLS.dgiven,
+        MonsterPageN.COLS.dtaken,
+        // MonsterPageN.COLS.mid,
+    ].flatMap((x) => (!!x ? [x] : []))
 
     return (
         <div className="flex flex-col justify-center">
             <ListTable
                 data={data}
-                cols={[
-                    MonsterPageN.COLS.name,
-                    MonsterPageN.COLS.trainer,
-                    MonsterPageN.COLS.pl,
-                    MonsterPageN.COLS.race,
-                    MonsterPageN.COLS.frequency,
-                    MonsterPageN.COLS.dgiven,
-                    MonsterPageN.COLS.dtaken,
-                    // MonsterPageN.COLS.mid,
-                ]}
+                cols={cols}
                 count={pageCount * pageSize}
-                getId={(d) => String(d.mid)}
+                getId={(d) => d.id}
                 pageIndex={pageIndex}
                 pageUrl={(pageIdx) => ({
                     ...rawParams,
@@ -61,18 +102,7 @@ function Table() {
                     },
                 }}
                 pageSize={pageSize}
-                sortCols={
-                    new Set([
-                        MonsterPageN.COLS.name.id,
-                        MonsterPageN.COLS.trainer.id,
-                        MonsterPageN.COLS.pl.id,
-                        MonsterPageN.COLS.race.id,
-                        MonsterPageN.COLS.frequency.id,
-                        MonsterPageN.COLS.dgiven.id,
-                        MonsterPageN.COLS.dtaken.id,
-                        // MonsterPageN.COLS.mid.id,
-                    ])
-                }
+                sortCols={new Set(cols.map((c) => c.id))}
                 sortCriteria={
                     sortCol
                         ? {
@@ -94,7 +124,9 @@ function Table() {
                     trigger: <lucide.SlidersHorizontal className="size-full" />,
                     content: <Filter />,
                     active: Object.entries(params).some(
-                        ([k, v]) => !"pnsd".includes(k) && v !== null,
+                        ([k, v]) =>
+                            !"pnsdm".includes(k) &&
+                            (Array.isArray(v) ? v.length > 0 : v !== null),
                     ),
                 }}
             />
@@ -102,20 +134,23 @@ function Table() {
     )
 }
 
+// region: filter
 function Filter() {
-    const { options } = MonsterPageN.ctx.useContext()
+    const { options, mode } = MonsterPageN.ctx.useContext()
 
     return (
         <form className="rounded-md border p-4 text-xs flex flex-col gap-2">
-            <div className="input-container">
-                <label>Name</label>
-                <MultiSelect
-                    param="nm"
-                    options={options.namePool}
-                    ngramSearch={options.nameGrams}
-                    placeholder="konata, yggdrasil"
-                />
-            </div>
+            {mode === "monsters" && (
+                <div className="input-container">
+                    <label>Name</label>
+                    <MultiSelect
+                        param="nm"
+                        options={options.namePool}
+                        ngramSearch={options.nameGrams}
+                        placeholder="konata, yggdrasil"
+                    />
+                </div>
+            )}
 
             <div className="input-container">
                 <label>Trainer</label>
@@ -136,7 +171,12 @@ function Filter() {
                 />
             </div>
 
-            <div className="grid grid-cols-5 gap-4">
+            <div
+                className={cn(
+                    "grid gap-4",
+                    mode === "monsters" ? "grid-cols-5" : "grid-cols-4",
+                )}
+            >
                 <NumberInput
                     param="v0"
                     label="Appearances"
@@ -152,18 +192,28 @@ function Filter() {
                     label="Damage Taken"
                     max={Math.ceil(options.maxDefense / 10) * 10}
                 />
-                <NumberInput param="l0" label="Level Min" max={2250} />
-                <NumberInput
-                    param="l1"
-                    label="Level Max"
-                    max={2250}
-                    placeholder="2250"
-                />
+
+                {mode === "trainers" && (
+                    <NumberInput param="c0" label="Monsters" max={200} />
+                )}
+
+                {mode === "monsters" && (
+                    <NumberInput param="l0" label="Level Min" max={2250} />
+                )}
+                {mode === "monsters" && (
+                    <NumberInput
+                        param="l1"
+                        label="Level Max"
+                        max={2250}
+                        placeholder="2250"
+                    />
+                )}
             </div>
         </form>
     )
 }
 
+// region: utils
 function MultiSelect(
     props: {
         param: "nm" | "tr" | "rc"
@@ -228,7 +278,7 @@ function MultiSelect(
 }
 
 function NumberInput(props: {
-    param: "l0" | "l1" | "v0" | "a0" | "d0"
+    param: "l0" | "l1" | "v0" | "a0" | "d0" | "c0"
     label: string
     min?: number
     max?: number

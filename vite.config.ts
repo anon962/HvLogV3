@@ -37,6 +37,21 @@ export default defineConfig((config) => {
                 compress: false,
                 mangle: false,
             },
+            rollupOptions: {
+                output: {
+                    banner: `
+                        var process = {
+                            env: {
+                                NODE_ENV: ${JSON.stringify(
+                                    config.mode === "development"
+                                        ? "development"
+                                        : "production",
+                                )},
+                            },
+                        };
+                    `,
+                },
+            },
         },
         optimizeDeps: {
             exclude: ["@bokuweb/zstd-wasm"],

@@ -106,7 +106,7 @@ export function ListTable<T>(
         tableProps?: CommonProps
     } & CommonProps,
 ) {
-    const [showFilter, setShowFilter] = useState(true)
+    const [showFilter, setShowFilter] = useState(false)
 
     return (
         <div
@@ -262,7 +262,10 @@ const TableInner = <T,>(
 
         const isSelected = id === props.selectedId
         const isNextSelected = nextId === props.selectedId
-        const rowExtras = props.cols.map((_, colIdx) => extras[colIdx][idx])
+        const rowExtras = props.cols.map(
+            // @todo: why is this sometimes null when switching tabs with tables
+            (_, colIdx) => extras[colIdx]?.[idx] ?? null,
+        )
 
         return (
             <Row<T>

@@ -1,11 +1,19 @@
 import { formatNumber, newContext, useAsync } from "@/lib/utils/miscUtils"
+import {
+    alphabetical,
+    clamp,
+    dedupe,
+    enumerate,
+    NgramSearch,
+    range,
+    sortBy,
+    sum,
+} from "myutils"
+import { useMemo, useState } from "react"
 import { lucide } from "../constants"
 import { ListTable } from "../listTable"
 import { LOG_SOURCE } from "./logSource"
 import { UrlParamN } from "./router"
-import { useMemo, useState } from "react"
-import { alphabetical, clamp, dedupe, range, sortBy, sum } from "myutils"
-import { NgramSearch } from "@/lib/ngramSearch"
 
 // region cols
 const COLS_ = {
@@ -47,7 +55,8 @@ const COLS_ = {
         },
         align: "text-right",
         cell: (x) => ({
-            content: formatNumber(100 * x.damage.taken) + "%",
+            content:
+                formatNumber((100 * x.damage.taken) / x.damage.takenHits) + "%",
             className: "taken",
         }),
     },
@@ -59,7 +68,7 @@ const COLS_ = {
         },
         align: "text-right",
         cell: (x) => ({
-            content: Math.round(1000 * x.damage.given),
+            content: Math.round((1000 * x.damage.given) / x.appearances),
             className: "given",
         }),
     },
@@ -90,6 +99,15 @@ const COLS_ = {
             className: "race",
         }),
     },
+    mobcount: {
+        id: "mobcount",
+        header: { content: "Monsters" },
+        align: "text-right",
+        cell: (x) => ({
+            content: x.filterIds.size,
+            className: "mobcount",
+        }),
+    },
 } as const satisfies Record<string, ListTable.Column<MonsterPageN.Row, any>>
 
 // region params
@@ -109,6 +127,9 @@ const PARAM_SCHEMA = {
     },
     d: {
         type: "boolean",
+    },
+    m: {
+        type: "string",
     },
     // Filter options
     nm: {
@@ -144,6 +165,9 @@ const PARAM_SCHEMA = {
     d0: {
         type: "number",
     },
+    c0: {
+        type: "number",
+    },
 } as const satisfies UrlParamN.Schema
 
 // region namespace
@@ -152,6 +176,7 @@ export namespace MonsterPageN {
     export const SCHEMA = PARAM_SCHEMA
 
     export type Row = {
+        id: string
         mid: number
         name: string
         hp: number
@@ -160,8 +185,10 @@ export namespace MonsterPageN {
         globalCount: number
         damage: {
             taken: number
+            takenHits: number
             given: number
         }
+        filterIds: Set<number>
 
         trainer: string | null
         race: string | null
@@ -183,7 +210,11 @@ export namespace MonsterPageN {
             schema: PARAM_SCHEMA,
         })
 
-        const allRows: Array<MonsterPageN.Row> = useMemo(() => {
+        const [mode, setMode] = useState(
+            params.m === "t" ? "trainers" : "monsters",
+        )
+
+        const monsterRows: Array<MonsterPageN.Row> = useMemo(() => {
             if (!mobQuery.data) {
                 return []
             }
@@ -200,6 +231,7 @@ export namespace MonsterPageN {
                 const ml = monlabQuery.data?.[mid]
 
                 rows.push({
+                    id: String(mid),
                     mid,
                     name: m.name[idx],
                     appearances: m.appearances[idx],
@@ -207,24 +239,23 @@ export namespace MonsterPageN {
                     hp: m.hp[idx],
                     level: m.level[idx],
                     damage: {
-                        given:
-                            sum(
-                                Object.values(m.damage.given).map(
-                                    (v) => v.total[idx],
-                                ),
-                            ) / m.appearances[idx],
-                        taken:
-                            sum(
-                                Object.values(m.damage.taken).map(
-                                    (v) => v.total[idx],
-                                ),
-                            ) /
-                            sum(
-                                Object.values(m.damage.taken).map(
-                                    (v) => v.count[idx],
-                                ),
+                        given: sum(
+                            Object.values(m.damage.given).map(
+                                (v) => v.total[idx],
                             ),
+                        ),
+                        taken: sum(
+                            Object.values(m.damage.taken).map(
+                                (v) => v.total[idx],
+                            ),
+                        ),
+                        takenHits: sum(
+                            Object.values(m.damage.taken).map(
+                                (v) => v.count[idx],
+                            ),
+                        ),
                     },
+                    filterIds: new Set([mid]),
                     trainer: ml?.trainer ?? null,
                     race: ml?.monsterClass ?? null,
                     pl: ml?.plvl ?? null,
@@ -238,20 +269,67 @@ export namespace MonsterPageN {
             return rows
         }, [mobQuery.data, monlabQuery.data])
 
+        const trainerRows: Array<MonsterPageN.Row> = useMemo(() => {
+            const trainerMap = new Map<string, MonsterPageN.Row>()
+            for (const r of monsterRows) {
+                if (r.trainer === null) {
+                    continue
+                }
+
+                let t: MonsterPageN.Row
+                if (!trainerMap.has(r.trainer)) {
+                    t = {
+                        ...r,
+                        id: r.trainer,
+                        filterIds: new Set(),
+                        mid: -1,
+                        hp: -1,
+                        level: -1,
+                        name: "",
+                        appearances: 0,
+                        damage: {
+                            taken: 0,
+                            takenHits: 0,
+                            given: 0,
+                        },
+                    }
+                    trainerMap.set(r.trainer, t)
+                } else {
+                    t = trainerMap.get(r.trainer)!
+                }
+
+                t.filterIds.add(r.mid)
+                t.appearances += r.appearances
+                t.damage.taken += r.damage.taken
+                t.damage.takenHits += r.damage.takenHits
+                t.damage.given += r.damage.given
+            }
+
+            return [...trainerMap.values()]
+        }, [monsterRows])
+
+        const allRows = useMemo(
+            () => (mode === "monsters" ? monsterRows : trainerRows),
+            [mode, monsterRows, trainerRows],
+        )
+
         const [namePool, nameGrams] = useMemo(() => {
-            const names = allRows.map((x) => x.name)
+            const names = monsterRows.map((x) => x.name)
             const namePool = alphabetical(
                 names.flatMap((x) => (x.length > 0 ? [x] : [])),
             )
             const nameGrams = new NgramSearch({
-                items: names.map((x, idx) => ({ id: idx, text: x })),
+                items: names.map((x, idx) => ({
+                    id: monsterRows[idx].mid,
+                    text: x,
+                })),
                 cacheSize: 2,
             })
             return [namePool, nameGrams]
-        }, [allRows])
+        }, [monsterRows])
 
         const [trainerPool, trainerGrams] = useMemo(() => {
-            const trainers = allRows.map((x) => x.trainer)
+            const trainers = monsterRows.map((x) => x.trainer)
             const trainerPool = alphabetical(
                 trainers.flatMap((x) =>
                     x !== null && x.length > 0 ? [x] : [],
@@ -259,11 +337,21 @@ export namespace MonsterPageN {
             )
             const nameGrams = new NgramSearch({
                 items: trainers.flatMap((x, idx) =>
-                    x !== null ? [{ id: idx, text: x }] : [],
+                    x !== null ? [{ id: monsterRows[idx].mid, text: x }] : [],
                 ),
                 cacheSize: 2,
             })
             return [trainerPool, nameGrams]
+        }, [monsterRows])
+
+        const midToIdx = useMemo(() => {
+            const midToIdx = new Map<number, number>()
+            for (const [idx, x] of enumerate(allRows)) {
+                for (const mid of x.filterIds) {
+                    midToIdx.set(mid, idx)
+                }
+            }
+            return midToIdx
         }, [allRows])
 
         const filtered = useMemo(() => {
@@ -276,7 +364,7 @@ export namespace MonsterPageN {
                 xs = dedupe(
                     nm.flatMap((patt) => nameGrams.find(patt)),
                     (x) => x.id,
-                )[0].map((x) => x.id)
+                )[0].map((x) => midToIdx.get(x.id)!)
             }
 
             const tr = params.tr
@@ -286,7 +374,7 @@ export namespace MonsterPageN {
                 xs = dedupe(
                     tr.flatMap((patt) => trainerGrams.find(patt)),
                     (x) => x.id,
-                )[0].map((x) => x.id)
+                )[0].map((x) => midToIdx.get(x.id)!)
             }
 
             const rc = params.rc
@@ -320,6 +408,9 @@ export namespace MonsterPageN {
             if (Number.isInteger(params.d0)) {
                 xs = xs.filter((x) => allRows[x].damage.taken >= params.d0!)
             }
+            if (Number.isInteger(params.c0)) {
+                xs = xs.filter((x) => allRows[x].filterIds.size >= params.c0!)
+            }
 
             return xs
         }, [
@@ -342,23 +433,26 @@ export namespace MonsterPageN {
             xs = sortBy(xs, [
                 {
                     fn: (x) => {
+                        const r = allRows[x]
                         switch (cid) {
                             case "mid":
-                                return allRows[x].mid
+                                return r.mid
                             case "name":
-                                return allRows[x].name
+                                return r.name
                             case "frequency":
-                                return allRows[x].appearances
+                                return r.appearances
                             case "dtaken":
-                                return allRows[x].damage.taken
+                                return r.damage.taken / r.damage.takenHits
                             case "dgiven":
-                                return allRows[x].damage.given
+                                return r.damage.given / r.appearances
                             case "trainer":
-                                return allRows[x].trainer ?? ""
+                                return r.trainer ?? ""
                             case "pl":
-                                return allRows[x].pl ?? 0
+                                return r.pl ?? 0
                             case "race":
-                                return allRows[x].race ?? ""
+                                return r.race ?? ""
+                            case "mobcount":
+                                return r.filterIds.size
                         }
                     },
                     reverse,
@@ -409,6 +503,8 @@ export namespace MonsterPageN {
                 rawParams,
                 sortCol: params.s,
                 options,
+                mode,
+                setMode,
             },
             () => {},
         ]
