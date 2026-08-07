@@ -8,10 +8,12 @@ import { lucide } from "../constants"
 
 export function MonsterPage(props: {}) {
     const logSource = LOG_SOURCE.useContext()
-    const resp = useAsync(
+    const mobQuery = useAsync(
         async () => await logSource.fetchGlobalMonsterSummary(),
         {},
     )
+    const monlabQuery = useAsync(async () => await logSource.fetchMonlab(), {})
+
     const [age, setAge] = useState<number | null>(null)
     const [page, setPage] = useState({
         idx: 0,
@@ -20,11 +22,11 @@ export function MonsterPage(props: {}) {
     })
 
     const rows: Array<MonsterPageN.Row> = useMemo(() => {
-        if (!resp.data) {
+        if (!mobQuery.data) {
             return []
         }
 
-        const d = resp.data.find((x) => x.days === age)!
+        const d = mobQuery.data.find((x) => x.days === age)!
         const m = d.monsters
 
         const rows: Array<MonsterPageN.Row> = []
@@ -32,8 +34,11 @@ export function MonsterPage(props: {}) {
         for (let idx = 0; idx < m.mid.length; idx++) {
             totalAppearances += m.appearances[idx]
 
+            const mid = parseInt(m.mid[idx])
+            const ml = monlabQuery.data?.[mid]
+
             rows.push({
-                mid: parseInt(m.mid[idx]),
+                mid,
                 name: m.name[idx],
                 appearances: m.appearances[idx],
                 globalCount: 0,
@@ -58,9 +63,9 @@ export function MonsterPage(props: {}) {
                             ),
                         ),
                 },
-                trainer: null,
-                race: null,
-                pl: null,
+                trainer: ml?.trainer ?? null,
+                race: ml?.monsterClass ?? null,
+                pl: ml?.plvl ?? null,
             })
         }
 
@@ -69,7 +74,7 @@ export function MonsterPage(props: {}) {
         }
 
         return rows
-    }, [resp])
+    }, [mobQuery.data, monlabQuery.data])
 
     const data = useMemo(() => {
         const cid = page.sort?.cid ?? MonsterPageN.COLS.frequency.id
@@ -86,7 +91,7 @@ export function MonsterPage(props: {}) {
             case MonsterPageN.COLS.damageTaken.id:
                 vn ||= (x) => x.damage.taken
             case MonsterPageN.COLS.pl.id:
-                vn ||= (x) => x.level
+                vn ||= (x) => x.pl ?? 0
                 rowsSorted = sort(rows, vn, order === "desc")
                 break
             case MonsterPageN.COLS.name.id:
@@ -198,7 +203,7 @@ namespace MonsterPageN {
             align: "text-right",
             cell: (x) => ({
                 content: Math.round(
-                    x.appearances * (1_000_000 / x.globalCount),
+                    x.appearances, // * (1_000_000 / x.globalCount),
                 ),
             }),
         },
@@ -225,7 +230,7 @@ namespace MonsterPageN {
             header: { content: "Trainer" },
             align: "text-right",
             cell: (x) => ({
-                content: x.trainer ?? "???",
+                content: x.trainer !== null ? x.trainer || "-" : "???",
                 className: "trainer",
             }),
         },
@@ -234,7 +239,7 @@ namespace MonsterPageN {
             header: { content: "Level" },
             align: "text-right",
             cell: (x) => ({
-                content: x.pl ?? "???",
+                content: x.pl !== null ? x.pl || "-" : "???",
                 className: "pl",
             }),
         },
@@ -243,7 +248,7 @@ namespace MonsterPageN {
             header: { content: "Race" },
             align: "text-right",
             cell: (x) => ({
-                content: "???",
+                content: x.race !== null ? x.race || "-" : "???",
                 className: "race",
             }),
         },

@@ -5,14 +5,14 @@
         padding: 0;
     }
     th > * {
-        padding-left: calc(0.25em * 4);
-        padding-right: calc(0.25em * 4);
+        padding-left: calc(0.25em * 2);
+        padding-right: calc(0.25em * 2);
         padding-top: calc(0.25em * 2);
         padding-bottom: calc(0.25em * 2);
     }
     td > * {
-        padding-left: calc(0.25em * 8);
-        padding-right: calc(0.25em * 8);
+        padding-left: calc(0.25em * 4);
+        padding-right: calc(0.25em * 4);
         padding-top: calc(0.25em * 2);
         padding-bottom: calc(0.25em * 2);
     }
@@ -64,8 +64,6 @@
 
     /* Splash color on unselected rows */
     tbody tr:not(.selected) {
-        cursor: pointer;
-
         .type {
             &.rob {
                 color: var(--color-pink-200);

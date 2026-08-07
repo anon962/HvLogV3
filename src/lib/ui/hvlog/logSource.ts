@@ -1,4 +1,4 @@
-import { CompleteLog, LogMeta } from "@/lib/logDb/schema"
+import { CompleteLog, ISODate, LogMeta } from "@/lib/logDb/schema"
 import { MetaSummary } from "@/lib/stats/metaStats"
 import {
     DetailsSummary,
@@ -10,11 +10,13 @@ import { compressGzip, CustomMap, sleep } from "myutils"
 import { IS_REMOTE } from "../constants"
 
 export interface TLogSource {
-    fetchPrices: () => Promise<Record<string, number>>
-    fetchGlobalMonsterSummary: () => Promise<GlobalMonsterSummary>
     fetchLog: (id: string) => Promise<CompleteLog<any>>
     fetchDetails: (id: string) => Promise<DetailsSummary>
     fetchSearch: (req: LogSearchRequest) => Promise<LogSearchResponse>
+
+    fetchPrices: () => Promise<Record<string, number>>
+    fetchGlobalMonsterSummary: () => Promise<GlobalMonsterSummary>
+    fetchMonlab: () => Promise<Record<number, MonlabMonster>>
 }
 
 export interface LogSearchRequest {
@@ -56,6 +58,26 @@ export interface LogSearchResult {
     search: SearchSummary
 }
 
+export interface MonlabMonster {
+    monsterId: number
+    created_at: ISODate
+    monsterClass: string
+    monsterName: string
+    plvl: number
+    attack: string
+    trainer: string
+    piercing: number
+    crushing: number
+    slashing: number
+    cold: number
+    wind: number
+    elec: number
+    fire: number
+    dark: number
+    holy: number
+    lastUpdate: string
+}
+
 interface Dated<T> {
     data: T
     createdAt: Date
@@ -93,6 +115,7 @@ class LogSourceRemote {
 
     private prices: Promise<Record<string, number>> | null = null
     private globalMonsterSummary: Promise<any> | null = null
+    private monlab: Promise<Record<number, MonlabMonster>> | null = null
 
     constructor() {}
 
@@ -223,7 +246,7 @@ class LogSourceRemote {
 
     async fetchPrices() {
         if (!this.prices) {
-            const url = this.HVDATA_URL + `/api/battle_logs/prices.json`
+            const url = this.HVDATA_URL + `/api/fapspreader.json`
             this.prices = fetch(url).then(async (resp) => resp.json())
         }
 
@@ -249,6 +272,25 @@ class LogSourceRemote {
         }
 
         return this.globalMonsterSummary
+    }
+
+    async fetchMonlab() {
+        if (!this.monlab) {
+            const url = this.HVDATA_URL + `/api/hv-monsterdb.json`
+            this.monlab = fetch(url).then(async (resp) => {
+                const data: Array<MonlabMonster> = await resp.json()
+                const byMid = data.reduce(
+                    (acc, x) => {
+                        acc[x.monsterId] = x
+                        return acc
+                    },
+                    {} as Record<number, MonlabMonster>,
+                )
+                return byMid
+            })
+        }
+
+        return this.monlab
     }
 }
 
