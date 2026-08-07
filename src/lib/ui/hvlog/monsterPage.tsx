@@ -31,7 +31,7 @@ function Inner() {
             onValueChange={(x) => {
                 setMode(x)
                 setParams({
-                    ...mapEntries(params, ([k, v]) => ({ [k]: null })),
+                    ...mapEntries(params, (k) => ({ [k]: null })),
                     m: x[0],
                 })
             }}
