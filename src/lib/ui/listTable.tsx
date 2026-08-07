@@ -37,6 +37,12 @@ import {
 } from "./shadcn/select"
 import * as lucide from "lucide-react"
 import { RouteLink } from "./routeLink"
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "./shadcn/tooltip"
 
 export namespace ListTable {
     export interface Column<TValue = unknown, TImpureValue = null> {
@@ -45,6 +51,7 @@ export namespace ListTable {
         header: {
             content: ReactNode
             className?: string
+            tooltip?: ReactNode
         }
         // cell() should be pure, hooks go in preprocess
         cell: (
@@ -118,7 +125,7 @@ export function ListTable<T>(
             {showFilter && props.filter?.content ? (
                 <div className="mx-auto p-4 pt-0">{props.filter.content}</div>
             ) : (
-                <div className="h-2"></div>
+                <div className="h-0"></div>
             )}
 
             <hr className="border my-2!" />
@@ -202,18 +209,33 @@ const TableInner = <T,>(
 
         return (
             <TableHead className={cn(col.header.className)}>
-                <div
-                    onClick={onClick}
-                    className={cn(
-                        "flex",
-                        props.sortCols?.has(col.id) ? "cursor-pointer" : "",
-                        flexJustify[col.align ?? "text-center"],
-                        flexAlign[col.align ?? "text-center"],
-                    )}
-                >
-                    {col.header.content}
-                    {icon}
-                </div>
+                <TooltipProvider>
+                    <Tooltip open={col.header.tooltip ? undefined : false}>
+                        <TooltipTrigger
+                            style={{ textAlign: "inherit" }}
+                            className="w-full"
+                        >
+                            <div
+                                onClick={onClick}
+                                className={cn(
+                                    "flex",
+                                    props.sortCols?.has(col.id)
+                                        ? "cursor-pointer"
+                                        : "",
+                                    flexJustify[col.align ?? "text-center"],
+                                    flexAlign[col.align ?? "text-center"],
+                                    col.header.tooltip
+                                        ? "tooltip pb-[0.2em]"
+                                        : "",
+                                )}
+                            >
+                                {col.header.content}
+                                {icon}
+                            </div>
+                        </TooltipTrigger>
+                        <TooltipContent>{col.header.tooltip}</TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
             </TableHead>
         )
     })

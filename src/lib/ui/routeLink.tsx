@@ -2,16 +2,17 @@ import { ComponentPropsWithoutRef, MouseEvent, ReactNode } from "react"
 
 export function RouteLink({
     children,
+    onClick,
     ...props
 }: ComponentPropsWithoutRef<"a">) {
     return (
-        <a onClick={onClick} {...props}>
+        <a onClick={onClickHijack} {...props}>
             {children}
         </a>
     )
 
-    function onClick(ev: MouseEvent<HTMLAnchorElement>) {
-        props.onClick?.(ev)
+    function onClickHijack(ev: MouseEvent<HTMLAnchorElement>) {
+        onClick?.(ev)
         if (ev.defaultPrevented) return
 
         const isModified =

@@ -1,6 +1,6 @@
 import { formatNumber } from "@/lib/utils/miscUtils"
 import { enumerate } from "myutils"
-import { CSSProperties, ReactElement, useState } from "react"
+import { CSSProperties, ReactElement, ReactNode, useState } from "react"
 import {
     Tooltip,
     TooltipContent,
@@ -22,7 +22,7 @@ export interface TallyTableProps<TItem = any, TSubItem = any> {
 
 export interface TallyTableColumn<TItem = any> {
     label: string
-    tooltip?: ReactElement | string
+    tooltip?: ReactNode
     get: (x: TItem) => number
     format?: (value: number, x: TItem) => string
     formatTotal?: (value: number) => string

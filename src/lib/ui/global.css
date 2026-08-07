@@ -222,3 +222,8 @@ nav a:not(href) {
 button {
     cursor: pointer;
 }
+
+.tooltip {
+    border-bottom: 0.15em dashed
+        color-mix(in oklab, var(--muted-foreground) 75%, transparent);
+}

@@ -199,7 +199,10 @@ namespace MonsterPageN {
         },
         frequency: {
             id: "frequency",
-            header: { content: <lucide.Eye /> },
+            header: {
+                content: <lucide.Eye />,
+                tooltip: "Number of appearances (all-time).",
+            },
             align: "text-right",
             cell: (x) => ({
                 content: Math.round(
@@ -209,7 +212,11 @@ namespace MonsterPageN {
         },
         damageTaken: {
             id: "damageTaken",
-            header: { content: <lucide.Shield /> },
+            header: {
+                content: <lucide.Shield />,
+                tooltip:
+                    "Monster's average damage taken per hit as percentage of max HP.",
+            },
             align: "text-right",
             cell: (x) => ({
                 content: formatNumber(100 * x.damage.taken) + "%",
@@ -218,7 +225,10 @@ namespace MonsterPageN {
         },
         damageGiven: {
             id: "damageGiven",
-            header: { content: <lucide.Sword /> },
+            header: {
+                content: <lucide.Sword />,
+                tooltip: "Average damage per appearance.",
+            },
             align: "text-right",
             cell: (x) => ({
                 content: Math.round(1000 * x.damage.given),

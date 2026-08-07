@@ -104,21 +104,6 @@
         text-align: right;
     }
 
-    .tooltip button {
-        width: min-content;
-        position: relative;
-
-        &::after {
-            content: "";
-            position: absolute;
-            bottom: -0.3em;
-            width: 100%;
-            border-bottom: 3px dashed
-                color-mix(in oklab, var(--muted-foreground) 75%, transparent);
-            left: 0;
-            right: 0;
-        }
-    }
     .subheader.tooltip button {
         &::after {
             bottom: -0.15em;
