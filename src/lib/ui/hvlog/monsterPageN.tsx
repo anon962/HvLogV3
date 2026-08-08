@@ -55,8 +55,10 @@ const COLS_ = {
         },
         align: "text-right",
         cell: (x) => ({
-            content:
-                formatNumber((100 * x.damage.taken) / x.damage.takenHits) + "%",
+            content: x.damage.takenHits
+                ? formatNumber((100 * x.damage.taken) / x.damage.takenHits) +
+                  "%"
+                : "???",
             className: "taken",
         }),
     },
@@ -450,6 +452,8 @@ export namespace MonsterPageN {
             const reverse = params.d !== null ? params.d : true
             let xs = filtered
 
+            const lastNum = reverse ? 0 : 999_999_999
+
             xs = sortBy(xs, [
                 {
                     fn: (x) => {
@@ -462,7 +466,9 @@ export namespace MonsterPageN {
                             case "frequency":
                                 return r.appearances
                             case "dtaken":
-                                return r.damage.taken / r.damage.takenHits
+                                return r.damage.takenHits
+                                    ? r.damage.taken / r.damage.takenHits
+                                    : lastNum
                             case "dgiven":
                                 return r.damage.given / r.appearances
                             case "trainer":
