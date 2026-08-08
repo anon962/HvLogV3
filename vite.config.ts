@@ -13,7 +13,18 @@ export default defineConfig((config) => {
                     minified: false,
                 },
             }),
-            config.mode === "production" && minifyDeps(),
+            (config.mode === "production" && minifyDeps()) as any,
+            prepend(`
+                var process = {
+                    env: {
+                        NODE_ENV: ${JSON.stringify(
+                            config.mode === "development"
+                                ? "development"
+                                : "production",
+                        )},
+                    },
+                };
+            `),
         ],
         test: {
             testTimeout: 30_000,
@@ -34,21 +45,6 @@ export default defineConfig((config) => {
                 name: "weblog",
                 fileName: () => "web-log.js",
                 // fileName: () => "tmp.js", // @DEBUG
-            },
-            rollupOptions: {
-                output: {
-                    banner: `
-                        var process = {
-                            env: {
-                                NODE_ENV: ${JSON.stringify(
-                                    config.mode === "development"
-                                        ? "development"
-                                        : "production",
-                                )},
-                            },
-                        };
-                    `,
-                },
             },
         },
         optimizeDeps: {
@@ -75,6 +71,18 @@ function minifyDeps() {
             }
 
             return { code: result.code, map: null }
+        },
+    }
+}
+
+function prepend(x: string) {
+    return {
+        name: "inject-banner",
+        renderChunk(code: any) {
+            return {
+                code: x + code,
+                map: null,
+            }
         },
     }
 }
