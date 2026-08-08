@@ -40,7 +40,7 @@ export default defineConfig((config) => {
             cssCodeSplit: false,
             emptyOutDir: false,
             lib: {
-                entry: path.resolve(__dirname, "src", "index.ts"),
+                entry: path.resolve(__dirname, "src", "server.ts"),
                 formats: ["iife"],
                 name: "server",
                 fileName: () => "server.js",

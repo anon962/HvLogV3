@@ -1,8 +1,8 @@
-import { LogEntry } from "./db/schema"
+import { LogEntry } from "../db/dbN"
+import { v91 } from "../v91/v91"
 import { EventParser } from "./eventParser"
 import { BaseHvEvent, ParserSchema } from "./eventParser"
 import { Result } from "myutils"
-import { v91 } from "./v91/v91"
 
 export function parseLine<TSchema extends ParserSchema, TName extends string>(
     line: string,
@@ -27,7 +27,7 @@ export function parseLog(
     logText: string,
     createdAt: Date | null,
 ): {
-    entries: Array<LogEntry<any>>
+    entries: Array<LogEntry>
     versionString: "v91"
     errorCount: number
 } {

@@ -67,8 +67,8 @@ export const HvLog = (props: { prefix: string[] }) => {
         {
             icon: <lucide.ScrollText />,
             path: "/logs/",
-            isActive: (url) => url.pathname.startsWith("/logs/"),
-            isDisabled: (url) => url.pathname === "/logs/",
+            isActive: (url) => url.pathname.startsWith("/logs"),
+            isDisabled: (url) => strip(url.pathname, "/") === "logs",
         },
         {
             icon: "ML",

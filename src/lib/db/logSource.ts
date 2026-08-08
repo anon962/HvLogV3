@@ -1,7 +1,7 @@
 import { DbN, LogEntry } from "@/lib/db/dbN"
 import { DetailsSummary } from "@/lib/stats/summary"
 import { newContext } from "@/lib/utils/miscUtils"
-import { compressGzip, CustomMap, sleep } from "myutils"
+import { compressGzip, sleep } from "myutils"
 import { IS_REMOTE } from "../ui/constants"
 import { LogSourceN as N } from "./logSourceN"
 

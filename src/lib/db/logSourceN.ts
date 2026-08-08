@@ -3,9 +3,9 @@ import {
     GlobalMonsterSummary,
     SearchSummary,
 } from "@/lib/stats/summary"
-import { DbN, LogEntry } from "./dbN"
-import { MetaSummary } from "../stats/metaStats"
 import { CustomMap, ISODate } from "myutils"
+import { MetaSummary } from "../stats/metaStats"
+import { DbN, LogEntry } from "./dbN"
 
 export namespace LogSourceN {
     export interface Protocol {
@@ -126,7 +126,7 @@ export namespace LogSourceN {
             }
 
             // send request
-            if (!this.pending.has(req)) {
+            if (this.pending.has(req)) {
                 return this.pending.get(req)!
             }
             const respPromise = this.opts.fetch(req)
