@@ -11,7 +11,7 @@ import { useMemo } from "react"
 import { ListTable } from "../listTable"
 import { Input } from "../shadcn/input"
 import { MonsterPageN } from "./monsterPageN"
-import { cn, mapEntries, NgramSearch } from "myutils"
+import { cn, dedupe, mapEntries, NgramSearch } from "myutils"
 import * as Tabs from "../shadcn/tabs"
 
 export function MonsterPage(props: {}) {
@@ -234,7 +234,10 @@ function MultiSelect(
                 x.toLowerCase().includes(currValue),
             )
         } else {
-            return props.ngramSearch.find(currValue).map((x) => x.text)
+            return dedupe(
+                props.ngramSearch.find(currValue).map((x) => x.text),
+                (x) => x,
+            )[0]
         }
     }, [props.options, props.ngramSearch, currValue])
 

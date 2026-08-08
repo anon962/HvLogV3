@@ -297,7 +297,7 @@ export namespace MonsterPageN {
                         ...r,
                         id: r.trainer,
                         filterIds: new Set(),
-                        mid: -1,
+                        // mid: -1,
                         hp: -1,
                         level: -1,
                         name: "",
@@ -347,11 +347,14 @@ export namespace MonsterPageN {
 
         const [trainerPool, trainerGrams] = useMemo(() => {
             const trainers = monsterRows.map((x) => x.trainer)
-            const trainerPool = alphabetical(
-                trainers.flatMap((x) =>
-                    x !== null && x.length > 0 ? [x] : [],
+            const trainerPool = dedupe(
+                alphabetical(
+                    trainers.flatMap((x) =>
+                        x !== null && x.length > 0 ? [x] : [],
+                    ),
                 ),
-            )
+                (x) => x,
+            )[0]
             const nameGrams = new NgramSearch({
                 items: trainers.flatMap((x, idx) =>
                     x !== null ? [{ id: monsterRows[idx].mid, text: x }] : [],
