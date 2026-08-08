@@ -36,7 +36,7 @@ function Inner() {
                 })
             }}
         >
-            <Tabs.TabsList className="grid grid-cols-2 w-full">
+            <Tabs.TabsList className="grid grid-cols-2 w-full max-w-[50em] mx-auto">
                 <Tabs.TabsTrigger value="monsters" className="font-bold py-1">
                     Monsters
                 </Tabs.TabsTrigger>
