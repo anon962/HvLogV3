@@ -104,10 +104,25 @@
         text-align: right;
     }
 
-    .subheader.tooltip button {
-        &::after {
-            bottom: -0.15em;
-            border-bottom-width: 1.5px;
+    .tooltip {
+        border: 0;
+
+        button {
+            width: min-content;
+            position: relative;
+            &::after {
+                content: "";
+                border-bottom: 0.2em dashed
+                    color-mix(
+                        in oklab,
+                        var(--muted-foreground) 75%,
+                        transparent
+                    );
+                position: absolute;
+                bottom: -0.25em;
+                left: 0;
+                right: 0;
+            }
         }
     }
 
