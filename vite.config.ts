@@ -1,6 +1,7 @@
 import tailwindcss from "@tailwindcss/vite"
 import react from "@vitejs/plugin-react"
 import path from "path"
+import { minify } from "terser"
 import { defineConfig } from "vite"
 
 export default defineConfig((config) => {
@@ -12,6 +13,7 @@ export default defineConfig((config) => {
                     minified: false,
                 },
             }),
+            config.mode === "production" && minifyDeps(),
         ],
         test: {
             testTimeout: 30_000,
@@ -32,10 +34,6 @@ export default defineConfig((config) => {
                 name: "weblog",
                 fileName: () => "web-log.js",
                 // fileName: () => "tmp.js", // @DEBUG
-            },
-            terserOptions: {
-                compress: false,
-                mangle: false,
             },
             rollupOptions: {
                 output: {
@@ -58,3 +56,25 @@ export default defineConfig((config) => {
         },
     }
 })
+
+function minifyDeps() {
+    return {
+        name: "minify-deps",
+        async transform(code: any, id: any) {
+            if (!id.includes("node_modules")) {
+                return null
+            }
+
+            const result = await minify(code, {
+                compress: true,
+                mangle: true,
+                format: { beautify: false },
+            })
+            if (!result.code) {
+                return null
+            }
+
+            return { code: result.code, map: null }
+        },
+    }
+}
