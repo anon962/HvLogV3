@@ -1,7 +1,7 @@
-import { CompleteLog, LogEntry } from "./logDb/schema"
+import { CompleteLog, LogEntry } from "../db/schema"
+import { DEBUG } from "../ui/constants"
 import { BaseHvEvent } from "./eventParser"
 import { sort } from "myutils"
-import { DEBUG } from "./ui/constants"
 
 // @todo: Replace with https://chevrotain.io/docs/tutorial/step2_parsing.html#complete-parser
 

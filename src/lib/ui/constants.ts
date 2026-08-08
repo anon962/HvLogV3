@@ -3,7 +3,7 @@ import * as _lucide from "lucide-react"
 export const IS_BROWSER = typeof window !== "undefined"
 export const IS_REMOTE = IS_BROWSER ? !!window.HV_LOG_IS_REMOTE : true
 
-export const DEBUG = 0
+export const DEBUG = process.env.NODE_ENV === "development"
 
 /**
 https://tailwindcss.com/docs/colors

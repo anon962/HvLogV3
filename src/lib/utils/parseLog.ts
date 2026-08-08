@@ -1,4 +1,4 @@
-import { LogEntry } from "./logDb/schema"
+import { LogEntry } from "./db/schema"
 import { EventParser } from "./eventParser"
 import { BaseHvEvent, ParserSchema } from "./eventParser"
 import { Result } from "myutils"

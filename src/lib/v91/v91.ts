@@ -1,6 +1,6 @@
 import { findNext, InferCollectionType, last, range, sort, zip } from "myutils"
 import { EventGrammar, filterEvents, takeEvents } from "../eventGrammar"
-import { CompleteLog, LogEntry } from "../logDb/schema"
+import { CompleteLog, LogEntry } from "../db/schema"
 import { summarizeItemDrops } from "../stats/dropStats"
 import { summarizeItemUsage } from "../stats/itemUsageStats"
 import { MetaSummary, parseBattleType } from "../stats/metaStats"

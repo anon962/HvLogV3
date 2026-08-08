@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { EventGrammar, takeEvents } from "./eventGrammar"
-import { CompleteLog } from "./logDb/schema"
 import { BaseHvEvent } from "./eventParser"
+import { CompleteLog } from "../db/schema"
 
 const withKeys = (...keys: string[]) => [{ keys }]
 const baseGrammar = {

@@ -1,4 +1,4 @@
-import { CompleteLog } from "../logDb/schema"
+import { CompleteLog } from "../db/schema"
 import { BaseHvEvent } from "../eventParser"
 import { enumerate } from "myutils"
 

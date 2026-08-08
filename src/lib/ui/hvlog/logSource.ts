@@ -1,4 +1,4 @@
-import { CompleteLog, ISODate, LogMeta } from "@/lib/logDb/schema"
+import { CompleteLog, ISODate, LogMeta } from "@/lib/db/schema"
 import { MetaSummary } from "@/lib/stats/metaStats"
 import {
     DetailsSummary,

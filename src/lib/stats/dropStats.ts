@@ -1,5 +1,5 @@
 import { sum } from "myutils"
-import { CompleteLog } from "../logDb/schema"
+import { CompleteLog } from "../db/schema"
 import { BaseHvEvent } from "../eventParser"
 import { MetaSummary } from "./metaStats"
 import { enumerate } from "myutils"

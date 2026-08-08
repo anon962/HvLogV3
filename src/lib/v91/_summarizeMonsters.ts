@@ -1,4 +1,4 @@
-import { CompleteLog } from "../logDb/schema"
+import { CompleteLog } from "../db/schema"
 import { MonsterSummary } from "../summary"
 import { _ALL_PARSERS, v91 as parsers } from "./_parsers"
 import { v91 } from "./v91"

@@ -1,5 +1,5 @@
 import { enumerate, sum } from "myutils"
-import { CompleteLog } from "../logDb/schema"
+import { CompleteLog } from "../db/schema"
 import {
     CombatSummary,
     CombatSummaryEventMap,

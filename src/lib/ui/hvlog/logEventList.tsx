@@ -1,5 +1,5 @@
 import { BaseHvEvent } from "@/lib/eventParser"
-import { CompleteLog, LogEntry } from "@/lib/logDb/schema"
+import { CompleteLog, LogEntry } from "@/lib/db/schema"
 import JsonView from "@uiw/react-json-view"
 import { enumerate, range, sleep } from "myutils"
 import { memo, ReactElement, useEffect, useRef, useState } from "react"
