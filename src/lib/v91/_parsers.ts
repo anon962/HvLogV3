@@ -1,7 +1,7 @@
 import { sort, ValueOf } from "myutils"
-import { BaseHvEvent, EventParser, t } from "../eventParser"
+import { BaseHvEvent, EventParser, t } from "../utils/eventParser"
 
-export namespace v91 {
+export namespace v91N {
     export type HvEvent = ValueOf<HvEventMap>
     export type HvEventMap = {
         [K in keyof _P]: BaseHvEvent<_P[K]["schema"], _P[K]["name"]>

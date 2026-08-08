@@ -1,6 +1,6 @@
-import { CompleteLog } from "../db/schema"
-import { BaseHvEvent } from "../eventParser"
 import { enumerate } from "myutils"
+import { LogEntries } from "../db/dbN"
+import { BaseHvEvent } from "../utils/eventParser"
 
 export const ITEM_USAGE_CATEGORIES = {
     "Gum & Vase": "Gum & Vase",
@@ -30,7 +30,7 @@ export type ItemUsageSummary = Record<
 >
 
 export function summarizeItemUsage<T extends BaseHvEvent>(
-    entries: CompleteLog<T>["entries"],
+    entries: LogEntries<T>,
     count: (ev: T) => Array<{
         key: string
         name?: string

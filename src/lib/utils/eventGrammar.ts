@@ -1,4 +1,4 @@
-import { CompleteLog, LogEntry } from "../db/schema"
+import { LogEntries, LogEntry } from "../db/dbN"
 import { DEBUG } from "../ui/constants"
 import { BaseHvEvent } from "./eventParser"
 import { sort } from "myutils"
@@ -7,7 +7,7 @@ import { sort } from "myutils"
 
 export function takeEvents<TEvent extends BaseHvEvent>(
     grammar: EventGrammar<TEvent["event_type"]>,
-    entries: CompleteLog<TEvent>["entries"],
+    entries: LogEntries<TEvent>,
     startIdx: number,
     root: GrammarRule<TEvent["event_type"]>,
     greedy = true,
@@ -304,7 +304,7 @@ function trySimplify<TEvent extends BaseHvEvent>(
 
 function peekRepeats<TEvent extends BaseHvEvent>(
     keys: Readonly<Array<TEvent["event_type"]>>,
-    entries: CompleteLog<TEvent>["entries"],
+    entries: LogEntries<TEvent>,
     startIdx: number,
     max: number,
 ): Array<{ entryIdx: number; isError: boolean }> {
@@ -429,7 +429,7 @@ export function filterEvents<
     TEvent extends BaseHvEvent,
     TFilter extends string,
 >(
-    entries: CompleteLog<TEvent>["entries"],
+    entries: LogEntries<TEvent>,
     eventTypes: Array<TFilter> | null,
 ): Array<TEvent & { event_type: TFilter } & { logIndex: number }> {
     const evs = entries.flatMap((entry, idx) =>

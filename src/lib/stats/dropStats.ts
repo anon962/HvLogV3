@@ -1,9 +1,9 @@
 import { sum } from "myutils"
-import { CompleteLog } from "../db/schema"
-import { BaseHvEvent } from "../eventParser"
 import { MetaSummary } from "./metaStats"
 import { enumerate } from "myutils"
 import { ItemUsageSummary } from "./itemUsageStats"
+import { BaseHvEvent } from "../utils/eventParser"
+import { LogEntries } from "../db/dbN"
 
 export const DROP_CATEGORIES = {
     Artifacts: "Artifacts",
@@ -37,7 +37,7 @@ export type DropSummary = Record<
 
 // Classify drops
 export function summarizeItemDrops<T extends BaseHvEvent>(
-    entries: CompleteLog<T>["entries"],
+    entries: LogEntries<T>,
     count: (ev: T) => Array<{
         key: string
         name?: string

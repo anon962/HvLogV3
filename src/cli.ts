@@ -1,15 +1,14 @@
-import { createWriteStream } from "fs"
-import { compressGzip } from "myutils"
 import * as Zstd2 from "@bokuweb/zstd-wasm"
+import { createWriteStream } from "fs"
 import path from "path"
 import { fileURLToPath } from "url"
-import { parseLog } from "./lib/parseLog"
 import {
     DetailsSummary,
     MonsterSummary,
     SearchSummary,
     summarizeSearchStats,
-} from "./lib/summary"
+} from "./lib/stats/summary"
+import { parseLog } from "./lib/utils/parseLog"
 import { v91 } from "./lib/v91/v91"
 
 export {}

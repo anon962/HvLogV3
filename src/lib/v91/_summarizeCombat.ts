@@ -1,12 +1,12 @@
 import { enumerate, sum } from "myutils"
-import { CompleteLog } from "../db/schema"
 import {
     CombatSummary,
     CombatSummaryEventMap,
     summarizeStyle,
 } from "../stats/combatStats"
-import { type v91 as parsers } from "./_parsers"
+import { type v91N } from "./_parsers"
 import { type v91 } from "./v91"
+import { LogEntries } from "../db/dbN"
 
 const enemyActions = new Set([
     "E_ATTACK",
@@ -24,7 +24,7 @@ const enemyActions = new Set([
 ])
 
 export function _summarizeCombat(
-    entries: CompleteLog<parsers.HvEvent>["entries"],
+    entries: LogEntries<v91N.HvEvent>,
     partition: v91.LogPartition,
 ): CombatSummary & { hasDupeError: boolean } {
     const effectBlame: Record<string, string> = {}

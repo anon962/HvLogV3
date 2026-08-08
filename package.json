@@ -1,10 +1,12 @@
 {
     "version": "1.0.0",
     "main": "index.ts",
-    "name": "web-log",
+    "name": "hvlog",
     "scripts": {
-        "dev": "vite build --mode development --watch",
-        "build": "vite build --mode production --watch",
+        "sdev": "vite build --mode development --watch --config vite.server.ts",
+        "sbuild": "vite build --mode production --watch --config vite.server.ts",
+        "udev": "vite build --mode development --watch --config vite.user.ts & python3 -m http.server -d dist 6767",
+        "ubuild": "vite build --mode production --watch --config vite.user.ts",
         "test": "vitest --passWithNoTests"
     },
     "devDependencies": {
@@ -50,6 +52,7 @@
         "tailwindcss": "^4.0.15",
         "terser": "^5.49.2",
         "tw-animate-css": "^1.2.4",
+        "vite-plugin-css-injected-by-js": "^5.0.2",
         "zstd-codec": "^0.1.5"
     }
 }

@@ -12,7 +12,7 @@ import {
 import { useMemo, useState } from "react"
 import { lucide } from "../constants"
 import { ListTable } from "../listTable"
-import { LOG_SOURCE } from "./logSource"
+import { LOG_SOURCE } from "../../db/logSource"
 import { UrlParamN } from "./router"
 
 // region cols

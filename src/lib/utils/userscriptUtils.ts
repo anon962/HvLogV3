@@ -53,3 +53,23 @@ export type RootComponent<T = {}> = React.FC<{} & T>
 export function isChrome() {
     return !!(window as any).chrome
 }
+
+const URL_CHANGE_FLAG = Symbol("URL_CHANGE_FLAG")
+export function patchUrlChange() {
+    const w = window as any
+    if (w[URL_CHANGE_FLAG]) {
+        return
+    }
+
+    w[URL_CHANGE_FLAG] = true
+
+    for (const k of ["pushState", "replaceState"] as const) {
+        const fn = window.history[k].bind(window.history)
+        window.history[k] = (...args: any[]) => {
+            // @ts-ignore
+            const result = fn(...args)
+            window.dispatchEvent(new Event("hvlog:urlchange"))
+            return result
+        }
+    }
+}

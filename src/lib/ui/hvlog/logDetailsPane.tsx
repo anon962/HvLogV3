@@ -1,24 +1,18 @@
-import { BaseHvEvent } from "@/lib/eventParser"
-import { CompleteLog } from "@/lib/db/schema"
-import { DetailsSummary } from "@/lib/summary"
+import { DbN, LogEntries } from "@/lib/db/dbN"
+import { IndexMap } from "@/lib/stats/indexMap"
+import { DetailsSummary } from "@/lib/stats/summary"
 import React from "react"
+import { IS_REMOTE } from "../constants"
 import { Card, CardContent } from "../shadcn/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../shadcn/tabs"
 import { CombatInfo } from "./combat/combatInfo"
 import { DropInfo } from "./drop/dropInfo"
 import { LogEventList } from "./logEventList"
-import { IS_REMOTE } from "../constants"
-import { IndexMap } from "@/lib/stats/indexMap"
 
 export const LogDetailsPane = React.memo(
-    <T extends BaseHvEvent>({
-        log,
-        prices,
-        details: stats,
-        indexMap,
-    }: {
-        log: CompleteLog<T> | null
-        prices: Record<string, number>
+    (props: {
+        entries: LogEntries | null
+        prices: DbN.Prices
         details: DetailsSummary | null
         indexMap: IndexMap
     }) => {
@@ -50,11 +44,11 @@ export const LogDetailsPane = React.memo(
                     <TabsContent value="stats" className="h-full min-h-0">
                         <Card className="min-h-full py-0 h-full">
                             <CardContent className="h-full p-8">
-                                {stats ? (
+                                {props.details ? (
                                     <DropInfo
-                                        prices={prices}
-                                        stats={stats}
-                                        indexMap={indexMap}
+                                        prices={props.prices}
+                                        stats={props.details}
+                                        indexMap={props.indexMap}
                                     />
                                 ) : (
                                     ""
@@ -66,10 +60,10 @@ export const LogDetailsPane = React.memo(
                     <TabsContent value="combat" className="h-full min-h-0">
                         <Card className="min-h-0 h-full py-0 overflow-auto">
                             <CardContent className="p-0">
-                                {stats ? (
+                                {props.details ? (
                                     <CombatInfo
-                                        details={stats}
-                                        indexMap={indexMap}
+                                        details={props.details}
+                                        indexMap={props.indexMap}
                                     />
                                 ) : (
                                     ""
@@ -81,10 +75,10 @@ export const LogDetailsPane = React.memo(
                     <TabsContent value="events" className="h-full min-h-0">
                         <Card className="min-h-0 h-full py-0">
                             <CardContent className="p-0 min-h-0">
-                                {log && stats ? (
+                                {props.entries && props.indexMap ? (
                                     <LogEventList
-                                        log={log}
-                                        indexMap={indexMap}
+                                        entries={props.entries}
+                                        indexMap={props.indexMap}
                                     />
                                 ) : (
                                     ""

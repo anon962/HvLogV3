@@ -4,7 +4,7 @@ import {
     MELEE_STYLES,
 } from "@/lib/stats/combatStats"
 import { humanizeBattleType } from "@/lib/stats/metaStats"
-import { LOG_SOURCE, LogSearchResult } from "@/lib/ui/hvlog/logSource"
+import { LOG_SOURCE } from "@/lib/db/logSource"
 import { formatNumber, newContext, useAsync } from "@/lib/utils/miscUtils"
 import { cn, range, sum } from "myutils"
 import { useEffect, useMemo, useState } from "react"
@@ -14,6 +14,7 @@ import { CheckIcon } from "../../icons/tailwind"
 import { ListTable } from "../../listTable"
 import { UrlParamN } from "../router"
 import { useLocalJsonState } from "../hooks"
+import { LogSourceN } from "@/lib/db/logSourceN"
 
 export namespace LogListN {
     export const COLS = {
@@ -94,7 +95,7 @@ export namespace LogListN {
                 ...formatStartDate(x.meta.start, now),
                 className: "date",
             }),
-        } as const satisfies ListTable.Column<LogSearchResult, Date>,
+        } as const satisfies ListTable.Column<LogSourceN.SearchResult, Date>,
         status: {
             id: "status",
             header: { content: "Status" },
@@ -119,7 +120,10 @@ export namespace LogListN {
         // } as const satisfies ListTableColumn<
         //     ReturnType<typeof formatEnchants>[number]
         // >,
-    } as const satisfies Record<string, ListTable.Column<LogSearchResult, any>>
+    } as const satisfies Record<
+        string,
+        ListTable.Column<LogSourceN.SearchResult, any>
+    >
 
     export const SORT_IDS = new Set([COLS.turns.id, COLS.date.id] as const)
 
@@ -521,7 +525,7 @@ function formatStartDate(
     }
 }
 
-function formatCompletionType(x: LogSearchResult) {
+function formatCompletionType(x: LogSourceN.SearchResult) {
     const completionType = x.search.meta.completionType
     const round = x.search.meta.round
 

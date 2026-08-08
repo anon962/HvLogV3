@@ -40,11 +40,11 @@ export default defineConfig((config) => {
             cssCodeSplit: false,
             emptyOutDir: false,
             lib: {
-                entry: path.resolve(__dirname, "src/index.ts"),
+                entry: path.resolve(__dirname, "src", "index.ts"),
                 formats: ["iife"],
-                name: "weblog",
-                fileName: () => "web-log.js",
-                // fileName: () => "tmp.js", // @DEBUG
+                name: "server",
+                fileName: () => "server.js",
+                cssFileName: "server",
             },
         },
         optimizeDeps: {
@@ -78,10 +78,12 @@ function minifyDeps() {
 function prepend(x: string) {
     return {
         name: "inject-banner",
-        renderChunk(code: any) {
-            return {
-                code: x + code,
-                map: null,
+        enforce: "post",
+        generateBundle(options: any, bundle: any) {
+            for (const file of Object.values(bundle) as any[]) {
+                if (file.type === "chunk" && file.fileName.endsWith(".js")) {
+                    file.code = x.trim() + "\n" + file.code
+                }
             }
         },
     }

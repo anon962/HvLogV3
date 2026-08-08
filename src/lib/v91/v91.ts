@@ -1,10 +1,9 @@
 import { findNext, InferCollectionType, last, range, sort, zip } from "myutils"
-import { EventGrammar, filterEvents, takeEvents } from "../eventGrammar"
-import { CompleteLog, LogEntry } from "../db/schema"
+import { LogEntries, LogEntry } from "../db/dbN"
 import { summarizeItemDrops } from "../stats/dropStats"
 import { summarizeItemUsage } from "../stats/itemUsageStats"
 import { MetaSummary, parseBattleType } from "../stats/metaStats"
-import { DetailsSummary, MonsterSummary } from "../summary"
+import { DetailsSummary, MonsterSummary } from "../stats/summary"
 import {
     BUBBLE_VASE,
     CONSUMABLES,
@@ -17,15 +16,14 @@ import {
     SPIRIT_ITEMS,
     TROPHIES,
 } from "../ui/constants"
-import { _ALL_PARSERS, v91 as parsers } from "./_parsers"
+import { _ALL_PARSERS, v91N } from "./_parsers"
 import { _summarizeCombat } from "./_summarizeCombat"
 import { _summarizeMonsters } from "./_summarizeMonsters"
+import { EventGrammar, filterEvents, takeEvents } from "../utils/eventGrammar"
 
 export const v91 = {
     ALL_PARSERS: _ALL_PARSERS,
-    summarizeDetails: (
-        entries: CompleteLog<parsers.HvEvent>["entries"],
-    ): DetailsSummary => {
+    summarizeDetails: (entries: LogEntries<v91N.HvEvent>): DetailsSummary => {
         entries = _parseScans(entries)
 
         const partition = partitionLog(entries)
@@ -59,9 +57,7 @@ export const v91 = {
 
         return details
     },
-    summarizeMonsters: (
-        entries: CompleteLog<parsers.HvEvent>["entries"],
-    ): MonsterSummary => {
+    summarizeMonsters: (entries: LogEntries<v91N.HvEvent>): MonsterSummary => {
         const partition = partitionLog(entries)
         const monsters = _summarizeMonsters(entries, partition)
         return monsters
@@ -69,7 +65,7 @@ export const v91 = {
 }
 
 function _summarizeMeta(
-    entries: CompleteLog<parsers.HvEvent>["entries"],
+    entries: LogEntries<v91N.HvEvent>,
     partition: v91.LogPartition,
 ): MetaSummary {
     const completionType = getCompletionType()
@@ -182,7 +178,7 @@ function _summarizeMeta(
 
         // prettier-ignore
         const cond =
-            (ev: parsers.HvEvent): ev is parsers.HvEventMap[InferCollectionType<typeof endMarkers>] =>
+            (ev: v91N.HvEvent): ev is v91N.HvEventMap[InferCollectionType<typeof endMarkers>] =>
                 endMarkers.has(ev.event_type as any)
 
         const [end, _] = findNext(evs, cond, {
@@ -203,10 +199,10 @@ function _summarizeMeta(
     }
 }
 
-function _summarizeItemDrops(entries: CompleteLog<parsers.HvEvent>["entries"]) {
+function _summarizeItemDrops(entries: LogEntries<v91N.HvEvent>) {
     return summarizeItemDrops(
         entries,
-        (ev: parsers.HvEvent) => {
+        (ev: v91N.HvEvent) => {
             switch (ev.event_type) {
                 case "AUTO_SALVAGE": {
                     const xs = [
@@ -385,9 +381,7 @@ function _summarizeItemDrops(entries: CompleteLog<parsers.HvEvent>["entries"]) {
     )
 }
 
-function partitionLog(
-    entries: CompleteLog<parsers.HvEvent>["entries"],
-): v91.LogPartition {
+function partitionLog(entries: LogEntries<v91N.HvEvent>): v91.LogPartition {
     const actionKeys = [
         "cast",
         "item",
@@ -572,7 +566,7 @@ function partitionLog(
     return partition
 }
 
-type TEvent = parsers.HvEvent["event_type"]
+type TEvent = v91N.HvEvent["event_type"]
 
 type AG = typeof ACTION_GRAMMAR
 type AGKeys<
@@ -583,7 +577,7 @@ type P_HIT = AGKeys<"hit">
 
 export namespace v91 {
     export type PartitionEntry<T extends TEvent = TEvent> = {
-        event: parsers.HvEvent & { event_type: T }
+        event: v91N.HvEvent & { event_type: T }
         logIdx: number
     }
 
@@ -616,7 +610,7 @@ export namespace v91 {
         unknown: PartitionEntry[][]
     }
     export type LogPartitionEntry<T extends string> = {
-        event: parsers.HvEvent & { event_type: T }
+        event: v91N.HvEvent & { event_type: T }
         logIdx: number
     }
 }
@@ -903,11 +897,11 @@ const ACTION_GRAMMAR = {
             keys: ["P_DEFEND"],
         },
     ],
-} as const satisfies EventGrammar<parsers.HvEvent["event_type"]>
+} as const satisfies EventGrammar<v91N.HvEvent["event_type"]>
 
 function _parseScans(
-    entries: CompleteLog<parsers.HvEvent>["entries"],
-): CompleteLog<parsers.HvEvent>["entries"] {
+    entries: LogEntries<v91N.HvEvent>,
+): LogEntries<v91N.HvEvent> {
     const SCAN_EVENTS = new Set([
         "SCAN_1",
         "SCAN_2",
@@ -924,7 +918,7 @@ function _parseScans(
         "SCAN_13",
     ])
 
-    const isScanEvent = (x?: LogEntry<parsers.HvEvent>) =>
+    const isScanEvent = (x?: LogEntry<v91N.HvEvent>) =>
         x && x.type === "event" && SCAN_EVENTS.has(x.event.event_type)
 
     // Log lines are normally newest first but scans span multiple lines and are oldest first (when submitting this is reversed)

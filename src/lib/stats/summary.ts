@@ -1,12 +1,8 @@
-import { ISODate } from "./db/schema"
-import { CombatSummary } from "./stats/combatStats"
-import {
-    DropSummary,
-    FinanceSummary,
-    summarizeFinances,
-} from "./stats/dropStats"
-import { ItemUsageSummary } from "./stats/itemUsageStats"
-import { MetaSummary } from "./stats/metaStats"
+import { ISODate } from "myutils"
+import { CombatSummary } from "./combatStats"
+import { DropSummary, FinanceSummary, summarizeFinances } from "./dropStats"
+import { ItemUsageSummary } from "./itemUsageStats"
+import { MetaSummary } from "./metaStats"
 
 export interface DetailsSummary {
     meta: MetaSummary

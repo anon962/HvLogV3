@@ -1,5 +1,5 @@
 import { newContext } from "@/lib/utils/miscUtils"
-import { readUrl } from "@/lib/utils/userscriptUtils"
+import { patchUrlChange, readUrl } from "@/lib/utils/userscriptUtils"
 import { AnyFunction, bitmaskToBigint, CustomMap, range } from "myutils"
 import { FC, ReactNode, useEffect, useMemo, useState } from "react"
 
@@ -56,8 +56,6 @@ export function Router(props: {
     }
 }
 
-const URL_CHANGE_EVENT = "urlchange"
-const URL_CHANGE_FLAG = Symbol("URL_CHANGE_FLAG")
 export const ROUTER = newContext(() => {
     const [data, setData] = useState(readUrl())
 
@@ -69,36 +67,17 @@ export const ROUTER = newContext(() => {
         }
 
         window.addEventListener("popstate", onUrlChange)
-        window.addEventListener(URL_CHANGE_EVENT, onUrlChange)
+        window.addEventListener("hvlog:urlchange", onUrlChange)
         window.addEventListener("hashchange", onUrlChange)
 
         return () => {
             window.removeEventListener("popstate", onUrlChange)
-            window.removeEventListener(URL_CHANGE_EVENT, onUrlChange)
+            window.removeEventListener("hvlog:urlchange", onUrlChange)
             window.removeEventListener("hashchange", onUrlChange)
         }
     }, [])
 
     return [data, setData]
-
-    function patchUrlChange() {
-        const w = window as any
-        if (w[URL_CHANGE_FLAG]) {
-            return
-        }
-
-        w[URL_CHANGE_FLAG] = true
-
-        for (const k of ["pushState", "replaceState"] as const) {
-            const fn = window.history[k].bind(window.history)
-            window.history[k] = (...args: any[]) => {
-                // @ts-ignore
-                const result = fn(...args)
-                window.dispatchEvent(new Event(URL_CHANGE_EVENT))
-                return result
-            }
-        }
-    }
 })
 
 export namespace UrlParamN {

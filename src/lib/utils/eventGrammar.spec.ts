@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { EventGrammar, takeEvents } from "./eventGrammar"
 import { BaseHvEvent } from "./eventParser"
-import { CompleteLog } from "../db/schema"
+import { LogEntries } from "../db/dbN"
 
 const withKeys = (...keys: string[]) => [{ keys }]
 const baseGrammar = {
@@ -9,7 +9,7 @@ const baseGrammar = {
     b: withKeys("b"),
 } as const satisfies EventGrammar<string>
 
-function entries(seq: string): CompleteLog<BaseHvEvent>["entries"] {
+function entries(seq: string): LogEntries {
     return events(seq).map((event) => ({
         type: "event",
         event,

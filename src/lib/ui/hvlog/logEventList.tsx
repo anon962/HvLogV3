@@ -1,17 +1,18 @@
-import { BaseHvEvent } from "@/lib/eventParser"
-import { CompleteLog, LogEntry } from "@/lib/db/schema"
 import JsonView from "@uiw/react-json-view"
 import { enumerate, range, sleep } from "myutils"
 import { memo, ReactElement, useEffect, useRef, useState } from "react"
 import { IndexMap } from "../../stats/indexMap"
 import { XIcon } from "../icons/tailwind"
+import { BaseHvEvent } from "@/lib/utils/eventParser"
+import { LogEntries, LogEntry } from "@/lib/db/dbN"
+import { v91N } from "@/lib/v91/_parsers"
 
 export function LogEventList<T extends BaseHvEvent>(props: {
-    log: CompleteLog<T>
+    entries: LogEntries<T>
     indexMap: IndexMap
 }) {
     const { rows, loading, indexMap, activeIdx, setActiveIdx } = useRowsAsync(
-        props.log,
+        props.entries,
         props.indexMap,
     )
 
@@ -20,7 +21,7 @@ export function LogEventList<T extends BaseHvEvent>(props: {
     useEffect(() => {
         setActiveIdx(-1)
         scrollRef.current?.scrollTo({ top: 0 })
-    }, [props.log.id])
+    }, [props.entries])
 
     return (
         <div className="log-event-list flex flex-col h-full">
@@ -32,10 +33,10 @@ export function LogEventList<T extends BaseHvEvent>(props: {
                 {...rows}
             </div>
 
-            {props.log.entries[activeIdx] && (
+            {props.entries[activeIdx] && (
                 <LogEntryDetails
                     onClose={() => setActiveIdx(-1)}
-                    entry={props.log.entries[activeIdx]}
+                    entry={props.entries[activeIdx]}
                     label={`Round ${indexMap.l2r(
                         activeIdx,
                     )}, Turn ${indexMap.l2t(activeIdx)}`}
@@ -46,11 +47,11 @@ export function LogEventList<T extends BaseHvEvent>(props: {
 }
 
 function useRowsAsync<T extends BaseHvEvent>(
-    log: CompleteLog<T>,
+    entries: LogEntries<T>,
     indexMap: IndexMap,
 ) {
     const [current, setCurrent] = useState({
-        id: "",
+        id: entries,
         rows: [] as ReactElement[],
         activeLogIdx: -1,
     })
@@ -66,16 +67,14 @@ function useRowsAsync<T extends BaseHvEvent>(
 
         const updateTargets = new Set<number>()
 
-        if (current.id !== log.id) {
+        if (current.id !== entries) {
             setCurrent((current) => ({
-                id: log.id,
+                id: entries,
                 rows: [],
                 activeLogIdx: -1,
             }))
 
-            range(0, log.entries.length).forEach((idx) =>
-                updateTargets.add(idx),
-            )
+            range(0, entries.length).forEach((idx) => updateTargets.add(idx))
         }
 
         if (current.activeLogIdx !== target.activeLogIdx) {
@@ -94,7 +93,7 @@ function useRowsAsync<T extends BaseHvEvent>(
                 el: ReactElement
             }>
 
-            for (const [logIdx, entry] of enumerate(log.entries)) {
+            for (const [logIdx, entry] of enumerate(entries)) {
                 const needsPush = logIdx > current.rows.length
                 const needsUpdate = updateTargets.has(logIdx)
 
@@ -106,7 +105,6 @@ function useRowsAsync<T extends BaseHvEvent>(
                     idx: logIdx,
                     el: (
                         <EventRowContainer
-                            logId={log.id}
                             logIdx={logIdx}
                             entry={entry}
                             indexMap={indexMap}
@@ -157,7 +155,7 @@ function useRowsAsync<T extends BaseHvEvent>(
         return () => {
             cancelled = true
         }
-    }, [target.activeLogIdx, log.id])
+    }, [target.activeLogIdx, entries])
 
     return {
         rows: current.rows,
@@ -174,16 +172,14 @@ function useRowsAsync<T extends BaseHvEvent>(
 
 interface EventRowContainerProps {
     logIdx: number
-    entry: LogEntry<any>
+    entry: LogEntry
     indexMap: IndexMap
     activeLogIdx: number
     setActiveLogIdx: (logIdx: number) => void
-    logId: string
 }
 
 const EventRowContainer = memo((props: EventRowContainerProps) => {
-    const { logIdx, entry, indexMap, activeLogIdx, setActiveLogIdx, logId } =
-        props
+    const { logIdx, entry, indexMap, activeLogIdx, setActiveLogIdx } = props
 
     const els: ReactElement[] = []
 
@@ -251,7 +247,8 @@ const EventRow = memo((props: EventRowProps) => {
         const eventType = props.entry.event.event_type
         const summary =
             eventType in EVENT_SUMMARY_MAP
-                ? EVENT_SUMMARY_MAP[eventType](props.entry.event as any)
+                ? // @ts-ignore
+                  EVENT_SUMMARY_MAP[eventType](props.entry.event)
                 : JSON.stringify(props.entry.event)
 
         content = (
@@ -384,7 +381,7 @@ const EVENT_SUMMARY_MAP = {
     SPIRIT_STANCE_END: (ev) => ``,
     TOKEN_BONUS: (ev) => `Dropped ${ev.item}`,
 } satisfies {
-    [K in keyof HvEventMap]: (ev: HvEventMap[K]) => string
+    [K in keyof v91N.HvEventMap]: (ev: v91N.HvEventMap[K]) => string
 }
 
 const JSON_VSCODE_THEME = {

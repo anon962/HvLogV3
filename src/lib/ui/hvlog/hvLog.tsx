@@ -3,11 +3,11 @@ import { humanizeBattleType } from "@/lib/stats/metaStats"
 import "@/lib/ui/global.css"
 import { useAsync } from "@/lib/utils/miscUtils"
 import { RootComponent } from "@/lib/utils/userscriptUtils"
-import { CustomMap, sleep } from "myutils"
+import { CustomMap, sleep, strip } from "myutils"
 import { StrictMode } from "react"
 import { LogDetailsPane } from "./logDetailsPane"
 import { LogList } from "./logList/logList"
-import { LOG_SOURCE } from "./logSource"
+import { LOG_SOURCE } from "../../db/logSource"
 import { ROUTER, Router } from "./router"
 import { humanizeFightingType } from "@/lib/stats/combatStats"
 import { RouteLink } from "../routeLink"
@@ -16,19 +16,9 @@ import { Sidebar, SidebarItem } from "../sidebar"
 import * as lucide from "lucide-react"
 import { MonsterPage } from "./monsterPage"
 
-// @fixme: compression
-
-// @fixme: monsters killed
-
-// @fixme: mob leaderboard
-//    appearance (per million)
-//    survival rate (avg 1.34)
-//    damage
-//    cast rate
-//    attack rate
-//    trainer table vs mob table (searchable)
-// @fixme: item world
 // @fixme: client vs server entry points
+// @fixme: monsters killed
+// @fixme: item world
 // @fixme: equip drop search
 // @fixme: off by one charts
 // @fixme: event log pagination
@@ -42,33 +32,35 @@ import { MonsterPage } from "./monsterPage"
 // @todo: profit history
 // @todo: rotate web cli log
 // @todo: select with version filter
+// @todo: monster cast rate
 
-export const HvLog: RootComponent = ({}) => {
+export const HvLog = (props: { prefix: string[] }) => {
+    const prefix = props.prefix.join("/") + "/"
     const routes = new CustomMap({
         toRaw: (parts) => parts.join("/"),
         fromRaw: (raw) => raw.split("/"),
         initValue: (
             [
                 [
-                    "logs/*",
+                    prefix + "logs/*",
                     (parts: string[], url: URL) => ({
                         component: <LogDetailsRoute id={parts[1]} />,
                     }),
                 ],
                 [
-                    "logs",
+                    prefix + "logs",
                     (parts: string[], url: URL) => ({
                         component: <LogList />,
                     }),
                 ],
                 [
-                    "mobs",
+                    prefix + "mobs",
                     (parts: string[], url: URL) => ({
                         component: <MonsterPage />,
                     }),
                 ],
             ] as const
-        ).map((kv) => [kv[0].split("/"), kv[1]] as const),
+        ).map((kv) => [strip(kv[0], "/").split("/"), kv[1]] as const),
     })
 
     const sidebarItems: Array<SidebarItem> = [
@@ -111,20 +103,33 @@ function LogDetailsRoute(props: { id: string }) {
         async () => await logSource.fetchDetails(props.id),
         null,
     )
-    const { data: log } = useAsync(async () => {
-        await sleep(500)
-        return await logSource.fetchLog(props.id)
+    const { data: metaEntries } = useAsync(async () => {
+        let st = performance.now()
+        while (true) {
+            const elapsed = performance.now() - st
+            if (!prices && !details && elapsed < 500) {
+                await sleep(100)
+                continue
+            } else {
+                break
+            }
+        }
+        return Promise.all([
+            logSource.fetchMeta(props.id),
+            logSource.fetchEntries(props.id),
+        ] as const)
     }, null)
+    const [meta, entries] = metaEntries ?? [null, null]
 
     let title
-    if (log && details) {
-        const d = new Date(log.meta.start)
+    if (meta && details) {
+        const d = new Date(meta.start)
         const m = details.meta
         const zfill = (x: number, n = 2) => x.toString().padStart(n, "0")
 
         title = [
             humanizeBattleType(m.battleType, m.round?.end ?? null),
-            log.meta.user_name ?? "(anonymous)",
+            meta.user_name ?? "(anonymous)",
             humanizeFightingType(details.combat.style),
             `${d.getFullYear()}-${zfill(d.getMonth())}-${zfill(d.getDate())} ${zfill(d.getHours())}:${zfill(d.getMinutes())}`,
         ].join(" - ")
@@ -156,7 +161,7 @@ function LogDetailsRoute(props: { id: string }) {
             <div className="w-full max-w-[60rem] h-full mx-auto">
                 {prices && (
                     <LogDetailsPane
-                        log={log}
+                        entries={entries}
                         prices={prices}
                         details={details}
                         indexMap={indexMap}
