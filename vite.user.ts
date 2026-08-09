@@ -3,7 +3,6 @@ import react from "@vitejs/plugin-react"
 import path from "path"
 import { minify } from "terser"
 import { defineConfig } from "vite"
-import cssInjectedByJsPlugin from "vite-plugin-css-injected-by-js"
 
 export default defineConfig((config) => {
     return {
@@ -14,9 +13,10 @@ export default defineConfig((config) => {
                     minified: false,
                 },
             }),
-            cssInjectedByJsPlugin(),
+            // cssInjectedByJsPlugin(),
             (config.mode === "production" && minifyDeps()) as any,
             prepend(`
+window.HV_LOG = unsafeWindow.HV_LOG = {};
 var process = {
     env: {
         NODE_ENV: ${JSON.stringify(
@@ -59,6 +59,12 @@ var process = {
                 name: "hvlog",
                 fileName: () => "hvlog.user.js",
             },
+            // cssSideEffects: () => {
+            //     return (styles: string) => {
+            //         // @ts-ignore
+            //         unsafeWindow.HV_LOG.initCss = () => styles
+            //     }
+            // },
         },
         optimizeDeps: {
             exclude: ["@bokuweb/zstd-wasm"],

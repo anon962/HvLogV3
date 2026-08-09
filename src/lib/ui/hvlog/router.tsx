@@ -1,29 +1,60 @@
 import { newContext } from "@/lib/utils/miscUtils"
-import { patchUrlChange, readUrl } from "@/lib/utils/userscriptUtils"
-import { AnyFunction, bitmaskToBigint, CustomMap, range } from "myutils"
+import {
+    normalizeUrlParts,
+    patchUrlChange,
+    readUrl,
+} from "@/lib/utils/userscriptUtils"
+import { AnyFunction, bitmaskToBigint, CustomMap, range, strip } from "myutils"
 import { FC, ReactNode, useEffect, useMemo, useState } from "react"
 
 type RouteSelection = { component: ReactNode; hideSidebar?: boolean }
 type Sidebar = FC<{ children: ReactNode }>
+export type RouteDef = (
+    patt: string[],
+    url: URL,
+) => RouteSelection | { redirect: string[] }
 
 export function Router(props: {
     routes: CustomMap<
         string[],
-        (patt: string[], url: URL) => RouteSelection,
+        (patt: string[], url: URL) => RouteSelection | { redirect: string[] },
         string
     >
+    prefix?: string[]
     defaultSidebar?: Sidebar
     defaultRoute?: () => RouteSelection
 }) {
     let { parts, url } = ROUTER.useContext()
+    const prefix = useMemo(
+        () => normalizeUrlParts(props.prefix ?? []),
+        [props.prefix],
+    )
 
-    let sel
-    for (const [patt, factory] of props.routes.entries()) {
-        if (!isRouteMatch(patt, parts)) {
-            continue
+    const [partsPrefix, partsRem] = useMemo(
+        () => [parts.slice(0, prefix.length), parts.slice(prefix.length)],
+        [parts, prefix],
+    )
+
+    let sel: RouteSelection | null = null
+    if (!!isRouteMatch(prefix, partsPrefix)) {
+        console.log("here", props.routes)
+        for (const [patt, factory] of props.routes.entries()) {
+            if (!isRouteMatch(patt, partsRem)) {
+                continue
+            }
+
+            const x = factory(partsRem, url)
+            if ("redirect" in x) {
+                window.history.replaceState(
+                    null,
+                    "",
+                    "/" + [prefix, ...x.redirect].join("/"),
+                )
+                return <></>
+            } else {
+                sel = x
+            }
         }
-
-        sel = factory(parts, url)
     }
 
     if (!sel) {

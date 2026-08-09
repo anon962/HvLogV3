@@ -2,13 +2,17 @@ import { humanizeBattleType } from "@/lib/stats/metaStats"
 // @ts-ignore
 import "@/lib/ui/global.css"
 import { useAsync } from "@/lib/utils/miscUtils"
-import { RootComponent } from "@/lib/utils/userscriptUtils"
+import {
+    normalizeUrlParts,
+    readUrl,
+    RootComponent,
+} from "@/lib/utils/userscriptUtils"
 import { CustomMap, sleep, strip } from "myutils"
-import { StrictMode } from "react"
+import { ComponentProps, PropsWithChildren, StrictMode } from "react"
 import { LogDetailsPane } from "./logDetailsPane"
 import { LogList } from "./logList/logList"
 import { LOG_SOURCE } from "../../db/logSource"
-import { ROUTER, Router } from "./router"
+import { RouteDef, ROUTER, Router } from "./router"
 import { humanizeFightingType } from "@/lib/stats/combatStats"
 import { RouteLink } from "../routeLink"
 import { IndexMap } from "@/lib/stats/indexMap"
@@ -16,7 +20,6 @@ import { Sidebar, SidebarItem } from "../sidebar"
 import * as lucide from "lucide-react"
 import { MonsterPage } from "./monsterPage"
 
-// @fixme: client vs server entry points
 // @fixme: monsters killed
 // @fixme: item world
 // @fixme: equip drop search
@@ -34,33 +37,27 @@ import { MonsterPage } from "./monsterPage"
 // @todo: select with version filter
 // @todo: monster cast rate
 
-export const HvLog = (props: { prefix: string[] }) => {
-    const prefix = props.prefix.join("/") + "/"
+export const HvLog = (props: { prefix?: string[] }) => {
     const routes = new CustomMap({
         toRaw: (parts) => parts.join("/"),
-        fromRaw: (raw) => raw.split("/"),
-        initValue: (
-            [
-                [
-                    prefix + "logs/*",
-                    (parts: string[], url: URL) => ({
-                        component: <LogDetailsRoute id={parts[1]} />,
-                    }),
-                ],
-                [
-                    prefix + "logs",
-                    (parts: string[], url: URL) => ({
-                        component: <LogList />,
-                    }),
-                ],
-                [
-                    prefix + "mobs",
-                    (parts: string[], url: URL) => ({
-                        component: <MonsterPage />,
-                    }),
-                ],
-            ] as const
-        ).map((kv) => [strip(kv[0], "/").split("/"), kv[1]] as const),
+        fromRaw: (raw) => normalizeUrlParts(raw.split("/")),
+        initValue: Object.entries({
+            "": () => ({
+                redirect: ["logs"],
+            }),
+            "/logs/*": (parts) => ({
+                component: <LogDetailsRoute id={parts[1]} />,
+            }),
+            "/logs": () => ({
+                component: <LogList />,
+            }),
+            "/mobs": () => ({
+                component: <MonsterPage />,
+            }),
+        } satisfies Record<string, RouteDef>).map((kv) => [
+            normalizeUrlParts(kv[0].split("/")),
+            kv[1],
+        ]),
     })
 
     const sidebarItems: Array<SidebarItem> = [
@@ -81,6 +78,7 @@ export const HvLog = (props: { prefix: string[] }) => {
             <ROUTER.Provider>
                 <LOG_SOURCE.Provider>
                     <Router
+                        prefix={props.prefix}
                         routes={routes}
                         defaultSidebar={({ children }) => (
                             <Sidebar items={sidebarItems}>{children}</Sidebar>

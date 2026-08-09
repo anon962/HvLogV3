@@ -1,33 +1,71 @@
 import React from "react"
 import { createRoot } from "react-dom/client"
+// @ts-ignore
+import cssRoot from "@/lib/ui/global.css?inline"
+import { strip, Unsub } from "myutils"
 
 export interface MountReactOptions {
-    targetEl?: HTMLElement
+    target?: {
+        hostEl: Element
+        styleEl?: HTMLStyleElement
+    }
 }
-
 export async function mountReact<T extends React.JSXElementConstructor<any>>(
     component: T,
     props: React.ComponentProps<T>,
-    { targetEl }: MountReactOptions = {},
+    opts: MountReactOptions = {},
 ) {
-    if (!targetEl) {
-        document.body.innerHTML = `
-            <div id="root" className="h-full w-full">
+    const sink: Unsub[] = []
 
+    let targetEl: Element
+    let styleEl: HTMLStyleElement
+    if (opts.target) {
+        targetEl = opts.target.hostEl
+
+        let styleEl
+        if (!opts.target.styleEl) {
+            const el = document.createElement("style")
+            styleEl = el
+            document.head.appendChild(styleEl)
+            sink.push(() => el.remove())
+        } else {
+            const el = opts.target.styleEl
+            const prevStyles = el.innerHTML
+            styleEl = el
+            sink.push(() => (el.innerHTML = prevStyles))
+        }
+        styleEl.innerHTML = cssRoot
+    } else {
+        const hostEl = document.createElement("div")
+        hostEl.classList.add("hvlog-shadow")
+        const shadowRoot = hostEl.attachShadow({
+            mode: "open",
+            delegatesFocus: true,
+        })
+        document.body.appendChild(hostEl)
+
+        shadowRoot.innerHTML = `
+            <div class="hvlog-container">
+                <style>
+                    ${cssRoot}
+                </style>
+                <div class="hvlog-host h-full w-full">
+                </div>
             </div>
         `
-        targetEl = document.querySelector<HTMLDivElement>("#root")!
-        document.body.classList.add("dark")
-        document.title = "HvLog"
+
+        targetEl = shadowRoot.querySelector(".hvlog-host")!
     }
 
     const rootComponent = React.createElement(component, props)
     const reactEl = createRoot(targetEl)
     reactEl.render(rootComponent)
+    sink.push(() => reactEl.unmount())
 
-    targetEl.addEventListener("unmountme", () => {
-        reactEl.unmount()
-        targetEl.remove()
+    targetEl.addEventListener("hvlog:unmount", () => {
+        for (const unsub of sink) {
+            unsub()
+        }
     })
 
     return reactEl
@@ -36,16 +74,21 @@ export async function mountReact<T extends React.JSXElementConstructor<any>>(
 export function readUrl(override?: string) {
     const url = new URL(window.location.href)
 
-    const parts = (override ?? window.location.pathname)
-        .split("/")
-        .map((part) => part.trim())
-        .filter((part) => !!part.length)
-        .map((part) => part.toLowerCase())
+    const parts = normalizeUrlParts(
+        (override ?? window.location.pathname).split("/"),
+    )
 
     return {
         parts,
         url,
     }
+}
+
+export function normalizeUrlParts(parts: string[]) {
+    return parts
+        .map((part) => strip(part, " /"))
+        .filter((part) => part.length > 0)
+        .map((part) => part.toLowerCase())
 }
 
 export type RootComponent<T = {}> = React.FC<{} & T>

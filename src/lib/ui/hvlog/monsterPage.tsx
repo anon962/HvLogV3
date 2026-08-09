@@ -4,7 +4,7 @@ import {
     AutocompleteInput,
     AutocompleteItem,
     AutocompleteList,
-} from "@/components/reui/autocomplete"
+} from "@/lib/ui/shadcn/autocomplete"
 import { lucide } from "@/lib/ui/constants"
 import { CommonProps } from "@/lib/utils/miscUtils"
 import { useMemo } from "react"

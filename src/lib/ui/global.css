@@ -15,7 +15,7 @@
 @import "./hvlog/combat/combatInfo.css";
 @import "./hvlog/drop/dropInfo.css";
 
-:root {
+.hvlog-container {
     --radius: 0.625rem;
     --background: oklch(0.145 0 0);
     --foreground: oklch(0.985 0 0);
@@ -94,19 +94,11 @@
     * {
         @apply border-border outline-ring/50;
     }
-    body {
+    .hvlog-container {
         @apply bg-background text-foreground;
     }
 
     :root {
-        --chart-1: 12 76% 61%;
-        --chart-2: 173 58% 39%;
-        --chart-3: 197 37% 24%;
-        --chart-4: 43 74% 66%;
-        --chart-5: 27 87% 67%;
-    }
-
-    .dark {
         --chart-1: 220 70% 50%;
         --chart-2: 160 60% 45%;
         --chart-3: 30 80% 55%;
@@ -115,9 +107,16 @@
     }
 }
 
+.hvlog-container {
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+html,
 body,
-#root {
-    height: 100vh !important;
+.hvlog-container,
+.hvlog-host {
+    min-height: 100vh;
 }
 
 /* From shadcn site: https://www.shadcn-svelte.com/examples/dashboard */

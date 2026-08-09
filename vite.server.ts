@@ -15,6 +15,8 @@ export default defineConfig((config) => {
             }),
             (config.mode === "production" && minifyDeps()) as any,
             prepend(`
+                var HV_LOG = {};
+                HV_LOG.isRemote = true;
                 var process = {
                     env: {
                         NODE_ENV: ${JSON.stringify(
