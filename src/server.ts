@@ -5,7 +5,7 @@ async function main() {
     await mountReact(
         HvLog,
         { prefix: [] },
-        { target: { hostEl: document.body } },
+        { target: { hostEl: document.body }, skipStyles: true },
     )
 }
 

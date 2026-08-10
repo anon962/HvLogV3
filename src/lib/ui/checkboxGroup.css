@@ -45,6 +45,12 @@
     grid-template-columns: max-content 1fr;
     cursor: pointer;
     text-align: left;
+
+    --bg-false: var(--color-gray-600);
+    --bg-true: var(--primary);
+    --bg-alpha: 50%;
+    --bg-alpha-hover: 60%;
+    --color-hover: var(--color-yellow-100);
 }
 .input-label-container button {
     grid-area: input;
@@ -52,15 +58,41 @@
 
     transition: all 0.15s ease-in-out;
 }
-.input-label-container:hover {
-    color: var(--color-yellow-100);
-
-    button:not([data-state="checked"]) {
+.input-label-container {
+    button {
         background-color: color-mix(
             in oklab,
-            var(--color-gray-600),
-            transparent 50%
+            var(--bg-false) var(--bg-alpha),
+            transparent
         );
+
+        &[data-state="checked"] {
+            background-color: color-mix(
+                in oklab,
+                var(--bg-true) var(--bg-alpha),
+                transparent
+            );
+        }
+    }
+
+    &:hover {
+        color: var(--color-hover);
+
+        button {
+            background-color: color-mix(
+                in oklab,
+                var(--bg-false) var(--bg-alpha-hover),
+                transparent
+            );
+
+            &[data-state="checked"] {
+                background-color: color-mix(
+                    in oklab,
+                    var(--bg-true) var(--bg-alpha-hover),
+                    transparent
+                );
+            }
+        }
     }
 }
 .input-label-container label {
@@ -73,4 +105,8 @@
     margin: 0;
     font-size: 0.6rem;
     color: rgba(200, 200, 200);
+}
+
+.input-label-container.destructive {
+    --bg-true: var(--color-destructive);
 }

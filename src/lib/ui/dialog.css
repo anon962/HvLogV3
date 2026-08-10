@@ -1,0 +1,62 @@
+dialog {
+    color: inherit;
+    background: color-mix(
+        in oklch,
+        color-mix(
+            in oklch,
+            var(--color-background),
+            var(--color-foreground) 35%
+        ),
+        transparent 10%
+    );
+    /* border: 0.15em solid
+            color-mix(in oklch, var(--color-background), transparent 0%); */
+    border-radius: 0.5rem;
+
+    z-index: 20;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    margin: auto;
+    overflow: auto;
+    cursor: initial;
+
+    overflow: auto;
+    margin: auto;
+    padding: 1.5em;
+
+    &::backdrop {
+        background: color-mix(
+            in oklch,
+            var(--color-background),
+            transparent 15%
+        );
+        cursor: pointer;
+    }
+
+    input {
+        height: 2em;
+        padding-left: 0.75em;
+        padding-right: 0.75em;
+    }
+
+    input {
+        background-color: color-mix(
+            in oklab,
+            var(--color-background) 30%,
+            transparent
+        );
+    }
+    .input-label-container {
+        --bg-false: color-mix(
+            in oklch,
+            var(--color-background),
+            var(--color-foreground) 10%
+        );
+        --bg-true: var(--color-foreground);
+        --bg-alpha: 100%;
+        --bg-alpha-hover: 80%;
+    }
+}

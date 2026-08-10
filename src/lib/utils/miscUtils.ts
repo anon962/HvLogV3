@@ -242,3 +242,10 @@ export function mergeProps<TBase extends React.ComponentProps<"div">>(
 
     return result
 }
+
+export function css(
+    strings: TemplateStringsArray,
+    ...values: unknown[]
+): string {
+    return strings.reduce((acc, s, i) => acc + s + (values[i] ?? ""), "")
+}

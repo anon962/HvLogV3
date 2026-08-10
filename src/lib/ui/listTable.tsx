@@ -9,13 +9,7 @@ import {
 import { CommonProps, ReactMemo } from "@/lib/utils/miscUtils"
 import { cn } from "@/lib/utils/shadcnUtils"
 import { clamp, range, sort } from "myutils"
-import React, {
-    ReactNode,
-    useCallback,
-    useEffect,
-    useRef,
-    useState,
-} from "react"
+import React, { ReactNode, useCallback, useRef, useState } from "react"
 import { ArrowLongDownIcon, ArrowLongUpIcon } from "./icons/tailwind"
 import { Input } from "./shadcn/input"
 import {
@@ -35,7 +29,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from "./shadcn/select"
-import * as lucide from "lucide-react"
 import { RouteLink } from "./routeLink"
 import {
     Tooltip,
@@ -43,6 +36,7 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "./shadcn/tooltip"
+import { Loader } from "./loader"
 
 export namespace ListTable {
     export interface Column<TValue = unknown, TImpureValue = null> {
@@ -582,7 +576,7 @@ const Paginator = React.memo(
                     </div>
                 </Pagination>
 
-                <Loader show={!!props.isLoading} />
+                <Loader show={!!props.isLoading} delay={200} className="ml-4" />
             </div>
         )
     },
@@ -637,28 +631,6 @@ function PageSizeSelect(props: {
                 ))}
             </SelectContent>
         </Select>
-    )
-}
-
-function Loader(props: { show: boolean; delay?: number }) {
-    const [show, setShow] = useState(false)
-
-    useEffect(() => {
-        if (!props.show) {
-            setShow(false)
-            return
-        }
-        const timeout = setTimeout(() => setShow(true), props.delay ?? 200)
-        return () => clearTimeout(timeout)
-    }, [props.show, props.delay])
-
-    return (
-        <lucide.LoaderCircle
-            className={cn(
-                show ? "" : "invisible",
-                "ml-4 animate-spin text-blue-500 size-6",
-            )}
-        />
     )
 }
 

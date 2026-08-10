@@ -9,6 +9,8 @@ export interface MountReactOptions {
         hostEl: Element
         styleEl?: HTMLStyleElement
     }
+    isDialog?: boolean
+    skipStyles?: boolean
 }
 export async function mountReact<T extends React.JSXElementConstructor<any>>(
     component: T,
@@ -22,19 +24,22 @@ export async function mountReact<T extends React.JSXElementConstructor<any>>(
     if (opts.target) {
         targetEl = opts.target.hostEl
 
-        let styleEl
-        if (!opts.target.styleEl) {
-            const el = document.createElement("style")
-            styleEl = el
-            document.head.appendChild(styleEl)
-            sink.push(() => el.remove())
-        } else {
-            const el = opts.target.styleEl
-            const prevStyles = el.innerHTML
-            styleEl = el
-            sink.push(() => (el.innerHTML = prevStyles))
+        if (!opts.skipStyles) {
+            let styleEl
+            if (!opts.target.styleEl) {
+                const el = document.createElement("style")
+                styleEl = el
+                document.head.appendChild(styleEl)
+                sink.push(() => el.remove())
+            } else {
+                const el = opts.target.styleEl
+                const prevStyles = el.innerHTML
+                styleEl = el
+                sink.push(() => (el.innerHTML = prevStyles))
+            }
+
+            styleEl.innerHTML = cssRoot
         }
-        styleEl.innerHTML = cssRoot
     } else {
         const hostEl = document.createElement("div")
         hostEl.classList.add("hvlog-shadow")
@@ -45,9 +50,9 @@ export async function mountReact<T extends React.JSXElementConstructor<any>>(
         document.body.appendChild(hostEl)
 
         shadowRoot.innerHTML = `
-            <div class="hvlog-container">
+            <div class="hvlog-container dialog-container dark">
                 <style>
-                    ${cssRoot}
+                    ${!opts.skipStyles ? cssRoot : ""}
                 </style>
                 <div class="hvlog-host h-full w-full">
                 </div>
