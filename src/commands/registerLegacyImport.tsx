@@ -1,11 +1,13 @@
+import { LogDb } from "@/lib/db/db"
+import { MigrateV2 } from "@/lib/db/migrateV2"
 import { LabeledCheckbox } from "@/lib/ui/checkboxGroup"
 import { Loader } from "@/lib/ui/loader"
 import { Button } from "@/lib/ui/shadcn/button"
 import { Input } from "@/lib/ui/shadcn/input"
-import { CommonProps, css } from "@/lib/utils/miscUtils"
+import { CommonProps, css, useAsync } from "@/lib/utils/miscUtils"
 import { mountReact } from "@/lib/utils/userscriptUtils"
-import { cn } from "myutils"
-import { ReactNode, useEffect, useRef, useState } from "react"
+import { cn, L, Unsubs } from "myutils"
+import { ReactNode, useEffect, useMemo, useRef, useState } from "react"
 
 // #region command
 export function registerLogExport() {
@@ -204,7 +206,102 @@ function ActionButton(
 // #endregion
 
 // #region state
-function useImportState() {}
+function useImportState() {
+    const unsubs = Unsubs()
+
+    const [log, setLog] = useState({ lines: [] as string[] })
+    const tStart = useMemo(() => performance.now(), [])
+    L.sinks["legacy_import"] = {
+        disabled: false,
+        call: (level, msg, ...rest) => {
+            const elapsed = performance.now() - tStart
+            const joined =
+                `[${level.toUpperCase().padEnd(5)}] [${(elapsed / 1000).toFixed(3)}ms] - ` +
+                [msg, ...rest]
+                    .map((x) => {
+                        try {
+                            return JSON.stringify(x)
+                        } catch (e) {
+                            return String(x)
+                        }
+                    })
+                    .join(" ")
+
+            const maxLength = 500
+            const toPush =
+                joined.length >= maxLength
+                    ? joined.slice(0, maxLength - 3) + "..."
+                    : joined
+            log.lines.push(toPush)
+
+            setLog({ ...log })
+        },
+    }
+    unsubs.push(() => delete L.sinks["legacy_import"])
+
+    const dbFetch = useAsync(
+        async () => ({
+            pOld: await MigrateV2.initDb(MigrateV2.DBID_P),
+            iOld: await MigrateV2.initDb(MigrateV2.DBID_I),
+            pNew: await new LogDb({
+                world: "persistent",
+            }).connect(),
+            iNew: await new LogDb({
+                world: "isekai",
+            }).connect(),
+        }),
+        [],
+    )
+    const dbs = useMemo(
+        () =>
+            dbFetch.data
+                ? dbFetch.data
+                : { pOld: null, iOld: null, pNew: null, iNew: null },
+        [dbFetch.data],
+    )
+
+    const [legacyStatsVersion, setLegacyStatsVersion] = useState(0)
+    const legacyStatsFetch = useAsync(async () => {
+        if (!dbs.pOld) {
+            return
+        }
+
+        const idsP = new Set(await MigrateV2.selectKeys(dbs.pOld))
+        const idsI = new Set(await MigrateV2.selectKeys(dbs.iOld))
+
+        const currIdsP = new Set(
+            await dbs.pNew.getAllKeys("logs"),
+        ) as Set<string>
+        const currIdsI = new Set(
+            await dbs.iNew.getAllKeys("logs"),
+        ) as Set<string>
+
+        const dupesP = idsP.intersection(currIdsP)
+        const dupesI = idsI.intersection(currIdsI)
+
+        return {
+            idsP,
+            idsI,
+            dupesP,
+            dupesI,
+        }
+    }, [legacyStatsVersion, dbs])
+
+    return {
+        tStart,
+        dbs,
+        legacyStats: legacyStatsFetch.data ?? {
+            idsP: new Set<string>(),
+            idsI: new Set<string>(),
+            dupesP: new Set<string>(),
+            dupesI: new Set<string>(),
+        },
+        refetchLegacyStats() {
+            setLegacyStatsVersion(legacyStatsVersion + 1)
+        },
+        unsubs,
+    }
+}
 // #endregion
 
 // #region css
