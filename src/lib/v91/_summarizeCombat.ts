@@ -1,4 +1,5 @@
-import { enumerate, sum } from "myutils"
+import { enumerate, L, sum } from "myutils"
+import { LogEntries } from "../db/dbN"
 import {
     CombatSummary,
     CombatSummaryEventMap,
@@ -6,7 +7,6 @@ import {
 } from "../stats/combatStats"
 import { type v91N } from "./_parsers"
 import { type v91 } from "./v91"
-import { LogEntries } from "../db/dbN"
 
 const enemyActions = new Set([
     "E_ATTACK",
@@ -501,7 +501,7 @@ export function _summarizeCombat(
                         })
                         break
                     case "P_HIT":
-                        console.error(
+                        L.error(
                             "Unexpected P_HIT event when root is a melee attack",
                         )
                         break

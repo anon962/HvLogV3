@@ -1,5 +1,6 @@
 import * as Zstd2 from "@bokuweb/zstd-wasm"
 import { createWriteStream } from "fs"
+import { L } from "myutils"
 import path from "path"
 import { fileURLToPath } from "url"
 import {
@@ -21,13 +22,14 @@ const logDir = path.join(ROOT_DIR, "data", "logs")
 const logFile = path.join(logDir, "web_cli.log")
 const logStream = createWriteStream(logFile, { flags: "a", flush: true })
 
-for (const level of ["log", "info", "warn", "debug", "error"] as const) {
-    console[level] = (...args: unknown[]) => {
+L.patchConsole()
+L.sinks["cli"] = {
+    disabled: false,
+    call: (level, msg, ...rest) => {
         const now = new Date().toISOString()
-
         logStream.write(
             `[${level.toUpperCase().padEnd(5)}] [${now}] - ` +
-                args
+                [msg, ...rest]
                     .map((x) => {
                         try {
                             return JSON.stringify(x)
@@ -38,9 +40,9 @@ for (const level of ["log", "info", "warn", "debug", "error"] as const) {
                     .join(" ") +
                 "\n",
         )
-    }
+    },
 }
-console.log(
+L.log(
     path.join(
         // process.cwd(),
         ROOT_DIR,
@@ -70,16 +72,16 @@ async function main() {
                     break
                 }
                 default:
-                    console.error(process.argv)
+                    L.error(process.argv)
                     throw new Error(`Unknown command ${cmd.type}`)
             }
         }
     } catch (e) {
-        console.error(e)
+        L.error(e)
 
         delete cmd["log"]
         delete cmd["events"]
-        console.error(cmd)
+        L.error(cmd)
 
         write("")
         throw e

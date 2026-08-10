@@ -160,11 +160,29 @@ input::file-selector-button {
     border-right: 0.1em solid var(--muted-foreground);
     padding-right: 0.5em;
     padding-left: 0.5em;
+    margin-right: 0.5em;
     line-height: inherit;
     height: 100%;
+    cursor: inherit;
+}
+input::file-selector-button {
     background-color: color-mix(
         in oklab,
         var(--background) 50%,
+        var(--foreground)
+    );
+}
+input:hover {
+    background-color: color-mix(
+        in oklab,
+        var(--color-background) 35%,
+        transparent
+    );
+}
+input:hover::file-selector-button {
+    background-color: color-mix(
+        in oklab,
+        var(--background) 55%,
         var(--foreground)
     );
 }

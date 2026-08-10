@@ -1,6 +1,7 @@
+import { L } from "myutils"
 import { LogEntries } from "../db/dbN"
 import { MonsterSummary } from "../stats/summary"
-import { _ALL_PARSERS, v91N as parsers } from "./_parsers"
+import { v91N as parsers } from "./_parsers"
 import { v91 } from "./v91"
 
 // explosion and parries cant be counted because no mob name logged
@@ -58,7 +59,7 @@ export function _summarizeMonsters(
         > | null,
     ) => {
         if (!(name in infoByName)) {
-            console.error(`No spawn for monster ${name}`)
+            L.error(`No spawn for monster ${name}`)
             return
         }
 

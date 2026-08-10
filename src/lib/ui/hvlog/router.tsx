@@ -1,3 +1,4 @@
+import { L } from "myutils"
 import { newContext } from "@/lib/utils/miscUtils"
 import {
     normalizeUrlParts,
@@ -37,7 +38,7 @@ export function Router(props: {
 
     let sel: RouteSelection | null = null
     if (!!isRouteMatch(prefix, partsPrefix)) {
-        console.log("here", props.routes)
+        L.log("here", props.routes)
         for (const [patt, factory] of props.routes.entries()) {
             if (!isRouteMatch(patt, partsRem)) {
                 continue
@@ -58,7 +59,7 @@ export function Router(props: {
     }
 
     if (!sel) {
-        console.error("Invalid route", parts)
+        L.error("Invalid route", parts)
         if (props.defaultRoute) {
             sel = props.defaultRoute()
         } else {

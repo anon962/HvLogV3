@@ -57,15 +57,18 @@ function Dialog() {
                     desc={
                         <ul>
                             <li>
-                                Import old logs from previous HvLog versions.
-                                This is not automatic due to possible data loss.
-                                (Previous versions did not store the original
-                                log.)
+                                Import old logs from previous HvLog versions
+                                (2.x and earlier). This is not automatic due to
+                                possible data loss. (Previous versions did not
+                                store the original log.)
                             </li>
                             <li>
-                                After import, you should check for weirdness or
-                                download the old logs before deleting. Issues
-                                can be reported in the forum thread.
+                                After import, you should{" "}
+                                <b>
+                                    check for weirdness or download the old logs
+                                    before deleting.
+                                </b>{" "}
+                                Issues can be reported in the forum thread.
                             </li>
                             <li>
                                 Found <b>500</b> old logs (<b>312.2 MiB</b>) in
@@ -153,8 +156,6 @@ function Section(
         setLineEls([...lineEls])
     }, [props.log])
 
-    console.log("here", lineEls)
-
     return (
         <section className={cn(props.className)}>
             <div>
@@ -200,6 +201,10 @@ function ActionButton(
         </Button>
     )
 }
+// #endregion
+
+// #region state
+function useImportState() {}
 // #endregion
 
 // #region css

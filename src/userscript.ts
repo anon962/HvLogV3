@@ -1,4 +1,4 @@
-import { registerLogExport } from "./commands/registerLogImportExport.tsx"
+import { registerLogExport } from "./commands/registerLegacyImport.tsx"
 import { HvLog } from "./lib/ui/hvlog/hvLog.tsx"
 import { mountReact, readUrl } from "./lib/utils/userscriptUtils.ts"
 

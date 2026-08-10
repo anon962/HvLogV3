@@ -1,4 +1,5 @@
 import { Result } from "myutils"
+import { L } from "myutils"
 
 export interface ParseError {
     detail: string
@@ -41,8 +42,8 @@ export class EventParser<
                     if (d === undefined) {
                         if (!term.isOptional) {
                             const msg = `Schema property ${k} for event ${this.name} was not captured in ${this.patt}. Line ${line}`
-                            console.error(line)
-                            console.error(msg)
+                            L.error(line)
+                            L.error(msg)
                             throw new Error(msg)
                         }
 

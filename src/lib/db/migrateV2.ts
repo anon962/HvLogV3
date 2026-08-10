@@ -22,13 +22,9 @@ export type MigrateV2Result =
     | { type: "log"; log: ExportLog }
     | { type: "error"; detail: string }
 
-export async function* migrateV2(): AsyncGenerator<
-    Array<MigrateV2Result>,
-    undefined,
-    never
-> {
-    const batchSize = 50
-
+export async function* migrateV2(
+    batchSize = 50,
+): AsyncGenerator<Array<MigrateV2Result>, undefined, never> {
     for (const [dbId, world] of [
         ["HvLog", "persistent"],
         ["HvLog_isekai", "isekai"],

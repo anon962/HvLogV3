@@ -2,6 +2,7 @@ import { LogEntries, LogEntry } from "../db/dbN"
 import { DEBUG } from "../ui/constants"
 import { BaseHvEvent } from "./eventParser"
 import { sort } from "myutils"
+import { L } from "myutils"
 
 // @todo: Replace with https://chevrotain.io/docs/tutorial/step2_parsing.html#complete-parser
 
@@ -239,7 +240,7 @@ export function takeEvents<TEvent extends BaseHvEvent>(
     const best = matches[0]
 
     if (debug && debug.n > 1000) {
-        console.debug(
+        L.debug(
             "takeEvents",
             debug,
             matches,

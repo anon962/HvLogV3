@@ -1,5 +1,5 @@
-import { sum } from "myutils"
-import React, { Dispatch, useState } from "react"
+import { L, sum } from "myutils"
+import React, { Dispatch } from "react"
 
 export function formatNumber(x: number, alwaysShowSign?: boolean) {
     // prettier-ignore
@@ -206,7 +206,7 @@ export function mergeProps<TBase extends React.ComponentProps<"div">>(
         } else if (!bv && !ov) {
             // result[k] = bv
         } else if (bt !== ot) {
-            console.error(`Cannot merge ${bv} (${bt}) with ${ov} (${ot})`)
+            L.error(`Cannot merge ${bv} (${bt}) with ${ov} (${ot})`)
         } else {
             switch (bt) {
                 case "string":
@@ -232,9 +232,7 @@ export function mergeProps<TBase extends React.ComponentProps<"div">>(
                 case "symbol":
                 case "object":
                 case "function":
-                    console.error(
-                        `Cannot merge ${bv} (${bt}) with ${ov} (${ot})`,
-                    )
+                    L.error(`Cannot merge ${bv} (${bt}) with ${ov} (${ot})`)
                     break
             }
         }

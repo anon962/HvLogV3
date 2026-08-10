@@ -1,4 +1,12 @@
-import { findNext, InferCollectionType, last, range, sort, zip } from "myutils"
+import {
+    findNext,
+    InferCollectionType,
+    L,
+    last,
+    range,
+    sort,
+    zip,
+} from "myutils"
 import { LogEntries, LogEntry } from "../db/dbN"
 import { summarizeItemDrops } from "../stats/dropStats"
 import { summarizeItemUsage } from "../stats/itemUsageStats"
@@ -16,10 +24,10 @@ import {
     SPIRIT_ITEMS,
     TROPHIES,
 } from "../ui/constants"
+import { EventGrammar, filterEvents, takeEvents } from "../utils/eventGrammar"
 import { _ALL_PARSERS, v91N } from "./_parsers"
 import { _summarizeCombat } from "./_summarizeCombat"
 import { _summarizeMonsters } from "./_summarizeMonsters"
-import { EventGrammar, filterEvents, takeEvents } from "../utils/eventGrammar"
 
 export const v91 = {
     ALL_PARSERS: _ALL_PARSERS,
@@ -524,7 +532,7 @@ function partitionLog(entries: LogEntries<v91N.HvEvent>): v91.LogPartition {
         const x = entries[logIdx]
         if (!seq && x.type === "event") {
             const pp = (xs: any[]) => (xs ? xs.map((x) => x.event) : null)
-            console.debug(
+            L.debug(
                 "context for unknown",
                 logIdx,
                 // @ts-ignore
@@ -544,19 +552,19 @@ function partitionLog(entries: LogEntries<v91N.HvEvent>): v91.LogPartition {
     }
 
     if (partition.unknown.length > 0) {
-        console.warn("Unknowns in log partition", partition.unknown)
+        L.warn("Unknowns in log partition", partition.unknown)
     }
 
     const errors = entries.flatMap((x, logIdx) =>
         x.type === "error" ? [{ logIdx, ...x }] : [],
     )
     if (errors.length > 0) {
-        console.error("Parser errors", errors)
+        L.error("Parser errors", errors)
     }
 
     if (parseTimes) {
         for (const [k, x] of Object.entries(parseTimes)) {
-            console.debug(
+            L.debug(
                 // @ts-ignore
                 `Partitioned ${k} in ${Math.round(10 * (x.t / x.n)) / 10}ms (${x.n})`,
             )
