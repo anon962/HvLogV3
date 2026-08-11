@@ -19,12 +19,6 @@ export namespace DbN {
         raw_c: null
     }
 
-    export type CompressedLog = Omit<Log, "compressed" | "raw" | "raw_c"> & {
-        compressed: number
-        raw: null
-        raw_c: Uint8Array<ArrayBuffer>
-    }
-
     export interface LogMeta {
         start: ISODate
         lastUpdate: ISODate
@@ -34,14 +28,27 @@ export namespace DbN {
         user_name: string | null
     }
 
-    type WithPartialMeta<T extends Log | CompressedLog> = Omit<T, "meta"> & {
-        meta: Omit<LogMeta, "version">
-    }
-    export type IdbLogRow = WithPartialMeta<Log | CompressedLog>
+    //
+    //
+    //
 
     export interface Schema {
-        logs: Record<LogId, IdbLogRow>
-        logVersions: Record<LogId, number>
+        logsMeta: Record<LogId, LogMeta & { id: string }>
+        logsRaw: Record<
+            LogId,
+            | {
+                  id: LogId
+                  compressed: 0
+                  raw: string
+                  raw_c: null
+              }
+            | {
+                  id: LogId
+                  compressed: number
+                  raw: null
+                  raw_c: Uint8Array<ArrayBuffer>
+              }
+        >
         kv: {
             toCompress: string[]
         }

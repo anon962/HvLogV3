@@ -14,7 +14,7 @@ import {
 } from "@/lib/utils/miscUtils"
 import { mountReact } from "@/lib/utils/userscriptUtils"
 import { unwrap } from "idb"
-import { batched, clamp, cn, L, throttle } from "myutils"
+import { batched, clamp, cn, L, sleep, throttle } from "myutils"
 import {
     ReactNode,
     useCallback,
@@ -67,7 +67,7 @@ function Dialog() {
         legacyStats.currIdsP.intersection(legacyStats.idsP).size +
         legacyStats.currIdsI.intersection(legacyStats.idsI).size
 
-    const [count, setCount] = useState(250)
+    const [count, setCount] = useState(200)
     const [importFiles, setImportFiles] = useState([] as File[])
 
     return (
@@ -333,10 +333,10 @@ function useImportState() {
         const idsI = new Set(await MigrateV2.selectKeys(unwrap(dbs.dbI)))
 
         const currIdsP = new Set(
-            await dbs.dbP.getAllKeys("logs"),
+            await dbs.dbP.getAllKeys("logsMeta"),
         ) as Set<string>
         const currIdsI = new Set(
-            await dbs.dbI.getAllKeys("logs"),
+            await dbs.dbI.getAllKeys("logsMeta"),
         ) as Set<string>
 
         L.info(
@@ -466,7 +466,10 @@ function useImportState() {
             [opts.dbs.dbI, idsI, "isekai"],
         ] as const) {
             for (const idBatch of batched(ids, 50)) {
-                const toInsert: Array<DbN.IdbLogRow> = []
+                const toInsert: Array<{
+                    meta: DbN.Schema["logsMeta"][DbN.LogId]
+                    raw: DbN.Schema["logsRaw"][DbN.LogId]
+                }> = []
                 for (const id of idBatch) {
                     if (count + 1 > opts.count) {
                         break
@@ -478,19 +481,23 @@ function useImportState() {
                         const lines = oldLog.entries.map((x) =>
                             MigrateV2.reverseEntry(x),
                         )
-                        const newLog: DbN.IdbLogRow = {
-                            id,
+                        const newLog = {
                             meta: {
+                                id,
                                 start: oldLog.meta.start,
                                 lastUpdate: oldLog.meta.lastUpdate,
+                                version: 0,
                                 world,
                                 user_id: null,
                                 user_name: null,
                             },
-                            compressed: 0,
-                            raw: lines.join("\n"),
-                            raw_c: null,
-                        }
+                            raw: {
+                                id,
+                                compressed: 0,
+                                raw: lines.join("\n"),
+                                raw_c: null,
+                            },
+                        } as const
                         toInsert.push(newLog)
                         count += 1
                     } catch (e) {
@@ -502,10 +509,11 @@ function useImportState() {
                     break
                 }
 
-                const txn = db.transaction(["logs"], "readwrite")
+                const txn = db.transaction(["logsMeta", "logsRaw"], "readwrite")
                 try {
-                    for (const l of toInsert) {
-                        await txn.objectStore("logs").put(l)
+                    for (const x of toInsert) {
+                        await txn.objectStore("logsMeta").put(x.meta)
+                        await txn.objectStore("logsRaw").put(x.raw)
                     }
                     logImportStatus()
                 } catch (e) {
@@ -525,28 +533,63 @@ function useImportState() {
         dbs: typeof dbs & { ready: true }
         stats: typeof legacyStats
     }) {
-        const logs: Array<DbN.IdbLogRow> = []
+        const logs: Array<{
+            meta: DbN.Schema["logsMeta"][DbN.LogId]
+            raw: DbN.Schema["logsRaw"][DbN.LogId]
+        }> = []
 
         for (const file of opts.files) {
             if (file.name.endsWith("jsonl.gz") || file.name.endsWith("jsonl")) {
                 try {
-                    for (const l of await MigrateV2.readJsonlExport(file)) {
+                    L.info(`Reading ${file.name} ...`)
+                    await sleep(100)
+
+                    let fromFile = await MigrateV2.readJsonlExport(file)
+                    let fileIdx = 0
+                    const [status, cancelStatus] = throttle({
+                        fn: () =>
+                            L.info(
+                                `Importing old logs from ${file.name} (${fileIdx + 1} / ${fromFile.length || "???"}) ...`,
+                            ),
+                        interval: 2000,
+                    })
+
+                    let lastPause = 0
+                    for (const l of fromFile) {
+                        status()
+                        fileIdx += 1
+
                         logs.push({
-                            id: l.id,
                             meta: {
-                                ...l.meta,
+                                id: l.id,
+                                start: l.meta.start,
+                                lastUpdate: l.meta.lastUpdate,
+                                version: 0,
                                 world: l.world,
                                 user_id: null,
                                 user_name: null,
                             },
-                            compressed: 17,
-                            raw: null,
-                            raw_c: await compressZstd(l.lines.join("\n"), 19),
-                            // compressed: 0,
-                            // raw: l.lines.join("\n"),
-                            // raw_c: null,
+                            raw: {
+                                id: l.id,
+                                compressed: 15,
+                                raw: null,
+                                raw_c: await compressZstd(
+                                    l.lines.join("\n"),
+                                    15,
+                                ),
+                                // compressed: 0,
+                                // raw: l.lines.join("\n"),
+                                // raw_c: null,
+                            },
                         })
+
+                        if (performance.now() - lastPause > 2000) {
+                            await sleep(100)
+                            lastPause = performance.now()
+                        }
                     }
+
+                    cancelStatus()
                 } catch (e) {
                     L.error(e)
                     continue
@@ -560,16 +603,17 @@ function useImportState() {
             ["persistent", opts.dbs.dbP],
             ["isekai", opts.dbs.dbI],
         ] as const) {
-            const txn = db.transaction(["logs"], "readwrite")
+            const txn = db.transaction(["logsMeta", "logsRaw"], "readwrite")
             for (const l of logs) {
                 if (l.meta.world === world) {
-                    await txn.objectStore("logs").put(l)
+                    await txn.objectStore("logsMeta").put(l.meta)
+                    await txn.objectStore("logsRaw").put(l.raw)
                 }
             }
             txn.commit()
         }
 
-        const dupes = new Set(logs.map((l) => l.id)).intersection(
+        const dupes = new Set(logs.map((l) => l.meta.id)).intersection(
             opts.stats.currIdsP.union(opts.stats.currIdsI),
         )
         L.info(

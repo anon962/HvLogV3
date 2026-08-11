@@ -6,7 +6,12 @@ import { L } from "myutils"
 const STORAGE_KEY_PERSISTENT = "HvLog"
 const STORAGE_KEY_ISEKAI = "HvLog_isekai"
 
-export type LogDbConn = idb.IDBPDatabase<DbN.Schema>
+type IdbSchema = {
+    [K in keyof DbN.Schema]: DbN.Schema[K] extends Record<infer K2, infer V2>
+        ? { key: K2; value: V2 }
+        : never
+}
+export type LogDbConn = idb.IDBPDatabase<IdbSchema>
 export class LogDb {
     world: DbN.HvWorld
     conn: Promise<LogDbConn> | null = null
@@ -36,7 +41,7 @@ export class LogDb {
                 ? STORAGE_KEY_ISEKAI
                 : STORAGE_KEY_PERSISTENT
 
-        this.conn = idb.openDB<DbN.Schema>(dbName, LogDb.schemaVersion, {
+        this.conn = idb.openDB<IdbSchema>(dbName, LogDb.schemaVersion, {
             upgrade: (conn, oldVersion, newVersion, txn, event) => {
                 L.info("Upgrading HvLog db ...")
                 this.applySchemaMigrations(conn, oldVersion)
@@ -67,8 +72,8 @@ export class LogDb {
                 v = 5
                 continue
             } else if (v === 5) {
-                conn.createObjectStore("logs", { keyPath: "id" })
-                conn.createObjectStore("logVersions")
+                conn.createObjectStore("logsMeta", { keyPath: "id" })
+                conn.createObjectStore("logsRaw", { keyPath: "id" })
 
                 v += 1
                 continue
