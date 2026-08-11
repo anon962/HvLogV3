@@ -247,7 +247,8 @@ export namespace MigrateV2 {
             lines: string[]
         }>
 
-        // This is supposed to be jsonl but it isnt lol
+        // This uses an unnecessary buffer bc i thought the jsonl dump wasnt actually one-per-line
+        // but thats just the editor (kate) being retarded
         let startIdx = 0
         let lineBuf: string[] = []
         const flush = () => {

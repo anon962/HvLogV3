@@ -14,13 +14,13 @@ export namespace DbN {
     export type Log = {
         id: LogId
         meta: LogMeta
-        compressed: false
+        compressed: 0
         raw: string
         raw_c: null
     }
 
     export type CompressedLog = Omit<Log, "compressed" | "raw" | "raw_c"> & {
-        compressed: true
+        compressed: number
         raw: null
         raw_c: Uint8Array<ArrayBuffer>
     }

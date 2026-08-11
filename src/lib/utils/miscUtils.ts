@@ -283,9 +283,13 @@ export async function initZstdWasm() {
 }
 export async function compressZstd(
     text: string,
+    level: number = 19,
 ): Promise<Uint8Array<ArrayBuffer>> {
     await initZstdWasm()
     const dataBytes = new TextEncoder().encode(text)
-    const result = zstdWasm.compress(dataBytes, 19) as Uint8Array<ArrayBuffer>
+    const result = zstdWasm.compress(
+        dataBytes,
+        level,
+    ) as Uint8Array<ArrayBuffer>
     return result
 }

@@ -99,6 +99,7 @@
     margin: 0 !important;
     background-color: var(--color-background);
     color: var(--color-foreground);
+    font-family: sans-serif;
 }
 
 html,

@@ -14,7 +14,7 @@ import {
 } from "@/lib/utils/miscUtils"
 import { mountReact } from "@/lib/utils/userscriptUtils"
 import { unwrap } from "idb"
-import { cn, L, throttle } from "myutils"
+import { batched, clamp, cn, L, throttle } from "myutils"
 import {
     ReactNode,
     useCallback,
@@ -100,7 +100,10 @@ function Dialog() {
                             <li>
                                 Found <b>{totalOld}</b> old logs in database.{" "}
                                 <b>
-                                    {totalDupes} / {totalOld}
+                                    <span className="underline text-red-400">
+                                        {totalDupes}
+                                    </span>{" "}
+                                    / {totalOld}
                                 </b>{" "}
                                 have been imported and are ready for deletion.
                             </li>
@@ -112,12 +115,14 @@ function Dialog() {
                                 Import
                                 <Input
                                     value={count}
-                                    min="0"
+                                    min="1"
                                     max={totalOld}
-                                    onChange={(ev) => {
+                                    onInput={(ev) => {
                                         const v = parseInt(ev.target.value)
                                         if (!Number.isNaN(v)) {
                                             setCount(v)
+                                        } else {
+                                            setCount(0)
                                         }
                                     }}
                                     type="number"
@@ -127,7 +132,7 @@ function Dialog() {
                             </span>,
                             <ActionButton
                                 onClick={() =>
-                                    migrateOldDb(Math.min(count, totalOld))
+                                    migrateOldDb(clamp(count, 1, totalOld))
                                 }
                                 label="Import from DB"
                                 loading={status.action !== null}
@@ -314,32 +319,37 @@ function useImportState() {
         [dbFetch.data],
     )
 
-    const [legacyStatsVersion, setLegacyStatsVersion] = useState(0)
-    const legacyStatsFetch = useAsync2(
-        async ({ legacyStatsVersion, dbs }) => {
-            if (!dbs.ready) {
-                return
-            }
-
-            const idsP = new Set(await MigrateV2.selectKeys(unwrap(dbs.dbP)))
-            const idsI = new Set(await MigrateV2.selectKeys(unwrap(dbs.dbI)))
-
-            const currIdsP = new Set(
-                await dbs.dbP.getAllKeys("logs"),
-            ) as Set<string>
-            const currIdsI = new Set(
-                await dbs.dbI.getAllKeys("logs"),
-            ) as Set<string>
-
-            return {
-                idsP,
-                idsI,
-                currIdsP,
-                currIdsI,
-            }
-        },
-        { legacyStatsVersion, dbs },
+    const [legacyStatsFetchVersion, setLegacyStatsFetchVersion] = useState(0)
+    const legacyStatsFetchKey = useMemo(
+        () => ({ dbs, legacyStatsFetchVersion }),
+        [dbs, legacyStatsFetchVersion],
     )
+    const legacyStatsFetch = useAsync2(async ({ dbs }) => {
+        if (!dbs.ready) {
+            return
+        }
+
+        const idsP = new Set(await MigrateV2.selectKeys(unwrap(dbs.dbP)))
+        const idsI = new Set(await MigrateV2.selectKeys(unwrap(dbs.dbI)))
+
+        const currIdsP = new Set(
+            await dbs.dbP.getAllKeys("logs"),
+        ) as Set<string>
+        const currIdsI = new Set(
+            await dbs.dbI.getAllKeys("logs"),
+        ) as Set<string>
+
+        L.info(
+            `Found ${idsP.size + idsI.size} old logs with ${idsP.intersection(currIdsP).size + idsI.intersection(currIdsI).size} ready for deletion`,
+        )
+
+        return {
+            idsP,
+            idsI,
+            currIdsP,
+            currIdsI,
+        }
+    }, legacyStatsFetchKey)
 
     const legacyStats = legacyStatsFetch.data ?? {
         idsP: new Set<string>(),
@@ -374,7 +384,7 @@ function useImportState() {
                     L.error(e)
                 })
                 .finally(() => {
-                    setLegacyStatsVersion(legacyStatsVersion + 1)
+                    setLegacyStatsFetchVersion(legacyStatsFetchVersion + 1)
                     setStatus((status) => ({
                         ...status,
                         action: null,
@@ -455,40 +465,55 @@ function useImportState() {
             [opts.dbs.dbP, idsP, "persistent"],
             [opts.dbs.dbI, idsI, "isekai"],
         ] as const) {
-            const txn = db.transaction(["logs"], "readwrite")
-            for (const id of ids) {
-                if (count >= opts.count) {
+            for (const idBatch of batched(ids, 50)) {
+                const toInsert: Array<DbN.IdbLogRow> = []
+                for (const id of idBatch) {
+                    if (count + 1 > opts.count) {
+                        break
+                    }
+
+                    try {
+                        logImportStatus()
+                        const oldLog = await MigrateV2.selectLog(unwrap(db), id)
+                        const lines = oldLog.entries.map((x) =>
+                            MigrateV2.reverseEntry(x),
+                        )
+                        const newLog: DbN.IdbLogRow = {
+                            id,
+                            meta: {
+                                start: oldLog.meta.start,
+                                lastUpdate: oldLog.meta.lastUpdate,
+                                world,
+                                user_id: null,
+                                user_name: null,
+                            },
+                            compressed: 0,
+                            raw: lines.join("\n"),
+                            raw_c: null,
+                        }
+                        toInsert.push(newLog)
+                        count += 1
+                    } catch (e) {
+                        L.error(e)
+                        continue
+                    }
+                }
+                if (toInsert.length === 0) {
                     break
                 }
 
+                const txn = db.transaction(["logs"], "readwrite")
                 try {
-                    const oldLog = await MigrateV2.selectLog(unwrap(db), id)
-                    const lines = oldLog.entries.map((x) =>
-                        MigrateV2.reverseEntry(x),
-                    )
-                    const newLog: DbN.IdbLogRow = {
-                        id,
-                        meta: {
-                            start: oldLog.meta.start,
-                            lastUpdate: oldLog.meta.lastUpdate,
-                            world,
-                            user_id: null,
-                            user_name: null,
-                        },
-                        compressed: false,
-                        raw: lines.join("\n"),
-                        raw_c: null,
+                    for (const l of toInsert) {
+                        await txn.objectStore("logs").put(l)
                     }
-
-                    await txn.objectStore("log").put(newLog)
-                    count += 1
                     logImportStatus()
                 } catch (e) {
                     L.error(e)
                     continue
                 }
+                txn.commit()
             }
-            txn.commit()
         }
 
         cancelLog()
@@ -514,12 +539,12 @@ function useImportState() {
                                 user_id: null,
                                 user_name: null,
                             },
-                            // compressed: true,
-                            // raw: null,
-                            // raw_c: await compressZstd(l.lines.join("\n")),
-                            compressed: false,
-                            raw: l.lines.join("\n"),
-                            raw_c: null,
+                            compressed: 17,
+                            raw: null,
+                            raw_c: await compressZstd(l.lines.join("\n"), 19),
+                            // compressed: 0,
+                            // raw: l.lines.join("\n"),
+                            // raw_c: null,
                         })
                     }
                 } catch (e) {
