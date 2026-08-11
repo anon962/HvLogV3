@@ -1,5 +1,6 @@
 import { L, sum } from "myutils"
 import React, { Dispatch } from "react"
+import { zstdWasm } from "../ui/constants"
 
 export function formatNumber(x: number, alwaysShowSign?: boolean) {
     // prettier-ignore
@@ -91,6 +92,31 @@ export function useAsync<TReq, TRes>(
         request,
         setRequest,
     }
+}
+
+export function useAsync2<TReq, TRes>(
+    getter: (req: TReq) => Promise<TRes>,
+    request: TReq,
+) {
+    const [data, setData] = React.useState<TRes | null>(null)
+    const [isPending, setIsPending] = React.useState(true)
+
+    React.useEffect(() => {
+        let isCancelled = false
+        setIsPending(true)
+        ;(async () => {
+            const d = await getter(request)
+            if (!isCancelled) {
+                setData(d)
+                setIsPending(false)
+            }
+        })()
+        return () => {
+            isCancelled = true
+        }
+    }, [request])
+
+    return { data, isPending }
 }
 
 export function useAsyncGen<TReq, TRes>(
@@ -246,4 +272,20 @@ export function css(
     ...values: unknown[]
 ): string {
     return strings.reduce((acc, s, i) => acc + s + (values[i] ?? ""), "")
+}
+
+export async function initZstdWasm() {
+    if (!("zstdInit" in window.HV_LOG)) {
+        window.HV_LOG.zstdInit = zstdWasm.init()
+    }
+
+    return window.HV_LOG.zstdInit
+}
+export async function compressZstd(
+    text: string,
+): Promise<Uint8Array<ArrayBuffer>> {
+    await initZstdWasm()
+    const dataBytes = new TextEncoder().encode(text)
+    const result = zstdWasm.compress(dataBytes, 19) as Uint8Array<ArrayBuffer>
+    return result
 }

@@ -34,8 +34,14 @@ export namespace DbN {
         user_name: string | null
     }
 
+    type WithPartialMeta<T extends Log | CompressedLog> = Omit<T, "meta"> & {
+        meta: Omit<LogMeta, "version">
+    }
+    export type IdbLogRow = WithPartialMeta<Log | CompressedLog>
+
     export interface Schema {
-        logs: Record<LogId, Log | CompressedLog>
+        logs: Record<LogId, IdbLogRow>
+        logVersions: Record<LogId, number>
         kv: {
             toCompress: string[]
         }

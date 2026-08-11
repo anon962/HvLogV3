@@ -4,6 +4,7 @@ declare global {
     interface Window {
         HV_LOG: {
             isRemote?: boolean
+            zstdInit?: Promise<void>
         }
 
         GM_registerMenuCommand: (

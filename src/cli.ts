@@ -1,4 +1,3 @@
-import * as Zstd2 from "@bokuweb/zstd-wasm"
 import { createWriteStream } from "fs"
 import { L } from "myutils"
 import path from "path"
@@ -11,6 +10,7 @@ import {
 } from "./lib/stats/summary"
 import { parseLog } from "./lib/utils/parseLog"
 import { v91 } from "./lib/v91/v91"
+import { zstdWasm } from "./lib/ui/constants"
 
 export {}
 
@@ -126,10 +126,10 @@ function handleParse(cmd: any) {
     write(JSON.stringify(result))
 }
 
-await Zstd2.init()
+await zstdWasm.init()
 async function handleCompress(cmd: { data: string }) {
     const dataBytes = new TextEncoder().encode(cmd.data)
-    const result = Zstd2.compress(dataBytes, 19)
+    const result = zstdWasm.compress(dataBytes, 19)
     // const result = await compressGzip(cmd.data)
 
     const result64 = Buffer.from(result).toString("base64")

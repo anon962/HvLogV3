@@ -1,5 +1,3 @@
-import * as _lucide from "lucide-react"
-
 export const IS_BROWSER = typeof window !== "undefined"
 export const IS_REMOTE = IS_BROWSER ? !!window.HV_LOG.isRemote : true
 
@@ -496,4 +494,8 @@ export const SHARDS = new Set<PriceKey>([
 
 export const ARTIFACTS = new Set<PriceKey>(["Precursor Artifact"])
 
+import * as _lucide from "lucide-react"
 export const lucide = _lucide
+
+import * as _zstdWasm from "@bokuweb/zstd-wasm"
+export const zstdWasm = _zstdWasm

@@ -1,6 +1,7 @@
 import * as idb from "idb"
 import { DbN } from "./dbN"
 import { readUrl } from "../utils/userscriptUtils"
+import { L } from "myutils"
 
 const STORAGE_KEY_PERSISTENT = "HvLog"
 const STORAGE_KEY_ISEKAI = "HvLog_isekai"
@@ -8,8 +9,9 @@ const STORAGE_KEY_ISEKAI = "HvLog_isekai"
 export type LogDbConn = idb.IDBPDatabase<DbN.Schema>
 export class LogDb {
     world: DbN.HvWorld
-    conn: LogDbConn | null = null
-    version = 5
+    conn: Promise<LogDbConn> | null = null
+    static schemaVersion = 5
+    static parserVersion = 1
 
     constructor(
         public opts: {
@@ -26,27 +28,34 @@ export class LogDb {
 
     async connect() {
         if (this.conn) {
-            return this.conn
+            return await this.conn
         }
 
         const dbName =
             this.world === "isekai"
                 ? STORAGE_KEY_ISEKAI
                 : STORAGE_KEY_PERSISTENT
-        const conn = await idb.openDB<DbN.Schema>(dbName, this.version, {
+
+        this.conn = idb.openDB<DbN.Schema>(dbName, LogDb.schemaVersion, {
             upgrade: (conn, oldVersion, newVersion, txn, event) => {
+                L.info("Upgrading HvLog db ...")
                 this.applySchemaMigrations(conn, oldVersion)
+            },
+            blocked(currentVersion, blockedVersion, event) {
+                L.error("blocked", { currentVersion, blockedVersion })
+            },
+            blocking(currentVersion, blockedVersion, event) {
+                L.error("blocking", { currentVersion, blockedVersion })
             },
         })
 
-        this.conn = conn
-        return conn
+        return await this.conn
     }
 
     // #region: migrations
     private applySchemaMigrations(conn: LogDbConn, initVersion: number) {
         let v = initVersion
-        while (v <= this.version) {
+        while (v <= LogDb.schemaVersion) {
             if (v === 0) {
                 conn.createObjectStore("live")
                 conn.createObjectStore("kv")
@@ -59,9 +68,12 @@ export class LogDb {
                 continue
             } else if (v === 5) {
                 conn.createObjectStore("logs", { keyPath: "id" })
+                conn.createObjectStore("logVersions")
 
                 v += 1
                 continue
+            } else {
+                throw new Error(`Invalid version ${v}`)
             }
         }
     }

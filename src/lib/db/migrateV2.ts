@@ -1,3 +1,5 @@
+import { decompressGzipRaw, enumerate, L } from "myutils"
+
 export namespace MigrateV2 {
     type BaseLog = {
         id: string
@@ -14,78 +16,39 @@ export namespace MigrateV2 {
     type LogEntry = LogEvent | LogError
     type LogEvent = { type: "event"; event: any }
     type LogError = { type: "error"; detail: string }
-    type ExportLog = {
-        id: string
-        world: "persistent" | "isekai"
-        lines: string[]
-    }
-    export type MigrateV2Result =
-        | { type: "log"; log: ExportLog }
-        | { type: "error"; detail: string }
+    // type ExportLog = {
+    //     id: string
+    //     lines: string[]
+    // }
+    // export type MigrateV2Result =
+    //     | { type: "log"; log: ExportLog }
+    //     | { type: "error"; detail: string }
 
     export const DBID_P = "HvLog"
     export const DBID_I = "HvLog_isekai"
 
-    export async function* iterLogs(
-        dbp: IDBDatabase,
-        dbi: IDBDatabase,
-        batchSize = 50,
-    ): AsyncGenerator<Array<MigrateV2Result>, undefined, never> {
-        for (const [db, world] of [
-            [dbp, "persistent"],
-            [dbi, "isekai"],
-        ] as const) {
-            const ids = await selectKeys(db)
-            for (let idx = 0; idx < ids.length; idx += batchSize) {
-                const idBatch = ids.slice(idx, idx + batchSize)
-                const logBatch: Array<MigrateV2Result> = []
-
-                for (const id of idBatch) {
-                    try {
-                        const log = await selectLog(db, id)
-                        logBatch.push({
-                            type: "log",
-                            log: {
-                                id: log.id,
-                                world,
-                                lines: log.entries.map((x) => reverseEntry(x)),
-                            },
-                        })
-                    } catch (e) {
-                        console.error(e)
-                        logBatch.push({
-                            type: "error",
-                            detail: String(e),
-                        })
-                    }
-                }
-
-                yield logBatch
-            }
-        }
-    }
-
     // region: parsers
-    function reverseEntry(x: LogEntry): string {
+    export function reverseEntry(x: LogEntry): string {
         if (x.type === "event") {
-            return reverseEntry(x.event)
+            return reverseEvent(x.event)
         } else {
             return x.detail.replace("No matching parser for ", "")
         }
     }
     function reverseEvent(event: any): string {
-        const { type, ...data } = event
-        if (type === "DEBUFF_EXPIRE" && data.monster === undefined) {
+        const { event_type, ...data } = event
+        if (event_type === "DEBUFF_EXPIRE" && data.monster === undefined) {
             return _reverseEvent("BUFF_EXPIRE", data)
         }
-        return _reverseEvent(type, data)
+        return _reverseEvent(event_type, data)
     }
     function _reverseEvent(event_type: string, data = {}) {
         const gen = GENERATORS[event_type]
-        if (!gen)
+        if (!gen) {
             throw new Error(
                 `No reverse generator for event type "${event_type}"`,
             )
+        }
         return gen(data)
     }
     function resistSuffix(resist: number | null | undefined) {
@@ -215,6 +178,9 @@ export namespace MigrateV2 {
     }
     export async function selectKeys(db: IDBDatabase) {
         const storeId = "complete"
+        if (!db.objectStoreNames.contains(storeId)) {
+            return []
+        }
         const tx = db.transaction(storeId, "readonly")
         const store = tx.objectStore(storeId)
         return asPromise(() => store.getAllKeys()) as Promise<string[]>
@@ -241,5 +207,113 @@ export namespace MigrateV2 {
                 : raw.entries,
         } as Log
         return log
+    }
+    export async function readJsonlExport(file: File): Promise<
+        Array<{
+            id: string
+            world: "persistent" | "isekai"
+            meta: Log["meta"]
+            lines: string[]
+        }>
+    > {
+        let text: string
+        if (file.name.toLowerCase().endsWith(".jsonl.gz")) {
+            try {
+                text = await decompressGzipRaw([await file.bytes()])
+            } catch (e) {
+                throw new Error(`Cannot decompress gzip file: ${file.name}`, {
+                    cause: e,
+                })
+            }
+        } else if (file.name.endsWith(".jsonl")) {
+            try {
+                const buffer = await file.arrayBuffer()
+                const decoder = new TextDecoder("utf-8", { fatal: true })
+                text = decoder.decode(buffer)
+            } catch (e) {
+                throw new Error(`Cannot decode jsonl file: ${file.name}`, {
+                    cause: e,
+                })
+            }
+        } else {
+            throw new Error(`Invalid file type: ${file.name}`)
+        }
+
+        const lines = text.split("\n")
+        const result = [] as Array<{
+            id: string
+            world: "persistent" | "isekai"
+            meta: Log["meta"]
+            lines: string[]
+        }>
+
+        // This is supposed to be jsonl but it isnt lol
+        let startIdx = 0
+        let lineBuf: string[] = []
+        const flush = () => {
+            const buf = lineBuf
+            lineBuf = []
+
+            const raw = buf.join("").trim()
+            if (raw.length === 0) {
+                return
+            }
+
+            let x:
+                | {
+                      type: "persistent" | "isekai"
+                      log: Log
+                  }
+                | {
+                      type: "meta"
+                      version: number
+                  }
+
+            try {
+                x = JSON.parse(raw)
+            } catch (e) {
+                L.error(e)
+                L.error(
+                    `Error parsing JSON on lines ${startIdx + 1} to ${startIdx + 1 + buf.length} of ${file.name}`,
+                )
+                return
+            }
+
+            if (x.type === "meta") {
+                L.info(`Found jsonl archive with version ${x.version}`)
+                return
+            } else {
+                let lines
+                try {
+                    lines = x.log.entries.map((entry) => reverseEntry(entry))
+                } catch (e) {
+                    L.error(e)
+                    L.error(
+                        `Unable to reverse log on line ${startIdx + 1} of ${file.name}`,
+                    )
+                    return
+                }
+
+                result.push({
+                    id: x.log.id,
+                    world: x.type,
+                    meta: x.log.meta,
+                    lines,
+                })
+            }
+        }
+
+        for (const [idx, ln] of enumerate(lines)) {
+            const newLogTest = /{"type":"(persistent|isekai|meta)"/.exec(ln)
+            if (newLogTest !== null) {
+                flush()
+                startIdx = idx
+            }
+
+            lineBuf.push(ln)
+        }
+        flush()
+
+        return result
     }
 }

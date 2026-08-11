@@ -52,6 +52,10 @@ export async function mountReact<T extends React.JSXElementConstructor<any>>(
         shadowRoot.innerHTML = `
             <div class="hvlog-container dialog-container dark">
                 <style>
+                    :host {
+                        all: initial;
+                    }
+
                     ${!opts.skipStyles ? cssRoot : ""}
                 </style>
                 <div class="hvlog-host h-full w-full">
