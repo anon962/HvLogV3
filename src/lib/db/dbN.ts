@@ -33,6 +33,9 @@ export namespace DbN {
     //
 
     export interface Schema {
+        kv: {
+            toCompress: string[]
+        }
         logsMeta: Record<LogId, LogMeta & { id: string }>
         logsRaw: Record<
             LogId,
@@ -49,13 +52,7 @@ export namespace DbN {
                   raw_c: Uint8Array<ArrayBuffer>
               }
         >
-        kv: {
-            toCompress: string[]
-        }
-        live: Record<
-            number,
-            { logId: LogId; entries: LogEntry[]; isMaybeDupe: boolean }
-        >
+        live: Record<number, { logId: LogId; lines: string[] }>
 
         /** @deprecated */
         complete: Record<string, any>

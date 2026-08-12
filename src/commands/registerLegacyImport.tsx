@@ -80,6 +80,7 @@ function Dialog() {
         migrateOldDb,
         importOldFiles,
         downloadOldFiles,
+        deleteOldLogs,
     } = useImportState()
     const totalOld = legacyStats.idsP.size + legacyStats.idsI.size
     const totalDupes =
@@ -88,6 +89,7 @@ function Dialog() {
 
     const [count, setCount] = useState(200)
     const [importFiles, setImportFiles] = useState([] as File[])
+    const [includeMissing, setIncludeMissing] = useState(false)
 
     return (
         <>
@@ -128,6 +130,7 @@ function Dialog() {
                             </li>
                         </ul>
                     }
+                    // #region actions
                     actions={[
                         [
                             <span>
@@ -160,14 +163,36 @@ function Dialog() {
                         [
                             <LabeledCheckbox
                                 label="Include ALL un-imported logs"
-                                checked={true}
-                                onCheckedChange={() => {}}
+                                checked={includeMissing}
+                                onCheckedChange={(v) => setIncludeMissing(v)}
                                 className="destructive"
                             />,
                             <ActionButton
-                                onClick={() => {}}
+                                onClick={() => {
+                                    if (includeMissing) {
+                                        let missingCount = 0
+                                        missingCount +=
+                                            legacyStats.idsP.difference(
+                                                legacyStats.currIdsP,
+                                            ).size
+                                        missingCount +=
+                                            legacyStats.idsI.difference(
+                                                legacyStats.currIdsI,
+                                            ).size
+                                        if (missingCount > 0) {
+                                            const x = confirm(
+                                                `${missingCount} logs have not been imported! Are you sure?`,
+                                            )
+                                            if (!x) {
+                                                return
+                                            }
+                                        }
+                                    }
+
+                                    deleteOldLogs(includeMissing)
+                                }}
                                 label="Delete Old Logs"
-                                loading={false}
+                                loading={status.action !== null}
                                 className="destructive"
                             />,
                         ],
@@ -189,7 +214,7 @@ function Dialog() {
                             <ActionButton
                                 onClick={() => importOldFiles(importFiles)}
                                 label="Import Old File"
-                                loading={false}
+                                loading={status.action !== null}
                             />,
                         ],
                         [
@@ -197,9 +222,10 @@ function Dialog() {
                             <ActionButton
                                 onClick={() => downloadOldFiles()}
                                 label="Download Old Files"
-                                loading={false}
+                                loading={status.action !== null}
                             />,
                         ],
+                        // #endregion
                     ]}
                     log={log}
                 />
@@ -384,8 +410,10 @@ function useImportState() {
             migrateOldDb: null as null | { count: number },
             importOldFiles: null as null | { files: File[] },
             downloadOldFiles: null as null | {},
+            deleteOldLogs: null as null | { includeMissing: boolean },
         },
     })
+    // #region run action
     useEffect(() => {
         if (status.action !== null) {
             return
@@ -444,8 +472,18 @@ function useImportState() {
                     stats: legacyStatsFetch.data,
                 }),
             )
+        } else if (status.pending.deleteOldLogs && legacyStatsFetch.data) {
+            runAction(
+                "deleteOldLogs",
+                deleteOldLogs({
+                    ...status.pending.deleteOldLogs,
+                    dbs,
+                    stats: legacyStatsFetch.data,
+                }),
+            )
         }
     }, [status, dbs])
+    // #endregion
 
     const queueAction = useCallback(
         <T extends keyof (typeof status)["pending"]>(
@@ -472,6 +510,8 @@ function useImportState() {
         importOldFiles: (files: File[]) =>
             queueAction("importOldFiles", { files }),
         downloadOldFiles: () => queueAction("downloadOldFiles", {}),
+        deleteOldLogs: (includeMissing: boolean) =>
+            queueAction("deleteOldLogs", { includeMissing }),
     }
 
     // #region migrateOldDb
@@ -853,6 +893,42 @@ function useImportState() {
 
         return stats
     }
+    // #region deleteOldLogs
+    async function deleteOldLogs(opts: {
+        dbs: typeof dbs & { ready: true }
+        stats: typeof legacyStats
+        includeMissing: boolean
+    }) {
+        for (const [idsOld, idsNew, db, world] of [
+            [opts.stats.idsP, opts.stats.currIdsP, opts.dbs.dbP, "persistent"],
+            [opts.stats.idsI, opts.stats.currIdsI, opts.dbs.dbI, "isekai"],
+        ] as const) {
+            let ids = idsOld
+            if (!opts.includeMissing) {
+                ids = ids.intersection(idsNew)
+            }
+
+            if (ids.size === 0) {
+                continue
+            }
+
+            const missing = ids.difference(idsOld)
+            if (missing.size > 0) {
+                L.info(
+                    `Deleting ${ids.size} ${world} logs (${missing.size} not migrated!)`,
+                )
+            } else {
+                L.info(`Deleting ${ids.size} ${world} logs`)
+            }
+
+            const txn = db.transaction(["complete"], "readwrite")
+            for (const id of ids) {
+                await txn.objectStore("complete").delete(id)
+            }
+            txn.abort()
+        }
+    }
+    // #endregion
     // #endregion
 }
 // #endregion
