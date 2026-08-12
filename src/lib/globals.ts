@@ -1,3 +1,5 @@
+import { WorkerPoolN } from "myutils"
+
 export {}
 
 declare global {
@@ -5,6 +7,7 @@ declare global {
         HV_LOG: {
             isRemote?: boolean
             zstdInit?: Promise<void>
+            workerPool: WorkerPoolN.Pool
         }
 
         GM_registerMenuCommand: (

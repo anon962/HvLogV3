@@ -1,6 +1,10 @@
 import { L, sum } from "myutils"
 import React, { Dispatch } from "react"
 import { zstdWasm } from "../ui/constants"
+// @ts-ignore
+import __zstdInline__ from "virtual:zstd-inline"
+// @ts-ignore
+import __zstdWasmUrl__ from "@/../node_modules/@bokuweb/zstd-wasm/dist/esm/zstd.wasm?url"
 
 export function formatNumber(x: number, alwaysShowSign?: boolean) {
     // prettier-ignore
@@ -274,22 +278,56 @@ export function css(
     return strings.reduce((acc, s, i) => acc + s + (values[i] ?? ""), "")
 }
 
-export async function initZstdWasm() {
+export function initZstdWasm() {
     if (!("zstdInit" in window.HV_LOG)) {
-        window.HV_LOG.zstdInit = zstdWasm.init()
+        globalThis.eval(__zstdInline__)
+        // @ts-ignore
+        window.HV_LOG.zstdInit = zstdWasm.init(__zstdWasmUrl__)
     }
-
     return window.HV_LOG.zstdInit
 }
-export async function compressZstd(
-    text: string,
-    level: number = 19,
-): Promise<Uint8Array<ArrayBuffer>> {
-    await initZstdWasm()
-    const dataBytes = new TextEncoder().encode(text)
-    const result = zstdWasm.compress(
-        dataBytes,
-        level,
-    ) as Uint8Array<ArrayBuffer>
-    return result
+
+export async function compressZstd(opts: {
+    text: string
+    level?: number
+    pool?: boolean
+}): Promise<Uint8Array<ArrayBuffer>> {
+    if (opts.pool) {
+        const { compress } = window.HV_LOG.workerPool.registerModule(
+            "compressZstd",
+            () => ({
+                initCtx: async () => {
+                    globalThis.eval(__zstdInline__)
+                    // @ts-ignore
+                    await zstdWasm.init(__zstdWasmUrl__)
+                },
+                initCtxReps: {
+                    __zstdInline__: JSON.stringify(__zstdInline__),
+                    __zstdWasmUrl__: JSON.stringify(__zstdWasmUrl__),
+                },
+                fns: {
+                    compress: async (opts: {
+                        text: string
+                        level?: number
+                    }) => {
+                        const dataBytes = new TextEncoder().encode(opts.text)
+                        const result = zstdWasm.compress(
+                            dataBytes,
+                            opts.level,
+                        ) as Uint8Array<ArrayBuffer>
+                        return result
+                    },
+                },
+            }),
+        )
+        return await compress({ text: opts.text, level: opts.level })
+    } else {
+        await initZstdWasm()
+        const dataBytes = new TextEncoder().encode(opts.text)
+        const result = zstdWasm.compress(
+            dataBytes,
+            opts.level,
+        ) as Uint8Array<ArrayBuffer>
+        return result
+    }
 }

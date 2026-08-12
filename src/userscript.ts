@@ -1,8 +1,11 @@
+import { WorkerPoolN } from "myutils"
 import { registerLogExport } from "./commands/registerLegacyImport.tsx"
 import { HvLog } from "./lib/ui/hvlog/hvLog.tsx"
 import { mountReact, readUrl } from "./lib/utils/userscriptUtils.ts"
 
 async function main() {
+    window.HV_LOG.workerPool = new WorkerPoolN.Pool()
+
     const { parts } = readUrl()
     if (parts[0] === "hvlog") {
         document.title = "HvLog"

@@ -37,6 +37,7 @@
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
         "date-fns": "^4.4.0",
+        "esbuild": "^0.28.2",
         "idb": "^8.0.2",
         "lucide-react": "^0.483.0",
         "myutils": "link:../myutils.js",

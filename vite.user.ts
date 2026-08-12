@@ -1,13 +1,16 @@
 import tailwindcss from "@tailwindcss/vite"
 import react from "@vitejs/plugin-react"
+import { build } from "esbuild"
+import { fileURLToPath } from "node:url"
 import path from "path"
 import { minify } from "terser"
-import { defineConfig } from "vite"
+import { defineConfig, Plugin } from "vite"
 
 export default defineConfig((config) => {
     return {
         plugins: [
             tailwindcss(),
+            inlineZstdWasm(),
             react({
                 babel: {
                     minified: false,
@@ -16,7 +19,15 @@ export default defineConfig((config) => {
             // cssInjectedByJsPlugin(),
             (config.mode === "production" && minifyDeps()) as any,
             prepend(`
-window.HV_LOG = unsafeWindow.HV_LOG = {};
+if (typeof unsafeWindow === 'undefined') {
+    console.warn('unsafeWindow not defined')
+    window.unsafeWindow = {};
+} else {
+    window.unsafeWindow = unsafeWindow;
+}
+window.HV_LOG = {};
+window.unsafeWindow.HV_LOG = window.HV_LOG;
+
 var process = {
     env: {
         NODE_ENV: ${JSON.stringify(
@@ -40,6 +51,10 @@ var process = {
                 `,
             ),
         ],
+        worker: {
+            format: "es",
+            plugins: () => [inlineZstdWasm()],
+        },
         test: {
             testTimeout: 30_000,
         },
@@ -59,12 +74,11 @@ var process = {
                 name: "hvlog",
                 fileName: () => "hvlog.user.js",
             },
-            // cssSideEffects: () => {
-            //     return (styles: string) => {
-            //         // @ts-ignore
-            //         unsafeWindow.HV_LOG.initCss = () => styles
-            //     }
-            // },
+            assetsInlineLimit: (filePath) => {
+                if (filePath.endsWith(".wasm")) {
+                    return true
+                }
+            },
         },
         optimizeDeps: {
             exclude: ["@bokuweb/zstd-wasm"],
@@ -104,6 +118,46 @@ function prepend(x: string) {
                     file.code = x.trim() + "\n" + file.code
                 }
             }
+        },
+    }
+}
+
+function inlineZstdWasm(): Plugin {
+    let cached: Promise<string> | null = null
+    const ID = "virtual:zstd-inline"
+
+    return {
+        name: "zstd-inline",
+        resolveId: (id) => {
+            if (id === ID) {
+                return "\0" + ID
+            }
+        },
+        async load(id) {
+            if (id !== "\0" + ID) {
+                return
+            }
+
+            cached ??= build({
+                entryPoints: [
+                    fileURLToPath(
+                        new URL(
+                            "./node_modules/@bokuweb/zstd-wasm/dist/esm/index.web.js",
+                            import.meta.url,
+                        ),
+                    ),
+                ],
+                bundle: true,
+                format: "iife",
+                globalName: "zstdWasm",
+                write: false,
+                target: "es2020",
+                define: {
+                    "import.meta.url": '"https://blah.blah/"',
+                },
+            }).then((r) => r.outputFiles[0].text)
+
+            return `export default ${JSON.stringify(await cached)};`
         },
     }
 }

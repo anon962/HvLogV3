@@ -14,7 +14,7 @@ import {
 } from "@/lib/utils/miscUtils"
 import { mountReact } from "@/lib/utils/userscriptUtils"
 import { unwrap } from "idb"
-import { batched, clamp, cn, L, sleep, throttle } from "myutils"
+import { batched, clamp, cn, L, throttle } from "myutils"
 import {
     ReactNode,
     useCallback,
@@ -533,16 +533,15 @@ function useImportState() {
         dbs: typeof dbs & { ready: true }
         stats: typeof legacyStats
     }) {
-        const logs: Array<{
-            meta: DbN.Schema["logsMeta"][DbN.LogId]
-            raw: DbN.Schema["logsRaw"][DbN.LogId]
-        }> = []
+        const stats = {
+            ids: new Set<string>(),
+            totalSize: 0,
+        }
 
         for (const file of opts.files) {
             if (file.name.endsWith("jsonl.gz") || file.name.endsWith("jsonl")) {
                 try {
                     L.info(`Reading ${file.name} ...`)
-                    await sleep(100)
 
                     let fromFile = await MigrateV2.readJsonlExport(file)
                     let fileIdx = 0
@@ -554,39 +553,61 @@ function useImportState() {
                         interval: 2000,
                     })
 
-                    let lastPause = 0
-                    for (const l of fromFile) {
+                    for (const batch of batched(fromFile, 10)) {
                         status()
-                        fileIdx += 1
 
-                        logs.push({
-                            meta: {
-                                id: l.id,
-                                start: l.meta.start,
-                                lastUpdate: l.meta.lastUpdate,
-                                version: 0,
-                                world: l.world,
-                                user_id: null,
-                                user_name: null,
-                            },
-                            raw: {
-                                id: l.id,
-                                compressed: 15,
-                                raw: null,
-                                raw_c: await compressZstd(
-                                    l.lines.join("\n"),
-                                    15,
-                                ),
-                                // compressed: 0,
-                                // raw: l.lines.join("\n"),
-                                // raw_c: null,
-                            },
-                        })
+                        const logs = await Promise.all(
+                            batch.map(async (l) => ({
+                                meta: {
+                                    id: l.id,
+                                    start: l.meta.start,
+                                    lastUpdate: l.meta.lastUpdate,
+                                    version: 0,
+                                    world: l.world,
+                                    user_id: null,
+                                    user_name: null,
+                                },
+                                raw: {
+                                    id: l.id,
+                                    compressed: 10,
+                                    raw: null,
+                                    raw_c: await compressZstd({
+                                        text: l.lines.join("\n"),
+                                        level: 19,
+                                        pool: true,
+                                    }),
+                                    // compressed: 0,
+                                    // raw: l.lines.join("\n"),
+                                    // raw_c: null,
+                                },
+                            })),
+                        )
 
-                        if (performance.now() - lastPause > 2000) {
-                            await sleep(100)
-                            lastPause = performance.now()
+                        for (const l of logs) {
+                            stats.ids.add(l.meta.id)
+                            stats.totalSize += l.raw.raw_c.byteLength
                         }
+
+                        for (const [world, db] of [
+                            ["persistent", opts.dbs.dbP],
+                            ["isekai", opts.dbs.dbI],
+                        ] as const) {
+                            const txn = db.transaction(
+                                ["logsMeta", "logsRaw"],
+                                "readwrite",
+                            )
+                            for (const l of logs) {
+                                if (l.meta.world === world) {
+                                    await txn
+                                        .objectStore("logsMeta")
+                                        .put(l.meta)
+                                    await txn.objectStore("logsRaw").put(l.raw)
+                                }
+                            }
+                            txn.commit()
+                        }
+
+                        fileIdx += batch.length
                     }
 
                     cancelStatus()
@@ -599,25 +620,11 @@ function useImportState() {
             }
         }
 
-        for (const [world, db] of [
-            ["persistent", opts.dbs.dbP],
-            ["isekai", opts.dbs.dbI],
-        ] as const) {
-            const txn = db.transaction(["logsMeta", "logsRaw"], "readwrite")
-            for (const l of logs) {
-                if (l.meta.world === world) {
-                    await txn.objectStore("logsMeta").put(l.meta)
-                    await txn.objectStore("logsRaw").put(l.raw)
-                }
-            }
-            txn.commit()
-        }
-
-        const dupes = new Set(logs.map((l) => l.meta.id)).intersection(
+        const dupes = stats.ids.intersection(
             opts.stats.currIdsP.union(opts.stats.currIdsI),
         )
         L.info(
-            `Imported ${logs.length} logs (${dupes.size} dupes) from ${opts.files.map((f) => f.name)}`,
+            `Imported ${stats.ids.size} logs (${(stats.totalSize / 1024 / 1024).toFixed(1)} MiB / ${dupes.size} dupes) from ${opts.files.map((f) => f.name)}`,
         )
     }
 }
