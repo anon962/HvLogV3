@@ -1,5 +1,4 @@
 import { LogDb, LogDbConn } from "@/lib/db/db"
-import { DbN } from "@/lib/db/dbN"
 import { MigrateV2 } from "@/lib/db/migrateV2"
 import { LabeledCheckbox } from "@/lib/ui/checkboxGroup"
 import { Loader } from "@/lib/ui/loader"
@@ -10,7 +9,6 @@ import {
     compressZstd,
     css,
     decompressZstd,
-    randomUint8Array,
     readZip,
     useAsync,
     useAsync2,
@@ -37,29 +35,30 @@ import {
 } from "react"
 
 // #region command
-export function registerLogExport() {
-    mountReact(
-        Dialog,
-        {},
-        {
-            isDialog: true,
-        },
-    )
+export async function registerLogExport() {
+    const dbP = await new LogDb({ world: "persistent" }).connect()
+    const dbI = await new LogDb({ world: "isekai" }).connect()
 
-    window.GM_registerMenuCommand(
-        "Log Import / Export",
-        () =>
-            mountReact(
-                Dialog,
-                {},
-                {
-                    isDialog: true,
-                },
-            ),
-        {
-            id: "export_logs",
-        },
-    )
+    const logCount =
+        (await MigrateV2.selectKeys(unwrap(dbP))).length +
+        (await MigrateV2.selectKeys(unwrap(dbP))).length
+
+    if (logCount > 0) {
+        window.GM_registerMenuCommand(
+            "Migrate Old Logs",
+            () =>
+                mountReact(
+                    Dialog,
+                    {},
+                    {
+                        isDialog: true,
+                    },
+                ),
+            {
+                id: "migrate_logs",
+            },
+        )
+    }
 }
 // #endregion
 

@@ -2,6 +2,7 @@ import { WorkerPoolN } from "myutils"
 import { registerLogExport } from "./commands/registerLegacyImport.tsx"
 import { HvLog } from "./lib/ui/hvlog/hvLog.tsx"
 import { mountReact, readUrl } from "./lib/utils/userscriptUtils.ts"
+import { registerViewLogs } from "./commands/registerViewLogs.ts"
 
 async function main() {
     window.HV_LOG.workerPool = new WorkerPoolN.Pool()
@@ -27,6 +28,7 @@ async function main() {
     }
 
     registerLogExport()
+    registerViewLogs()
 }
 
 main()

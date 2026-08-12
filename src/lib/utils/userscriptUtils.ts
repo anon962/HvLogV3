@@ -6,6 +6,7 @@ import { strip, Unsub } from "myutils"
 
 export interface MountReactOptions {
     target?: {
+        document?: Document
         hostEl: Element
         styleEl?: HTMLStyleElement
     }
@@ -20,16 +21,17 @@ export async function mountReact<T extends React.JSXElementConstructor<any>>(
     const sink: Unsub[] = []
 
     let targetEl: Element
-    let styleEl: HTMLStyleElement
     if (opts.target) {
         targetEl = opts.target.hostEl
 
         if (!opts.skipStyles) {
+            const doc = opts.target.document ?? document
+
             let styleEl
             if (!opts.target.styleEl) {
-                const el = document.createElement("style")
+                const el = doc.createElement("style")
                 styleEl = el
-                document.head.appendChild(styleEl)
+                doc.head.appendChild(styleEl)
                 sink.push(() => el.remove())
             } else {
                 const el = opts.target.styleEl
