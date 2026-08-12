@@ -1,10 +1,20 @@
-import { L, sum } from "myutils"
+import { L, sum, zip } from "myutils"
 import React, { Dispatch } from "react"
 import { zstdWasm } from "../ui/constants"
 // @ts-ignore
 import __zstdInline__ from "virtual:zstd-inline"
 // @ts-ignore
 import __zstdWasmUrl__ from "@/../node_modules/@bokuweb/zstd-wasm/dist/esm/zstd.wasm?url"
+import {
+    BlobReader,
+    BlobWriter,
+    Entry,
+    TextReader,
+    TextWriter,
+    Uint8ArrayReader,
+    ZipReader,
+    ZipWriter,
+} from "@zip.js/zip.js"
 
 export function formatNumber(x: number, alwaysShowSign?: boolean) {
     // prettier-ignore
@@ -288,10 +298,19 @@ export function initZstdWasm() {
 }
 
 export async function compressZstd(opts: {
-    text: string
+    x: string | Blob | Uint8Array<ArrayBuffer>
     level?: number
     pool?: boolean
 }): Promise<Uint8Array<ArrayBuffer>> {
+    let bytes: Uint8Array<ArrayBuffer>
+    if (typeof opts.x === "string") {
+        bytes = new TextEncoder().encode(opts.x)
+    } else if (opts.x instanceof Blob) {
+        bytes = new Uint8Array(await opts.x.arrayBuffer())
+    } else {
+        bytes = opts.x
+    }
+
     if (opts.pool) {
         const { compress } = window.HV_LOG.workerPool.registerModule(
             "compressZstd",
@@ -307,12 +326,11 @@ export async function compressZstd(opts: {
                 },
                 fns: {
                     compress: async (opts: {
-                        text: string
+                        bytes: Uint8Array<ArrayBuffer>
                         level?: number
                     }) => {
-                        const dataBytes = new TextEncoder().encode(opts.text)
                         const result = zstdWasm.compress(
-                            dataBytes,
+                            opts.bytes,
                             opts.level,
                         ) as Uint8Array<ArrayBuffer>
                         return result
@@ -320,14 +338,101 @@ export async function compressZstd(opts: {
                 },
             }),
         )
-        return await compress({ text: opts.text, level: opts.level })
+        return await compress({ bytes, level: opts.level })
     } else {
         await initZstdWasm()
-        const dataBytes = new TextEncoder().encode(opts.text)
         const result = zstdWasm.compress(
-            dataBytes,
+            bytes,
             opts.level,
         ) as Uint8Array<ArrayBuffer>
         return result
     }
+}
+export async function decompressZstd(opts: {
+    x: Blob | Uint8Array<ArrayBuffer>
+}) {
+    let bytes: Uint8Array<ArrayBuffer>
+    if (opts.x instanceof Blob) {
+        bytes = new Uint8Array(await opts.x.arrayBuffer())
+    } else {
+        bytes = opts.x
+    }
+
+    await initZstdWasm()
+
+    const result = zstdWasm.decompress(bytes) as Uint8Array<ArrayBuffer>
+    return result
+}
+
+export async function writeZip(
+    xs: Record<string, string | ReadableStream<Uint8Array<ArrayBuffer>>>,
+): Promise<Blob> {
+    const writer = new ZipWriter(new BlobWriter("application/zip"), {
+        compressionMethod: 0,
+    })
+
+    const toWrite = []
+    for (const [k, v] of Object.entries(xs)) {
+        let r
+        if (typeof v === "string") {
+            r = new TextReader(v)
+        } else {
+            r = v
+        }
+        toWrite.push(writer.add(k, r))
+    }
+    await Promise.all(toWrite)
+
+    return writer.close()
+}
+type ReadZipTypeId = "string"
+type ReadZipType<Id> = Id extends "string" ? string : never
+export async function* readZip<T extends ReadZipTypeId>(opts: {
+    data: Blob | Uint8Array<ArrayBuffer>
+    type: T
+    onFail?: (e: any, x: Entry) => void
+}): AsyncGenerator<{
+    filename: string
+    data: ReadZipType<T>
+}> {
+    let r
+    if (opts.data instanceof Blob) {
+        r = new BlobReader(opts.data)
+    } else {
+        r = new Uint8ArrayReader(opts.data)
+    }
+
+    const reader = new ZipReader(r)
+    for await (const x of reader.getEntriesGenerator()) {
+        if (x.directory) {
+            continue
+        }
+
+        let data: any = null
+        try {
+            if (opts.type === "string") {
+                data = await x.getData(new TextWriter())
+            }
+        } catch (e) {
+            opts.onFail?.(e, x)
+            continue
+        }
+
+        yield {
+            filename: x.filename,
+            data,
+        }
+    }
+}
+export function randomUint8Array(size: number) {
+    const result = new Uint8Array(size)
+    const chunkSize = 65536
+
+    for (let offset = 0; offset < size; offset += chunkSize) {
+        crypto.getRandomValues(
+            result.subarray(offset, Math.min(offset + chunkSize, size)),
+        )
+    }
+
+    return result
 }

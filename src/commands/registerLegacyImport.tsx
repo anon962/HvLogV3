@@ -1,4 +1,4 @@
-import { LogDb } from "@/lib/db/db"
+import { LogDb, LogDbConn } from "@/lib/db/db"
 import { DbN } from "@/lib/db/dbN"
 import { MigrateV2 } from "@/lib/db/migrateV2"
 import { LabeledCheckbox } from "@/lib/ui/checkboxGroup"
@@ -9,12 +9,24 @@ import {
     CommonProps,
     compressZstd,
     css,
+    decompressZstd,
+    randomUint8Array,
+    readZip,
     useAsync,
     useAsync2,
+    writeZip,
 } from "@/lib/utils/miscUtils"
 import { mountReact } from "@/lib/utils/userscriptUtils"
 import { unwrap } from "idb"
-import { batched, clamp, cn, L, throttle } from "myutils"
+import {
+    batched,
+    clamp,
+    cn,
+    enumerate,
+    L,
+    throttle,
+    truncateString,
+} from "myutils"
 import {
     ReactNode,
     useCallback,
@@ -60,8 +72,15 @@ function Dialog() {
         show ? dialogRef.current?.showModal() : dialogRef.current?.close()
     }, [show])
 
-    const { status, log, dbs, legacyStats, migrateOldDb, importOldFiles } =
-        useImportState()
+    const {
+        status,
+        log,
+        dbs,
+        legacyStats,
+        migrateOldDb,
+        importOldFiles,
+        downloadOldFiles,
+    } = useImportState()
     const totalOld = legacyStats.idsP.size + legacyStats.idsI.size
     const totalDupes =
         legacyStats.currIdsP.intersection(legacyStats.idsP).size +
@@ -163,6 +182,7 @@ function Dialog() {
                                         )
                                     }
                                     type="file"
+                                    multiple
                                     className="inline"
                                 />
                             </span>,
@@ -175,8 +195,8 @@ function Dialog() {
                         [
                             <span>Export old logs</span>,
                             <ActionButton
-                                onClick={() => {}}
-                                label="Download Old File"
+                                onClick={() => downloadOldFiles()}
+                                label="Download Old Files"
                                 loading={false}
                             />,
                         ],
@@ -363,6 +383,7 @@ function useImportState() {
         pending: {
             migrateOldDb: null as null | { count: number },
             importOldFiles: null as null | { files: File[] },
+            downloadOldFiles: null as null | {},
         },
     })
     useEffect(() => {
@@ -414,6 +435,15 @@ function useImportState() {
                     stats: legacyStatsFetch.data,
                 }),
             )
+        } else if (status.pending.downloadOldFiles && legacyStatsFetch.data) {
+            runAction(
+                "downloadOldFiles",
+                downloadOldFiles({
+                    ...status.pending.downloadOldFiles,
+                    dbs,
+                    stats: legacyStatsFetch.data,
+                }),
+            )
         }
     }, [status, dbs])
 
@@ -441,8 +471,10 @@ function useImportState() {
         migrateOldDb: (count: number) => queueAction("migrateOldDb", { count }),
         importOldFiles: (files: File[]) =>
             queueAction("importOldFiles", { files }),
+        downloadOldFiles: () => queueAction("downloadOldFiles", {}),
     }
 
+    // #region migrateOldDb
     async function migrateOldDb(opts: {
         count: number
         dbs: typeof dbs & { ready: true }
@@ -466,10 +498,7 @@ function useImportState() {
             [opts.dbs.dbI, idsI, "isekai"],
         ] as const) {
             for (const idBatch of batched(ids, 50)) {
-                const toInsert: Array<{
-                    meta: DbN.Schema["logsMeta"][DbN.LogId]
-                    raw: DbN.Schema["logsRaw"][DbN.LogId]
-                }> = []
+                const toInsert: Array<ImportFormat> = []
                 for (const id of idBatch) {
                     if (count + 1 > opts.count) {
                         break
@@ -478,25 +507,16 @@ function useImportState() {
                     try {
                         logImportStatus()
                         const oldLog = await MigrateV2.selectLog(unwrap(db), id)
-                        const lines = oldLog.entries.map((x) =>
-                            MigrateV2.reverseEntry(x),
-                        )
                         const newLog = {
+                            id,
+                            world,
                             meta: {
-                                id,
                                 start: oldLog.meta.start,
                                 lastUpdate: oldLog.meta.lastUpdate,
-                                version: 0,
-                                world,
-                                user_id: null,
-                                user_name: null,
                             },
-                            raw: {
-                                id,
-                                compressed: 0,
-                                raw: lines.join("\n"),
-                                raw_c: null,
-                            },
+                            lines: oldLog.entries.map((x) =>
+                                MigrateV2.reverseEntry(x),
+                            ),
                         } as const
                         toInsert.push(newLog)
                         count += 1
@@ -509,25 +529,20 @@ function useImportState() {
                     break
                 }
 
-                const txn = db.transaction(["logsMeta", "logsRaw"], "readwrite")
-                try {
-                    for (const x of toInsert) {
-                        await txn.objectStore("logsMeta").put(x.meta)
-                        await txn.objectStore("logsRaw").put(x.raw)
-                    }
-                    logImportStatus()
-                } catch (e) {
-                    L.error(e)
-                    continue
-                }
-                txn.commit()
+                await importOldLogs({
+                    dbP: opts.dbs.dbP,
+                    dbI: opts.dbs.dbI,
+                    logs: toInsert,
+                    cb: (_, idx) => logImportStatus(),
+                })
             }
         }
 
         cancelLog()
         L.info(`Imported ${count} logs!`)
     }
-
+    // #endregion
+    // #region importOldFiles
     async function importOldFiles(opts: {
         files: File[]
         dbs: typeof dbs & { ready: true }
@@ -535,88 +550,149 @@ function useImportState() {
     }) {
         const stats = {
             ids: new Set<string>(),
-            totalSize: 0,
+            byteCount: 0,
         }
 
         for (const file of opts.files) {
-            if (file.name.endsWith("jsonl.gz") || file.name.endsWith("jsonl")) {
-                try {
-                    L.info(`Reading ${file.name} ...`)
+            const name = file.name.toLowerCase()
 
+            L.info(`Reading ${file.name} ...`)
+            const [status, cancelStatus] = throttle({
+                fn: (idx: number, total: number) =>
+                    L.info(
+                        `Importing old logs from ${file.name} (${idx + 1} / ${total}) ...`,
+                    ),
+                interval: 2000,
+            })
+
+            try {
+                if (name.endsWith("jsonl.gz") || name.endsWith("jsonl")) {
                     let fromFile = await MigrateV2.readJsonlExport(file)
-                    let fileIdx = 0
-                    const [status, cancelStatus] = throttle({
-                        fn: () =>
-                            L.info(
-                                `Importing old logs from ${file.name} (${fileIdx + 1} / ${fromFile.length || "???"}) ...`,
-                            ),
-                        interval: 2000,
+
+                    const { byteCount } = await importOldLogs({
+                        dbP: opts.dbs.dbP,
+                        dbI: opts.dbs.dbI,
+                        logs: fromFile,
+                        cb: (stats, idx) => status(idx, fromFile.length),
                     })
+                    stats.byteCount += byteCount
+                    for (const l of fromFile) {
+                        stats.ids.add(l.id)
+                    }
+                    cancelStatus()
+                } else if (
+                    name.endsWith("zip.zstd") ||
+                    name.endsWith("zip") ||
+                    name.endsWith("json")
+                ) {
+                    let jsonData: Array<{
+                        data: string
+                        blame: string[]
+                    }> = []
+                    let textData: Array<{
+                        data: Uint8Array<ArrayBuffer>
+                        blame: string[]
+                    }> = []
+                    let zipData: {
+                        data: Uint8Array<ArrayBuffer>
+                        blame: string[]
+                    } | null = null
 
-                    for (const batch of batched(fromFile, 10)) {
-                        status()
-
-                        const logs = await Promise.all(
-                            batch.map(async (l) => ({
-                                meta: {
-                                    id: l.id,
-                                    start: l.meta.start,
-                                    lastUpdate: l.meta.lastUpdate,
-                                    version: 0,
-                                    world: l.world,
-                                    user_id: null,
-                                    user_name: null,
-                                },
-                                raw: {
-                                    id: l.id,
-                                    compressed: 10,
-                                    raw: null,
-                                    raw_c: await compressZstd({
-                                        text: l.lines.join("\n"),
-                                        level: 19,
-                                        pool: true,
-                                    }),
-                                    // compressed: 0,
-                                    // raw: l.lines.join("\n"),
-                                    // raw_c: null,
-                                },
-                            })),
-                        )
-
-                        for (const l of logs) {
-                            stats.ids.add(l.meta.id)
-                            stats.totalSize += l.raw.raw_c.byteLength
-                        }
-
-                        for (const [world, db] of [
-                            ["persistent", opts.dbs.dbP],
-                            ["isekai", opts.dbs.dbI],
-                        ] as const) {
-                            const txn = db.transaction(
-                                ["logsMeta", "logsRaw"],
-                                "readwrite",
-                            )
-                            for (const l of logs) {
-                                if (l.meta.world === world) {
-                                    await txn
-                                        .objectStore("logsMeta")
-                                        .put(l.meta)
-                                    await txn.objectStore("logsRaw").put(l.raw)
-                                }
+                    if (name.endsWith("zip.zstd")) {
+                        try {
+                            const bytes = await file.bytes()
+                            zipData = {
+                                data: await decompressZstd({
+                                    x: bytes,
+                                }),
+                                blame: [file.name],
                             }
-                            txn.commit()
+                        } catch (e) {
+                            L.error(e)
+                            L.error(`Failed to decompress ${file.name}`)
+                            continue
                         }
-
-                        fileIdx += batch.length
+                    } else if (file.name.endsWith("zip")) {
+                        zipData = {
+                            data: await file.bytes(),
+                            blame: [file.name],
+                        }
+                    } else if (file.name.endsWith("json")) {
+                        textData.push({
+                            data: await file.bytes(),
+                            blame: [file.name],
+                        })
                     }
 
+                    let logs: Array<DownloadFormat> = []
+                    if (zipData) {
+                        for await (const { filename, data } of readZip({
+                            data: zipData.data,
+                            type: "string",
+                            onFail: (e, x) => {
+                                L.error(e)
+                                L.error(
+                                    `Unable to read text file ${[...zipData.blame, x.filename].join("->")}`,
+                                )
+                            },
+                        })) {
+                            jsonData.push({
+                                data,
+                                blame: [...zipData.blame, filename],
+                            })
+                        }
+                    }
+                    for (const x of textData) {
+                        try {
+                            jsonData.push({
+                                data: await new Blob([x.data]).text(),
+                                blame: x.blame,
+                            })
+                        } catch (e) {
+                            L.error(e)
+                            L.error(
+                                `Unable to read text file ${x.blame.join("->")}`,
+                            )
+                        }
+                    }
+                    for (const x of jsonData) {
+                        try {
+                            logs.push(JSON.parse(x.data))
+                        } catch (e) {
+                            L.error(e)
+                            L.error(
+                                `Unable to parse JSON data from file ${x.blame.join("->")}: ${truncateString(x.data, 50, "...")}`,
+                            )
+                        }
+                    }
+
+                    const { byteCount } = await importOldLogs({
+                        dbP: opts.dbs.dbP,
+                        dbI: opts.dbs.dbI,
+                        logs: logs.map((l) => ({
+                            id: l.id,
+                            world: l.world,
+                            meta: {
+                                start: l.meta.start,
+                                lastUpdate: l.meta.lastUpdate,
+                            },
+                            lines: l.entries.map((x) =>
+                                MigrateV2.reverseEntry(x),
+                            ),
+                        })),
+                        cb: (stats, idx) => status(idx, logs.length),
+                    })
+                    stats.byteCount += byteCount
+                    for (const l of logs) {
+                        stats.ids.add(l.id)
+                    }
                     cancelStatus()
-                } catch (e) {
-                    L.error(e)
-                    continue
+                } else {
+                    L.error(`Invalid file type: ${file.name}`)
                 }
-            } else {
-                L.error(`Invalid file type: ${file.name}`)
+            } catch (e) {
+                L.error(e)
+                continue
             }
         }
 
@@ -624,16 +700,168 @@ function useImportState() {
             opts.stats.currIdsP.union(opts.stats.currIdsI),
         )
         L.info(
-            `Imported ${stats.ids.size} logs (${(stats.totalSize / 1024 / 1024).toFixed(1)} MiB / ${dupes.size} dupes) from ${opts.files.map((f) => f.name)}`,
+            `Imported ${stats.ids.size} logs (${(stats.byteCount / 1024 / 1024).toFixed(1)} MiB / ${dupes.size} dupes) from ${opts.files.map((f) => f.name)}`,
         )
     }
+    // #endregion
+    // #region downloadOldFiles
+    type DownloadFormat = MigrateV2.Log & { world: "persistent" | "isekai" }
+    async function downloadOldFiles(opts: {
+        dbs: typeof dbs & { ready: true }
+        stats: typeof legacyStats
+    }) {
+        const batchSize = 100
+        const toExport = [
+            ...[...opts.stats.idsP].map(
+                (id) => ({ world: "persistent", id }) as const,
+            ),
+            ...[...opts.stats.idsI].map(
+                (id) => ({ world: "isekai", id }) as const,
+            ),
+        ]
+        const batches = batched(toExport, batchSize)
+        L.info(
+            `Exporting ${opts.stats.idsP} persistent logs and ${opts.stats.idsI} isekai logs in ${batches.length} batches of ${batchSize}.`,
+        )
+
+        const d = new Date()
+        const fileNameBase = [
+            d.getFullYear() + "-",
+            String(d.getMonth() + 1).padStart(2, "0"),
+            "-" + String(d.getDate()).padStart(2, "0"),
+            "_" + String(d.getHours()).padStart(2, "0"),
+            String(d.getMinutes()).padStart(2, "0"),
+            String(d.getSeconds()).padStart(2, "0"),
+        ].join("")
+
+        for (const [batchIdx, batch] of enumerate(batches)) {
+            const startIdx = batchIdx * batchSize
+            L.info(
+                `Exporting logs ${startIdx + 1} to ${startIdx + batch.length}`,
+            )
+
+            const logs: Array<DownloadFormat> = []
+            for (const world of ["persistent", "isekai"] as const) {
+                logs.push(
+                    ...(
+                        await Promise.all(
+                            batch
+                                .filter((x) => x.world === world)
+                                .map(({ id }) =>
+                                    MigrateV2.selectLog(
+                                        unwrap(opts.dbs.dbP),
+                                        id,
+                                    ),
+                                ),
+                        )
+                    ).map((x) => ({ ...x, world })),
+                )
+            }
+
+            const zipBlob = await writeZip(
+                Object.fromEntries(
+                    logs.map(
+                        (l) => [l.id + ".json", JSON.stringify(l)] as const,
+                    ),
+                ),
+            )
+
+            const compressed = await compressZstd({ x: zipBlob, pool: true })
+
+            const fileName =
+                fileNameBase + `_p${String(batchIdx).padStart(3, "0")}.zip.zstd`
+            const downloadEl = Object.assign(document.createElement("a"), {
+                download: fileName,
+                href: URL.createObjectURL(new Blob([compressed])),
+            })
+            document.body.appendChild(downloadEl)
+            downloadEl.click()
+            downloadEl.remove()
+        }
+    }
+
+    // #region importOldLogs
+    type ImportFormat = {
+        id: string
+        world: "persistent" | "isekai"
+        meta: MigrateV2.Log["meta"]
+        lines: string[]
+    }
+    type ImportStats = {
+        byteCount: number
+    }
+    async function importOldLogs(opts: {
+        dbP: LogDbConn
+        dbI: LogDbConn
+        logs: Array<ImportFormat>
+        cb?: (stats: ImportStats, idx: number) => void
+    }): Promise<ImportStats> {
+        const stats: ImportStats = {
+            byteCount: 0,
+        }
+        let idx = 0
+        for (const batch of batched(opts.logs, 10)) {
+            opts.cb?.(stats, idx)
+
+            const logs = await Promise.all(
+                batch.map(async (l) => ({
+                    meta: {
+                        id: l.id,
+                        start: l.meta.start,
+                        lastUpdate: l.meta.lastUpdate,
+                        version: 0,
+                        world: l.world,
+                        user_id: null,
+                        user_name: null,
+                    },
+                    raw: {
+                        id: l.id,
+                        compressed: 10,
+                        raw: null,
+                        raw_c: await compressZstd({
+                            x: l.lines.join("\n"),
+                            level: 10,
+                            pool: true,
+                        }),
+                        // compressed: 0,
+                        // raw: l.lines.join("\n"),
+                        // raw_c: null,
+                    },
+                })),
+            )
+
+            for (const l of logs) {
+                stats.byteCount += l.raw.raw_c.byteLength
+            }
+
+            for (const [world, db] of [
+                ["persistent", opts.dbP],
+                ["isekai", opts.dbI],
+            ] as const) {
+                const txn = db.transaction(["logsMeta", "logsRaw"], "readwrite")
+                for (const l of logs) {
+                    if (l.meta.world === world) {
+                        await txn.objectStore("logsMeta").put(l.meta)
+                        await txn.objectStore("logsRaw").put(l.raw)
+                    }
+                }
+                txn.commit()
+            }
+
+            idx += batch.length
+        }
+
+        return stats
+    }
+    // #endregion
 }
+// #endregion
 // #endregion
 
 // #region css
 const CSS = css`
     dialog {
-        max-width: 40em;
+        max-width: min(80vw, 50em);
     }
 
     .log-mgr {

@@ -8,7 +8,7 @@ export namespace MigrateV2 {
             start: string
         }
     }
-    type Log = BaseLog & { compressed: false; entries: Array<LogEntry> }
+    export type Log = BaseLog & { compressed: false; entries: Array<LogEntry> }
     type CompressedLog = BaseLog & {
         compressed: true
         entries: Uint8Array<ArrayBuffer>

@@ -53,6 +53,9 @@ importers:
       '@vitejs/plugin-react':
         specifier: ^4.3.4
         version: 4.7.0(supports-color@5.5.0)(vite@6.4.2(@types/node@22.19.19)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.49.2)(tsx@4.23.0))
+      '@zip.js/zip.js':
+        specifier: ^2.8.37
+        version: 2.8.37
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -1505,6 +1508,10 @@ packages:
 
   '@vitest/utils@3.2.4':
     resolution: {integrity: sha512-fB2V0JFrQSMsCo9HiSq3Ezpdv4iYaXRG1Sx8edX3MwxfyNn83mKiGzOcH+Fkxt4MHxr3y42fQi1oeAInqgX2QA==}
+
+  '@zip.js/zip.js@2.8.37':
+    resolution: {integrity: sha512-hCjUGI0e0s7KNAV/f0Cs5rKLFt9+LsRcE0hAq9zvRkUehyUrrMFBWGLvjCs0JARJjKehyv/AUVB4yr89dLZurA==}
+    engines: {bun: '>=0.7.0', deno: '>=1.0.0', node: '>=18.0.0'}
 
   acorn@8.18.0:
     resolution: {integrity: sha512-lGq+9yr1/GuAWaVYIHRjvvySG5/4VfKIvC8EWxStPdcDh/Ka7FG3twP6v4d5BkravUilhIAsG4Qj83t02LWUPQ==}
@@ -3382,6 +3389,8 @@ snapshots:
       '@vitest/pretty-format': 3.2.4
       loupe: 3.2.1
       tinyrainbow: 2.0.0
+
+  '@zip.js/zip.js@2.8.37': {}
 
   acorn@8.18.0: {}
 
