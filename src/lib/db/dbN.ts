@@ -101,6 +101,6 @@ export namespace DbN {
     export type IdbLogInsertEvent = {
         type: typeof IDB_LOG_INSERT_EVENT
         world: HvWorld
-        id: LogId
+        ids: Array<LogId>
     }
 }

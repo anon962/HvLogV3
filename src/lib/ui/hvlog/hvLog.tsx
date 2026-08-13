@@ -21,9 +21,10 @@ import * as lucide from "lucide-react"
 import { MonsterPage } from "./monsterPage"
 
 // @fixme: count imported from file
-// @fixme: close-able dialog
+// @fixme: faster local search
+// @fixme: profit history
+// @fixme: equip search
 
-// @fixme: monsters killed
 // @fixme: item world
 // @fixme: equip drop search
 // @fixme: off by one charts
@@ -35,10 +36,10 @@ import { MonsterPage } from "./monsterPage"
 // @todo: effect blame
 // @todo: chart utils
 // @todo: consistent chart colors
-// @todo: profit history
 // @todo: rotate web cli log
 // @todo: select with version filter
 // @todo: monster cast rate
+// @todo: faster local parse
 
 export const HvLog = (props: { prefix?: string[] }) => {
     const routes = new CustomMap({

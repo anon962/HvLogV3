@@ -1,6 +1,8 @@
 import { LogDb, LogDbConn } from "@/lib/db/db"
+import { DbN } from "@/lib/db/dbN"
 import { MigrateV2 } from "@/lib/db/migrateV2"
 import { LabeledCheckbox } from "@/lib/ui/checkboxGroup"
+import { lucide } from "@/lib/ui/constants"
 import { Loader } from "@/lib/ui/loader"
 import { Button } from "@/lib/ui/shadcn/button"
 import { Input } from "@/lib/ui/shadcn/input"
@@ -55,12 +57,23 @@ export function registerLogExport() {
 
 // #region dialog
 function Dialog() {
-    const [show, setShow] = useState(true)
-
     const dialogRef = useRef<HTMLDialogElement>(null)
     useEffect(() => {
-        show ? dialogRef.current?.showModal() : dialogRef.current?.close()
-    }, [show])
+        dialogRef.current?.showModal()
+    }, [dialogRef?.current])
+
+    const tryClose = useCallback(() => {
+        if (status.action !== null) {
+            return false
+        }
+        if (!dialogRef.current) {
+            return
+        }
+        dialogRef.current.dispatchEvent(
+            new Event("hvlog:unmount", { bubbles: true }),
+        )
+        return true
+    }, [dialogRef.current])
 
     const {
         status,
@@ -88,7 +101,26 @@ function Dialog() {
             <dialog
                 ref={dialogRef}
                 className="log-mgr max-w-[80vw] max-h-[80vh] flex flex-col"
+                onCancel={(ev) => {
+                    const didClose = tryClose()
+                    if (!didClose) {
+                        ev.preventDefault()
+                    }
+                }}
+                onClick={(ev) => {
+                    if (ev.target === dialogRef.current) {
+                        tryClose()
+                    }
+                }}
             >
+                <button
+                    onClick={() => tryClose()}
+                    disabled={status.action !== null}
+                    className="absolute rounded-full bg-transparent hover:bg-foreground/10 top-[0.5em] right-[0.5em] h-[2.5em] w-[2.5em] p-[0.25em]"
+                >
+                    <lucide.XIcon className="size-full" />
+                </button>
+
                 <Section
                     className="migration"
                     title="Log Migration"
@@ -200,6 +232,7 @@ function Dialog() {
                                     accept=".zip.zstd,.zip,.json,.jsonl.gz,.jsonl"
                                     multiple
                                     className="inline"
+                                    disabled={status.action !== null}
                                 />
                             </span>,
                             <ActionButton
@@ -834,6 +867,8 @@ function useImportState() {
         const stats: ImportStats = {
             byteCount: 0,
         }
+        const bc = new BroadcastChannel(DbN.IDB_BC_ID)
+
         let idx = 0
         const importedAt = new Date().toISOString()
         for (const batch of batched(opts.logs, 10)) {
@@ -883,6 +918,13 @@ function useImportState() {
                     }
                 }
                 txn.commit()
+
+                bc.postMessage({
+                    type: DbN.IDB_LOG_INSERT_EVENT,
+                    world,
+                    ids: logs.map((l) => l.meta.id),
+                } satisfies DbN.IdbLogInsertEvent)
+                bc.close() // no reason to keep it open after one send
             }
 
             idx += batch.length

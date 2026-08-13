@@ -215,6 +215,7 @@ class LogSourceLocal implements N.Protocol {
     private logIds = {
         persistent: new Set<DbN.LogId>(),
         isekai: new Set<DbN.LogId>(),
+        initialFetch: false,
     }
 
     constructor() {
@@ -231,7 +232,9 @@ class LogSourceLocal implements N.Protocol {
             const d = ev.data as DbN.IdbEvents
             switch (d.type) {
                 case DbN.IDB_LOG_INSERT_EVENT:
-                    this.logIds[d.world].add(d.id)
+                    for (const id of d.ids) {
+                        this.logIds[d.world].add(id)
+                    }
                     break
             }
         }
@@ -244,6 +247,7 @@ class LogSourceLocal implements N.Protocol {
                     ids.add(id)
                 }
             }
+            this.logIds.initialFetch = true
         })
     }
 
@@ -404,7 +408,8 @@ class LogSourceLocal implements N.Protocol {
                 this.metaSearchCache.fetch(k)
             }
         }
-        const hasPending = xs.length !== allIds.size
+        const hasPending =
+            xs.length !== allIds.size || !this.logIds.initialFetch
 
         const metas = await Promise.all(
             ids.map((id) => this.metaCache.fetch({ world: this.world, id })),
@@ -419,8 +424,9 @@ class LogSourceLocal implements N.Protocol {
         })
 
         let sorted
-        const isDesc = req.sort?.order === "desc"
-        switch (req.sort?.type) {
+        const sortType = req.sort?.type ?? "date"
+        const isDesc = req.sort?.order !== "asc"
+        switch (sortType) {
             case "date":
                 sorted = alphabeticalBy(matches, ([m, x]) => m.start, isDesc)
                 break
@@ -458,7 +464,8 @@ class LogSourceLocal implements N.Protocol {
             resultCount: matches.length,
             pageSize: req.pageSize,
             results,
-            ttl: hasPending || allIds.size === 0 ? 1 : 0,
+            ttl: hasPending ? 1 : 10,
+            stale: hasPending,
         }
     }
     // #endregion

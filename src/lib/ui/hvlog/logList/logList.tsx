@@ -1,13 +1,14 @@
 import { FIGHTING_STYLE_NAMES } from "@/lib/stats/combatStats"
-import { CheckboxGroup } from "../../checkboxGroup"
-import { ListTable } from "../../listTable"
-import { LogListN } from "./logListN"
-import { useCallback, useMemo, useState } from "react"
-import * as Select from "../../shadcn/select"
-import { cn, range } from "myutils"
 import { CommonProps, mergeProps } from "@/lib/utils/miscUtils"
-import { Funnel, SlidersHorizontal } from "lucide-react"
+import { SlidersHorizontal } from "lucide-react"
+import { cn, range } from "myutils"
+import { useCallback, useMemo, useState } from "react"
+import { CheckboxGroup } from "../../checkboxGroup"
+import { IS_REMOTE } from "../../constants"
+import { ListTable } from "../../listTable"
 import { Input } from "../../shadcn/input"
+import * as Select from "../../shadcn/select"
+import { LogListN } from "./logListN"
 
 export function LogList() {
     return (
@@ -30,14 +31,24 @@ export function Table() {
     return (
         <ListTable
             data={data?.results ?? []}
-            cols={[
-                LogListN.COLS.battleType,
-                LogListN.COLS.turns,
-                LogListN.COLS.style,
-                LogListN.COLS.user,
-                LogListN.COLS.date,
-                LogListN.COLS.status,
-            ]}
+            cols={
+                IS_REMOTE
+                    ? [
+                          LogListN.COLS.battleType,
+                          LogListN.COLS.turns,
+                          LogListN.COLS.style,
+                          LogListN.COLS.user,
+                          LogListN.COLS.date,
+                          LogListN.COLS.status,
+                      ]
+                    : [
+                          LogListN.COLS.battleType,
+                          LogListN.COLS.turns,
+                          LogListN.COLS.style,
+                          LogListN.COLS.date,
+                          LogListN.COLS.status,
+                      ]
+            }
             count={data?.resultCount ?? 1}
             getId={(d) => d.id}
             sortCols={new Set(LogListN.SORT_IDS)}
@@ -67,7 +78,7 @@ export function Table() {
                 )
             }}
             rowUrl={(d) => `/logs/${d.id}`}
-            isLoading={isPending || !!data?.ttl}
+            isLoading={isPending || data?.stale}
             className="text-sm"
             pageUrl={(pageIdx) => ({
                 p: String(pageIdx + 1),
