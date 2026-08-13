@@ -14,6 +14,7 @@ import {
     sort,
     zip,
     L,
+    Unsub,
 } from "myutils"
 import { MetaSummary } from "../stats/metaStats"
 import { IS_REMOTE } from "../ui/constants"
@@ -210,12 +211,12 @@ class LogSourceLocal implements N.Protocol {
     pool: ReturnType<LogSourceLocal["initWorkerPool"]>
     prices: Promise<DbN.Prices>
     world: DbN.HvWorld
-    private bc: BroadcastChannel
+    private bcSub: Unsub
     private logIds = {
         persistent: new Set<DbN.LogId>(),
         isekai: new Set<DbN.LogId>(),
     }
-    init: Promise<void>
+    ainit: Promise<void>
 
     constructor() {
         this.db = {
@@ -226,19 +227,18 @@ class LogSourceLocal implements N.Protocol {
         this.prices = Promise.resolve({})
         this.world = "persistent"
 
-        this.bc = new BroadcastChannel(DbN.IDB_BC_ID)
-        this.bc.onmessage = (ev) => {
-            const d = ev.data as DbN.IdbEvents
-            switch (d.type) {
+        const self: LogSourceLocal = this
+        this.bcSub = DbN.listenIdbEvent((ev) => {
+            switch (ev.type) {
                 case DbN.IDB_LOG_INSERT_EVENT:
-                    for (const id of d.ids) {
-                        this.logIds[d.world].add(id)
+                    for (const id of ev.ids) {
+                        self.logIds[ev.world].add(id)
                     }
                     break
             }
-        }
+        })
 
-        this.init = (async () => {
+        this.ainit = (async () => {
             for (const world of ["persistent", "isekai"] as const) {
                 const ids = this.logIds[world]
                 const conn = await this.dbConn
@@ -398,7 +398,7 @@ class LogSourceLocal implements N.Protocol {
         ttl: (resp) => resp.ttl ?? null,
         size: 50,
         fetch: async (req) => {
-            await this.init
+            await this.ainit
 
             const allIds = this.logIds[this.world]
             const ids: Array<DbN.LogId> = []

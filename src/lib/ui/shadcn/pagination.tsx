@@ -9,7 +9,7 @@ import * as React from "react"
 
 import { Button, buttonVariants } from "@/lib/ui/shadcn/button"
 import { cn } from "@/lib/utils/shadcnUtils"
-import { RouteLink } from "../routeLink"
+import { RouteLink } from "../hvlog/router"
 
 function Pagination({ className, ...props }: React.ComponentProps<"nav">) {
     return (
@@ -43,12 +43,14 @@ function PaginationItem({ ...props }: React.ComponentProps<"li">) {
 type PaginationLinkProps = {
     isActive?: boolean
     href: null | string
+    ignorePrefix?: boolean
 } & Pick<React.ComponentProps<typeof Button>, "size"> &
     Omit<React.ComponentProps<"a">, "href">
 
 function PaginationLink({
     className,
     isActive,
+    ignorePrefix,
     size = "icon",
     ...props
 }: PaginationLinkProps) {
@@ -68,7 +70,7 @@ function PaginationLink({
     } as any
 
     return props.href ? (
-        <RouteLink {...propsResolved} />
+        <RouteLink {...propsResolved} ignorePrefix={ignorePrefix ?? true} />
     ) : (
         <button {...propsResolved}> {props.children} </button>
     )

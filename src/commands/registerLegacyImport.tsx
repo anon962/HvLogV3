@@ -867,8 +867,6 @@ function useImportState() {
         const stats: ImportStats = {
             byteCount: 0,
         }
-        const bc = new BroadcastChannel(DbN.IDB_BC_ID)
-
         let idx = 0
         const importedAt = new Date().toISOString()
         for (const batch of batched(opts.logs, 10)) {
@@ -919,12 +917,11 @@ function useImportState() {
                 }
                 txn.commit()
 
-                bc.postMessage({
+                DbN.broadcastIdbEvent({
                     type: DbN.IDB_LOG_INSERT_EVENT,
                     world,
                     ids: logs.map((l) => l.meta.id),
                 } satisfies DbN.IdbLogInsertEvent)
-                bc.close() // no reason to keep it open after one send
             }
 
             idx += batch.length

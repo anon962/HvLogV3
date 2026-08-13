@@ -1,12 +1,19 @@
-import { L } from "myutils"
 import { newContext } from "@/lib/utils/miscUtils"
 import {
     normalizeUrlParts,
     patchUrlChange,
     readUrl,
 } from "@/lib/utils/userscriptUtils"
-import { AnyFunction, bitmaskToBigint, CustomMap, range, strip } from "myutils"
-import { FC, ReactNode, useEffect, useMemo, useState } from "react"
+import { AnyFunction, bitmaskToBigint, CustomMap, L, range } from "myutils"
+import {
+    ComponentPropsWithoutRef,
+    FC,
+    MouseEvent,
+    ReactNode,
+    useEffect,
+    useMemo,
+    useState,
+} from "react"
 
 type RouteSelection = { component: ReactNode; hideSidebar?: boolean }
 type Sidebar = FC<{ children: ReactNode }>
@@ -15,6 +22,7 @@ export type RouteDef = (
     url: URL,
 ) => RouteSelection | { redirect: string[] }
 
+// #region router
 export function Router(props: {
     routes: CustomMap<
         string[],
@@ -30,6 +38,9 @@ export function Router(props: {
         () => normalizeUrlParts(props.prefix ?? []),
         [props.prefix],
     )
+    useEffect(() => {
+        ROUTER.setValue((x) => ({ ...x, prefix }))
+    }, [prefix])
 
     const [partsPrefix, partsRem] = useMemo(
         () => [parts.slice(0, prefix.length), parts.slice(prefix.length)],
@@ -88,13 +99,13 @@ export function Router(props: {
 }
 
 export const ROUTER = newContext(() => {
-    const [data, setData] = useState(readUrl())
+    const [data, setData] = useState({ prefix: [] as string[], ...readUrl() })
 
     useEffect(() => {
         patchUrlChange()
 
         const onUrlChange = () => {
-            setData(readUrl())
+            setData((x) => ({ ...x, ...readUrl() }))
         }
 
         window.addEventListener("popstate", onUrlChange)
@@ -110,7 +121,56 @@ export const ROUTER = newContext(() => {
 
     return [data, setData]
 })
+// #endregion
 
+// #region RouteLink
+export function RouteLink({
+    children,
+    onClick,
+    href,
+    ignorePrefix,
+    ...props
+}: ComponentPropsWithoutRef<"a"> & {
+    ignorePrefix?: boolean
+}) {
+    const { prefix } = ROUTER.useContext()
+
+    const hrefResolved = useMemo(
+        () =>
+            "/" +
+            normalizeUrlParts([
+                ...(ignorePrefix ? [] : prefix),
+                href ?? "",
+            ]).join("/"),
+        [prefix, href],
+    )
+
+    return (
+        <a onClick={onClickHijack} {...props} href={hrefResolved}>
+            {children}
+        </a>
+    )
+
+    function onClickHijack(ev: MouseEvent<HTMLAnchorElement>) {
+        onClick?.(ev)
+        if (ev.defaultPrevented) return
+
+        const isModified =
+            ev.metaKey ||
+            ev.ctrlKey ||
+            ev.shiftKey ||
+            ev.altKey ||
+            ev.button !== 0
+
+        if (!isModified && props.target !== "_blank" && hrefResolved) {
+            ev.preventDefault()
+            history.pushState(null, "", hrefResolved)
+        }
+    }
+}
+// #endregion
+
+// #region UrlParamN
 export namespace UrlParamN {
     export type Schema = Record<
         string,
@@ -440,3 +500,4 @@ export namespace UrlParamN {
     }
 }
 export const useUrlParams = UrlParamN.useUrlParams
+// #endregion

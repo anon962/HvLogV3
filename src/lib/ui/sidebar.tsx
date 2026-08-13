@@ -2,7 +2,7 @@ import { ReactNode } from "react"
 import { cn } from "../utils/shadcnUtils"
 import { readUrl } from "../utils/userscriptUtils"
 import { MyTooltip } from "./myTooltip"
-import { RouteLink } from "./routeLink"
+import { RouteLink } from "./hvlog/router"
 import { CommonProps } from "../utils/miscUtils"
 
 export type SidebarItem = {

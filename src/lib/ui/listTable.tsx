@@ -29,7 +29,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "./shadcn/select"
-import { RouteLink } from "./routeLink"
+import { RouteLink } from "./hvlog/router"
 import {
     Tooltip,
     TooltipContent,
@@ -459,7 +459,7 @@ const Paginator = React.memo(
                     url.searchParams.set(k, v)
                 }
             }
-            return url.href
+            return url.pathname + url.search + url.hash
         }
 
         const pageEls = pages.map((idx, j) => {

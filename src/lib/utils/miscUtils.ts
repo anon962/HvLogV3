@@ -1,5 +1,5 @@
 import { L, sum, zip } from "myutils"
-import React, { Dispatch } from "react"
+import React, { Dispatch, SetStateAction } from "react"
 import { zstdWasm } from "../ui/constants"
 // @ts-ignore
 import __zstdInline__ from "virtual:zstd-inline"
@@ -51,10 +51,12 @@ export function concatArrays(xs: Uint8Array[]) {
     return total
 }
 
-export function newContext<T = unknown>(init: () => [T, Dispatch<T>]) {
+export function newContext<T = unknown>(
+    init: () => [T, Dispatch<SetStateAction<T>>],
+) {
     const ctx = React.createContext<T>(null as any)
 
-    let setValue: (update: T) => void = null as any
+    let setValue: Dispatch<SetStateAction<T>> = null as any
     const Provider = React.memo((props: { children: React.ReactNode }) => {
         const [value, setValue2] = init()
         setValue = setValue2
@@ -67,7 +69,7 @@ export function newContext<T = unknown>(init: () => [T, Dispatch<T>]) {
 
     return {
         ctx,
-        setValue,
+        setValue: (update: SetStateAction<T>) => setValue(update),
         Provider,
         useContext: () => React.useContext(ctx),
     }

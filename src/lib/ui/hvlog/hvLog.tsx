@@ -1,24 +1,21 @@
+import { humanizeFightingType } from "@/lib/stats/combatStats"
+import { IndexMap } from "@/lib/stats/indexMap"
 import { humanizeBattleType } from "@/lib/stats/metaStats"
+import { USERSCRIPT_CONFIG } from "@/lib/db/userscriptConfig"
 // @ts-ignore
 import "@/lib/ui/global.css"
 import { useAsync } from "@/lib/utils/miscUtils"
-import {
-    normalizeUrlParts,
-    readUrl,
-    RootComponent,
-} from "@/lib/utils/userscriptUtils"
+import { normalizeUrlParts } from "@/lib/utils/userscriptUtils"
+import * as lucide from "lucide-react"
 import { CustomMap, sleep, strip } from "myutils"
-import { ComponentProps, PropsWithChildren, StrictMode } from "react"
+import { StrictMode, useMemo } from "react"
+import { LOG_SOURCE } from "../../db/logSource"
+import { IS_REMOTE } from "../constants"
+import { Sidebar, SidebarItem } from "../sidebar"
 import { LogDetailsPane } from "./logDetailsPane"
 import { LogList } from "./logList/logList"
-import { LOG_SOURCE } from "../../db/logSource"
-import { RouteDef, ROUTER, Router } from "./router"
-import { humanizeFightingType } from "@/lib/stats/combatStats"
-import { RouteLink } from "../routeLink"
-import { IndexMap } from "@/lib/stats/indexMap"
-import { Sidebar, SidebarItem } from "../sidebar"
-import * as lucide from "lucide-react"
 import { MonsterPage } from "./monsterPage"
+import { RouteDef, RouteLink, ROUTER, Router } from "./router"
 
 // @fixme: count imported from file
 // @fixme: faster local search
@@ -77,19 +74,36 @@ export const HvLog = (props: { prefix?: string[] }) => {
         },
     ]
 
+    const providers = useMemo(
+        () =>
+            IS_REMOTE
+                ? ([ROUTER.Provider, LOG_SOURCE.Provider] as const)
+                : ([
+                      USERSCRIPT_CONFIG.Provider,
+                      ROUTER.Provider,
+                      LOG_SOURCE.Provider,
+                  ] as const),
+        [],
+    )
+
+    const inner = (
+        <Router
+            prefix={props.prefix}
+            routes={routes}
+            defaultSidebar={({ children }) => (
+                <Sidebar items={sidebarItems}>{children}</Sidebar>
+            )}
+        />
+    )
+
     return (
         <StrictMode>
-            <ROUTER.Provider>
-                <LOG_SOURCE.Provider>
-                    <Router
-                        prefix={props.prefix}
-                        routes={routes}
-                        defaultSidebar={({ children }) => (
-                            <Sidebar items={sidebarItems}>{children}</Sidebar>
-                        )}
-                    />
-                </LOG_SOURCE.Provider>
-            </ROUTER.Provider>
+            {providers.reduceRight(
+                (el, Provider) => (
+                    <Provider>{el}</Provider>
+                ),
+                inner,
+            )}
         </StrictMode>
     )
 }

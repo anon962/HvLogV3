@@ -95,12 +95,27 @@ export namespace DbN {
         complete: Record<string, any>
     }
 
+    export function broadcastIdbEvent(ev: IdbEvent) {
+        const bc = new BroadcastChannel(DbN.IDB_BC_ID)
+        bc.postMessage(ev)
+        bc.close()
+    }
+    export function listenIdbEvent(
+        onmessage: (ev: IdbEvent, raw: MessageEvent) => void,
+    ) {
+        const bc = new BroadcastChannel(DbN.IDB_BC_ID)
+        bc.onmessage = (raw) => onmessage(raw.data, raw)
+        return () => bc.close()
+    }
+
     export const IDB_BC_ID = "hvlog"
-    export type IdbEvents = IdbLogInsertEvent
+    export type IdbEvent = IdbLogInsertEvent | IdbConfigChangeEvent
     export const IDB_LOG_INSERT_EVENT = "hvlog_log_insert"
     export type IdbLogInsertEvent = {
         type: typeof IDB_LOG_INSERT_EVENT
         world: HvWorld
         ids: Array<LogId>
     }
+    export const IDB_CONFIG_CHANGE_EVENT = "hvlog_config_change"
+    export type IdbConfigChangeEvent = { type: typeof IDB_CONFIG_CHANGE_EVENT }
 }
