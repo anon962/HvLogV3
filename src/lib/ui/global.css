@@ -95,6 +95,22 @@
 }
 
 @layer base {
+    * {
+        color: inherit;
+        border-color: var(--color-border);
+        outline-color: color-mix(in oklab, var(--ring) 50%, transparent);
+
+        scrollbar-width: 0.5rem;
+        scrollbar-color: color-mix(
+            in oklab,
+            var(--muted-foreground) 30%,
+            transparent
+        );
+        scrollbar-track-color: var(--muted);
+    }
+}
+
+@layer mine {
     .hvlog-container {
         padding: 0 !important;
         margin: 0 !important;
@@ -108,20 +124,6 @@
     .hvlog-container,
     .hvlog-host {
         min-height: 100vh;
-    }
-
-    * {
-        color: inherit;
-        border-color: var(--color-border);
-        outline-color: color-mix(in oklab, var(--ring) 50%, transparent);
-
-        scrollbar-width: 0.5rem;
-        scrollbar-color: color-mix(
-            in oklab,
-            var(--muted-foreground) 30%,
-            transparent
-        );
-        scrollbar-track-color: var(--muted);
     }
 
     /* From shadcn site: https://www.shadcn-svelte.com/examples/dashboard */
@@ -230,6 +232,18 @@
         cursor: pointer;
         font-size: inherit;
     }
+    .tooltip {
+        border-bottom: 0.15em dashed
+            color-mix(in oklab, var(--muted-foreground) 75%, transparent);
+    }
+
+    :not(nav) > ul {
+        list-style: unset;
+        li {
+            margin-left: 1.5em;
+        }
+    }
+
     button.destructive {
         background-color: color-mix(
             in oklch,
@@ -242,17 +256,6 @@
                 var(--color-destructive),
                 transparent 20%
             );
-        }
-    }
-    .tooltip {
-        border-bottom: 0.15em dashed
-            color-mix(in oklab, var(--muted-foreground) 75%, transparent);
-    }
-
-    :not(nav) > ul {
-        list-style: unset;
-        li {
-            margin-left: 1.5em;
         }
     }
 }

@@ -211,11 +211,11 @@ class LogSourceLocal implements N.Protocol {
     pool: ReturnType<LogSourceLocal["initWorkerPool"]>
     prices: Promise<DbN.Prices>
     world: DbN.HvWorld
-    private logIds: Record<
-        DbN.HvWorld,
-        { ids: Set<string>; fetchedAll: boolean }
-    >
     private bc: BroadcastChannel
+    private logIds = {
+        persistent: new Set<DbN.LogId>(),
+        isekai: new Set<DbN.LogId>(),
+    }
 
     constructor() {
         this.db = {
@@ -226,19 +226,25 @@ class LogSourceLocal implements N.Protocol {
         this.prices = Promise.resolve({})
         this.world = "persistent"
 
-        this.logIds = {
-            persistent: { ids: new Set(), fetchedAll: false },
-            isekai: { ids: new Set(), fetchedAll: false },
-        }
         this.bc = new BroadcastChannel(DbN.IDB_BC_ID)
         this.bc.onmessage = (ev) => {
             const d = ev.data as DbN.IdbEvents
             switch (d.type) {
                 case DbN.IDB_LOG_INSERT_EVENT:
-                    this.logIds[d.world].ids.add(d.id)
+                    this.logIds[d.world].add(d.id)
                     break
             }
         }
+
+        setTimeout(async () => {
+            for (const world of ["persistent", "isekai"] as const) {
+                const ids = this.logIds[world]
+                const conn = await this.dbConn
+                for (const id of await conn.getAllKeys("logsMeta")) {
+                    ids.add(id)
+                }
+            }
+        })
     }
 
     async fetchMeta(id: string) {
@@ -380,27 +386,31 @@ class LogSourceLocal implements N.Protocol {
     // #endregion
 
     // #region fetchSearch
-    async fetchSearch(req: N.SearchRequest) {
-        const ids = this.logIds[this.world]
-        if (!ids.fetchedAll) {
-            ids.fetchedAll = true
-            const conn = await this.dbConn
-            for (const id of await conn.getAllKeys("logsMeta")) {
-                ids.ids.add(id)
+    async fetchSearch(req: N.SearchRequest): Promise<N.SearchResponse> {
+        const allIds = this.logIds[this.world]
+        const ids: Array<DbN.LogId> = []
+
+        const xs: Array<{ meta: MetaSummary; search: SearchSummary }> = []
+        for (const id of allIds) {
+            const k = {
+                world: this.world,
+                id,
+            }
+            const fromCache = this.metaSearchCache.cache.get(k)?.data
+            if (fromCache) {
+                xs.push(fromCache)
+                ids.push(id)
+            } else {
+                this.metaSearchCache.fetch(k)
             }
         }
+        const hasPending = xs.length !== allIds.size
 
-        const idsArr = [...ids.ids]
-        const xs = await resolveSequential(
-            idsArr.map((id) =>
-                this.metaSearchCache.fetch({ world: this.world, id }),
-            ),
-        )
         const metas = await Promise.all(
-            idsArr.map((id) => this.metaCache.fetch({ world: this.world, id })),
+            ids.map((id) => this.metaCache.fetch({ world: this.world, id })),
         )
 
-        const matches = zip(metas, xs, idsArr).filter(([m, x]) => {
+        const matches = zip(metas, xs, ids).filter(([m, x]) => {
             return objectEntries(LogSourceLocal.FILTER_CONDITIONS).every(
                 ([k, cond]) =>
                     !isTruthy(req[k]) ||
@@ -448,6 +458,7 @@ class LogSourceLocal implements N.Protocol {
             resultCount: matches.length,
             pageSize: req.pageSize,
             results,
+            ttl: hasPending || allIds.size === 0 ? 1 : 0,
         }
     }
     // #endregion

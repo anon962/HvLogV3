@@ -55,6 +55,7 @@ export namespace LogSourceN {
         resultCount: number
         pageSize: number
         results: Array<SearchResult>
+        ttl?: number
     }
     export interface SearchResult {
         id: string

@@ -38,8 +38,11 @@ dialog {
 
     input {
         height: 2em;
-        padding-left: 0.75em;
-        padding-right: 0.75em;
+
+        &:not([type="file"]) {
+            padding-left: 0.75em;
+            padding-right: 0.75em;
+        }
     }
 
     input {

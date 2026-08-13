@@ -23,8 +23,6 @@ export function Table() {
     const {
         params,
         setParams,
-        pageSizeStorage,
-        setPageSizeStorage,
         fetcher: { request, data, isPending },
         logSource,
     } = LogListN.ctx.useContext()
@@ -47,7 +45,6 @@ export function Table() {
             setPageSize={{
                 options: [15, 50, 100, 1000],
                 handler: (pageSize: number) => {
-                    setPageSizeStorage(pageSize)
                     setParams({
                         p: 1,
                         n: pageSize,
@@ -70,7 +67,7 @@ export function Table() {
                 )
             }}
             rowUrl={(d) => `/logs/${d.id}`}
-            isLoading={isPending}
+            isLoading={isPending || !!data?.ttl}
             className="text-sm"
             pageUrl={(pageIdx) => ({
                 p: String(pageIdx + 1),

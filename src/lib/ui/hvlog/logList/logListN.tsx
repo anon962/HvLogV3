@@ -441,6 +441,21 @@ export namespace LogListN {
             return resp
         }, request)
 
+        useEffect(() => {
+            if (!fetcher.data?.ttl) {
+                return
+            }
+
+            const currReq = fetcher.request
+            const refetchTimer = setTimeout(() => {
+                if (fetcher.request === currReq) {
+                    fetcher.setRequest({ ...currReq })
+                }
+            }, fetcher.data.ttl * 1000)
+
+            return () => clearTimeout(refetchTimer)
+        }, [fetcher.data, fetcher.request])
+
         return [
             {
                 params,

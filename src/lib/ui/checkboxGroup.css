@@ -46,10 +46,11 @@
     cursor: pointer;
     text-align: left;
 
-    --bg-false: var(--color-gray-600);
+    --bg-false: color-mix(in oklch, var(--input) 30%, transparent);
     --bg-true: var(--primary);
-    --bg-alpha: 50%;
-    --bg-alpha-hover: 60%;
+    --bg-false-hover: color-mix(in oklch, var(--bg-false), var(--bg-true) 20%);
+    --bg-true-hover: color-mix(in oklab, var(--bg-true) 90%, transparent);
+    --bg-alpha: 100%;
     --color-hover: var(--color-yellow-100);
 }
 .input-label-container button {
@@ -79,18 +80,10 @@
         color: var(--color-hover);
 
         button {
-            background-color: color-mix(
-                in oklab,
-                var(--bg-false) var(--bg-alpha-hover),
-                transparent
-            );
+            background-color: var(--bg-false-hover);
 
             &[data-state="checked"] {
-                background-color: color-mix(
-                    in oklab,
-                    var(--bg-true) var(--bg-alpha-hover),
-                    transparent
-                );
+                background-color: var(--bg-true-hover);
             }
         }
     }
@@ -109,4 +102,8 @@
 
 .input-label-container.destructive {
     --bg-true: var(--color-destructive);
+    color: var(--color-destructive);
+    button {
+        border-color: var(--background);
+    }
 }
