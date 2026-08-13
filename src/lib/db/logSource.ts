@@ -214,8 +214,8 @@ class LogSourceLocal implements N.Protocol {
     private logIds = {
         persistent: new Set<DbN.LogId>(),
         isekai: new Set<DbN.LogId>(),
-        initialFetch: false,
     }
+    init: Promise<void>
 
     constructor() {
         this.db = {
@@ -238,7 +238,7 @@ class LogSourceLocal implements N.Protocol {
             }
         }
 
-        setTimeout(async () => {
+        this.init = (async () => {
             for (const world of ["persistent", "isekai"] as const) {
                 const ids = this.logIds[world]
                 const conn = await this.dbConn
@@ -246,8 +246,7 @@ class LogSourceLocal implements N.Protocol {
                     ids.add(id)
                 }
             }
-            this.logIds.initialFetch = true
-        })
+        })()
     }
 
     async fetchMeta(id: string) {
@@ -399,6 +398,8 @@ class LogSourceLocal implements N.Protocol {
         ttl: (resp) => resp.ttl ?? null,
         size: 50,
         fetch: async (req) => {
+            await this.init
+
             const allIds = this.logIds[this.world]
             const ids: Array<DbN.LogId> = []
 
@@ -416,8 +417,7 @@ class LogSourceLocal implements N.Protocol {
                     this.metaSearchCache.fetch(k)
                 }
             }
-            const hasPending =
-                xs.length !== allIds.size || !this.logIds.initialFetch
+            const hasPending = xs.length !== allIds.size
 
             const metas = await Promise.all(
                 ids.map((id) =>
@@ -478,7 +478,7 @@ class LogSourceLocal implements N.Protocol {
                 resultCount: matches.length,
                 pageSize: req.pageSize,
                 results,
-                ttl: hasPending ? 1 : 10,
+                ttl: hasPending ? 0.25 : 10,
                 stale: hasPending,
             }
         },
