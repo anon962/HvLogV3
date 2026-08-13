@@ -35,30 +35,21 @@ import {
 } from "react"
 
 // #region command
-export async function registerLogExport() {
-    const dbP = await new LogDb({ world: "persistent" }).connect()
-    const dbI = await new LogDb({ world: "isekai" }).connect()
-
-    const logCount =
-        (await MigrateV2.selectKeys(unwrap(dbP))).length +
-        (await MigrateV2.selectKeys(unwrap(dbP))).length
-
-    if (logCount > 0) {
-        window.GM_registerMenuCommand(
-            "Migrate Old Logs",
-            () =>
-                mountReact(
-                    Dialog,
-                    {},
-                    {
-                        isDialog: true,
-                    },
-                ),
-            {
-                id: "migrate_logs",
-            },
-        )
-    }
+export function registerLogExport() {
+    window.GM_registerMenuCommand(
+        "Migrate Old Logs",
+        () =>
+            mountReact(
+                Dialog,
+                {},
+                {
+                    isDialog: true,
+                },
+            ),
+        {
+            id: "migrate_logs",
+        },
+    )
 }
 // #endregion
 
@@ -206,6 +197,7 @@ function Dialog() {
                                         )
                                     }
                                     type="file"
+                                    accept=".zip.zstd,.zip,.json,.jsonl.gz,.jsonl"
                                     multiple
                                     className="inline"
                                 />
@@ -344,12 +336,16 @@ function useImportState() {
 
     const dbFetch = useAsync(async () => {
         return {
-            dbP: await new LogDb({
-                world: "persistent",
-            }).connect(),
-            dbI: await new LogDb({
-                world: "isekai",
-            }).connect(),
+            dbP: await (
+                await new LogDb({
+                    world: "persistent",
+                }).connect()
+            ).conn,
+            dbI: await (
+                await new LogDb({
+                    world: "isekai",
+                }).connect()
+            ).conn,
         }
     }, true)
     const dbs = useMemo(
@@ -839,6 +835,7 @@ function useImportState() {
             byteCount: 0,
         }
         let idx = 0
+        const importedAt = new Date().toISOString()
         for (const batch of batched(opts.logs, 10)) {
             opts.cb?.(stats, idx)
 
@@ -848,6 +845,7 @@ function useImportState() {
                         id: l.id,
                         start: l.meta.start,
                         lastUpdate: l.meta.lastUpdate,
+                        importedAt,
                         version: 0,
                         world: l.world,
                         user_id: null,

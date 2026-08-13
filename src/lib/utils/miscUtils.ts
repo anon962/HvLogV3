@@ -315,14 +315,14 @@ export async function compressZstd(opts: {
         const { compress } = window.HV_LOG.workerPool.registerModule(
             "compressZstd",
             () => ({
+                reps: {
+                    __zstdInline__: JSON.stringify(__zstdInline__),
+                    __zstdWasmUrl__: JSON.stringify(__zstdWasmUrl__),
+                },
                 initCtx: async () => {
                     globalThis.eval(__zstdInline__)
                     // @ts-ignore
                     await zstdWasm.init(__zstdWasmUrl__)
-                },
-                initCtxReps: {
-                    __zstdInline__: JSON.stringify(__zstdInline__),
-                    __zstdWasmUrl__: JSON.stringify(__zstdWasmUrl__),
                 },
                 fns: {
                     compress: async (opts: {

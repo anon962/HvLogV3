@@ -7,16 +7,20 @@ const STORAGE_KEY_PERSISTENT = "HvLog"
 const STORAGE_KEY_ISEKAI = "HvLog_isekai"
 
 type IdbSchema = {
-    [K in keyof DbN.Schema]: DbN.Schema[K] extends Record<infer K2, infer V2>
+    [K in keyof DbN.IdbSchema]: DbN.IdbSchema[K] extends Record<
+        infer K2,
+        infer V2
+    >
         ? { key: K2; value: V2 }
         : never
 }
 export type LogDbConn = idb.IDBPDatabase<IdbSchema>
-export class LogDb {
+export class LogDb<Ready extends boolean = false> {
     world: DbN.HvWorld
-    conn: Promise<LogDbConn> | null = null
+    conn: Ready extends true ? Promise<LogDbConn> : Promise<LogDbConn> | null =
+        null as any
     static schemaVersion = 5
-    static parserVersion = 1
+    static parserVersion = 2
 
     constructor(
         public opts: {
@@ -31,9 +35,10 @@ export class LogDb {
         }
     }
 
-    async connect() {
+    async connect(): Promise<LogDb<true>> {
         if (this.conn) {
-            return await this.conn
+            await this.conn
+            return this as any
         }
 
         const dbName =
@@ -45,6 +50,7 @@ export class LogDb {
             upgrade: (conn, oldVersion, newVersion, txn, event) => {
                 L.info("Upgrading HvLog db ...")
                 this.applySchemaMigrations(conn, oldVersion)
+                L.info(`Upgraded from ${oldVersion} to ${newVersion}`)
             },
             blocked(currentVersion, blockedVersion, event) {
                 L.error("blocked", { currentVersion, blockedVersion })
@@ -54,7 +60,8 @@ export class LogDb {
             },
         })
 
-        return await this.conn
+        await this.conn
+        return this as any
     }
 
     // #region: migrations
@@ -74,6 +81,11 @@ export class LogDb {
             } else if (v === 5) {
                 conn.createObjectStore("logsMeta", { keyPath: "id" })
                 conn.createObjectStore("logsRaw", { keyPath: "id" })
+                conn.createObjectStore("summariesForMeta", { keyPath: "id" })
+                conn.createObjectStore("summariesForSearch", { keyPath: "id" })
+
+                conn.deleteObjectStore("live")
+                conn.createObjectStore("live")
 
                 v += 1
                 continue

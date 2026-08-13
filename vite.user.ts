@@ -1,14 +1,16 @@
 import tailwindcss from "@tailwindcss/vite"
 import react from "@vitejs/plugin-react"
-import { build } from "esbuild"
+import * as esbuild from "esbuild"
 import { fileURLToPath } from "node:url"
 import path from "path"
 import { minify } from "terser"
-import { defineConfig, Plugin } from "vite"
+import { build, defineConfig, Plugin, ResolvedConfig, type Rollup } from "vite"
 
+// #region config
 export default defineConfig((config) => {
     return {
         plugins: [
+            inlineWorkerFunction(),
             tailwindcss(),
             inlineZstdWasm(),
             react({
@@ -85,7 +87,9 @@ var process = {
         },
     }
 })
+// #endregion
 
+// #region minifyDeps
 function minifyDeps() {
     return {
         name: "minify-deps",
@@ -107,7 +111,9 @@ function minifyDeps() {
         },
     }
 }
+// #endregion
 
+// #region prepend
 function prepend(x: string) {
     return {
         name: "inject-banner",
@@ -121,7 +127,9 @@ function prepend(x: string) {
         },
     }
 }
+// #endregion
 
+// #region inlineZstdWasm
 function inlineZstdWasm(): Plugin {
     let cached: Promise<string> | null = null
     const ID = "virtual:zstd-inline"
@@ -138,26 +146,137 @@ function inlineZstdWasm(): Plugin {
                 return
             }
 
-            cached ??= build({
-                entryPoints: [
-                    fileURLToPath(
-                        new URL(
-                            "./node_modules/@bokuweb/zstd-wasm/dist/esm/index.web.js",
-                            import.meta.url,
+            cached ??= esbuild
+                .build({
+                    entryPoints: [
+                        fileURLToPath(
+                            new URL(
+                                "./node_modules/@bokuweb/zstd-wasm/dist/esm/index.web.js",
+                                import.meta.url,
+                            ),
                         ),
-                    ),
-                ],
-                bundle: true,
-                format: "iife",
-                globalName: "zstdWasm",
-                write: false,
-                target: "es2020",
-                define: {
-                    "import.meta.url": '"https://blah.blah/"',
-                },
-            }).then((r) => r.outputFiles[0].text)
+                    ],
+                    bundle: true,
+                    format: "iife",
+                    globalName: "zstdWasm",
+                    write: false,
+                    target: "es2020",
+                    define: {
+                        "import.meta.url": '"https://blah.blah/"',
+                    },
+                })
+                .then((r) => r.outputFiles[0].text)
 
             return `export default ${JSON.stringify(await cached)};`
         },
     }
 }
+// #endregion
+
+// #region inlineWorkerFunction
+export function inlineWorkerFunction(): Plugin {
+    const FN_RE = /\?workerfn(?:=([A-Za-z_$][\w$]*))?$/
+
+    let config: ResolvedConfig
+
+    return {
+        name: "inline-worker-function",
+        enforce: "pre",
+
+        configResolved(c) {
+            config = c
+        },
+
+        async resolveId(id, importer) {
+            const m = FN_RE.exec(id)
+            if (!m) return null
+
+            const r = await this.resolve(id.slice(0, m.index), importer, {
+                skipSelf: true,
+            })
+            return r ? r.id + m[0] : null
+        },
+
+        async load(id) {
+            const m = FN_RE.exec(id)
+            if (!m) return null
+
+            const entry = id.slice(0, m.index)
+            const name = m[1] ?? "default"
+
+            const proxyId = path.join(
+                path.dirname(entry),
+                `__workerfn_${name}__.js`,
+            )
+            const proxySrc = `export { ${name} as default } from ${JSON.stringify(entry)}`
+
+            let result: Awaited<ReturnType<typeof build>>
+            try {
+                result = (await build({
+                    configFile: false,
+                    logLevel: "warn",
+                    resolve: { alias: config.resolve.alias },
+                    define: {
+                        ...config.define,
+                        "import.meta.url": "self.location.href",
+                    },
+                    plugins: [
+                        {
+                            name: "workerfn-proxy-entry",
+                            resolveId: (i) => (i === proxyId ? proxyId : null),
+                            load: (i) => (i === proxyId ? proxySrc : null),
+                        },
+                    ],
+                    build: {
+                        write: false,
+                        target: "es2022",
+                        minify: config.build.minify,
+                        assetsInlineLimit: config.build.assetsInlineLimit,
+                        lib: {
+                            entry: proxyId,
+                            name: "__FN__",
+                            formats: ["iife"],
+                            fileName: () => "fn.js",
+                        },
+                        rollupOptions: {
+                            output: {
+                                inlineDynamicImports: true,
+                                extend: false,
+                                exports: "default",
+                            },
+                        },
+                    },
+                })) as Rollup.RollupOutput
+            } catch (e) {
+                this.error(
+                    `failed to inline worker function ${name} from ${entry}: ${e instanceof Error ? e.message : e}`,
+                )
+            }
+
+            const outputs = (
+                Array.isArray(result!) ? result! : [result!]
+            ) as Rollup.RollupOutput[]
+
+            const chunk = outputs[0].output.find(
+                (o): o is Rollup.OutputChunk => o.type === "chunk" && o.isEntry,
+            )
+            if (!chunk) {
+                this.error(`no entry chunk produced for ${name} from ${entry}`)
+                return
+            }
+
+            for (const dep of Object.keys(chunk.modules)) {
+                if (dep !== proxyId && path.isAbsolute(dep))
+                    this.addWatchFile(dep)
+            }
+
+            const stripped = chunk.code.replace(/^var\s+[\w$]+\s*=\s*/, "")
+            if (stripped === chunk.code) {
+                this.error(`invalid iife`)
+            }
+
+            return `export default ${JSON.stringify(stripped)}\n`
+        },
+    }
+}
+// #endregion

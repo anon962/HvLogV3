@@ -132,20 +132,23 @@ export namespace MigrateV2 {
         SPAWN: (d: any) =>
             `Spawned Monster ${d.letter}: MID=${d.mid} (${d.monster}) LV=${d.level} HP=${d.hp}`,
         MONSTER_DEATH: (d: any) => `${d.monster} has been defeated.`,
-        RIDDLE_MASTER: () => `The Riddlemaster listens...`, // trailing text isn't captured by the parser
+        RIDDLE_MASTER: () => `The Riddlemaster listens...`,
         GEM: (d: any) => `${d.monster} drops a ${d.type} powerup!`,
         CREDITS: (d: any) => `You gain ${d.value} Credits!`,
         DROP: (d: any) => `${d.monster} dropped [${d.item}]`,
         DROP_EVENT: (d: any) => `You found [${d.item}]`,
         SOUL_FRAG_DROP: (d: any) => `You obtained ${d.count}x [Soul Fragments]`,
-        PROFICIENCY: (d: any) => `You gain ${d.value} points of ${d.type}.`,
+        PROFICIENCY: (d: any) =>
+            d.type === "mana"
+                ? `MONSTER_??? casts SPELL_???, but it is absorbed. You gain ${d.value} points of mana.`
+                : `You gain ${d.value} points of ${d.type}.`,
         EXPERIENCE: (d: any) => `You gain ${d.value} EXP!`,
         AUTO_SALVAGE: (d: any) =>
             `A traveling salesmoogle salvages it into ${d.value}x [${d.item}]${
                 d.value2 !== undefined && d.item2 !== undefined
                     ? ` and ${d.value2}x [${d.item2}]`
                     : ""
-            }`,
+            }, plus [0 Credits] for the remains.`,
         AUTO_SELL: (d: any) =>
             `A traveling salesmoogle gives you [${d.value} Credits] for it.`,
         CLEAR_BONUS: (d: any) => `Battle Clear Bonus! [${d.item}]`,

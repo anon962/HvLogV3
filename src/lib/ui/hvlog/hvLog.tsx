@@ -20,6 +20,9 @@ import { Sidebar, SidebarItem } from "../sidebar"
 import * as lucide from "lucide-react"
 import { MonsterPage } from "./monsterPage"
 
+// @fixme: count imported from file
+// @fixme: close-able dialog
+
 // @fixme: monsters killed
 // @fixme: item world
 // @fixme: equip drop search

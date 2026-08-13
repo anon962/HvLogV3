@@ -110,6 +110,7 @@ body,
 }
 
 * {
+    color: inherit;
     border-color: var(--color-border);
     outline-color: color-mix(in oklab, var(--ring) 50%, transparent);
 }

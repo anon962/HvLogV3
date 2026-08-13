@@ -1,19 +1,35 @@
-import { DbN, LogEntry } from "@/lib/db/dbN"
-import { DetailsSummary } from "@/lib/stats/summary"
-import { newContext } from "@/lib/utils/miscUtils"
-import { compressGzip, sleep } from "myutils"
+import { DbN, LogEntries } from "@/lib/db/dbN"
+import {
+    DetailsSummary,
+    SearchSummary,
+    summarizeSearchStats,
+} from "@/lib/stats/summary"
+import { decompressZstd, newContext } from "@/lib/utils/miscUtils"
+import {
+    alphabeticalBy,
+    resolveSequential,
+    compressGzip,
+    isTruthy,
+    objectEntries,
+    sleep,
+    sort,
+    zip,
+} from "myutils"
+import { MetaSummary } from "../stats/metaStats"
 import { IS_REMOTE } from "../ui/constants"
+import { LogDb, LogDbConn } from "./db"
 import { LogSourceN as N } from "./logSourceN"
+import { parseLogWithDetails } from "../worker"
+// @ts-ignore
+import parseLogWithDetailsSrc from "../worker?workerfn=parseLogWithDetails"
 
-// region: remote
-class LogSourceRemote {
+// #region remote
+class LogSourceRemote implements N.Protocol {
     private HVDATA_URL = ""
 
     private prices: Promise<Record<string, number>> | null = null
     private globalMonsterSummary: Promise<any> | null = null
     private monlab: Promise<Record<number, N.MonlabMonster>> | null = null
-
-    constructor() {}
 
     async fetchSearch(req: N.SearchRequest): Promise<N.SearchResponse> {
         const resp = await this.searchCache.fetch(req)
@@ -23,25 +39,20 @@ class LogSourceRemote {
         }
         return result
     }
-
-    async fetchLog() {
+    async fetchLog(): Promise<any> {
         throw new Error("not implemented")
     }
-
     async fetchMeta(id: string) {
         const { meta } = await this.metaEntriesCache.fetch(id)
         return meta
     }
-
     async fetchEntries(id: string) {
         const { entries } = await this.metaEntriesCache.fetch(id)
         return entries
     }
-
     async fetchDetails(id: string) {
         return await this.detailsCache.fetch(id)
     }
-
     async fetchPrices() {
         if (!this.prices) {
             const url = this.HVDATA_URL + `/api/fapspreader.json`
@@ -50,7 +61,6 @@ class LogSourceRemote {
 
         return this.prices
     }
-
     async fetchGlobalMonsterSummary() {
         if (this.globalMonsterSummary === null) {
             const url = this.HVDATA_URL + `/api/battle_logs/monsters.json`
@@ -90,10 +100,10 @@ class LogSourceRemote {
         return this.monlab
     }
 
-    // region: remote caches
+    // #region remote caches
     private metaEntriesCache = new N.AsyncCache<
         DbN.LogId,
-        { meta: DbN.LogMeta; entries: Array<LogEntry> }
+        { meta: DbN.LogMeta; entries: LogEntries }
     >({
         ttl: null,
         toRaw: (x) => x,
@@ -105,7 +115,6 @@ class LogSourceRemote {
                 meta: {
                     start: resp.created_at.replace("+00:00", "") + "Z",
                     lastUpdate: resp.created_at.replace("+00:00", "") + "Z",
-                    version: resp.version,
                     world: "persistent",
                     user_id: resp.id_user,
                     user_name: resp.name,
@@ -114,7 +123,6 @@ class LogSourceRemote {
             }
         },
     })
-
     private detailsCache = new N.AsyncCache<string, DetailsSummary>({
         ttl: null,
         fromRaw: (x) => x,
@@ -126,7 +134,6 @@ class LogSourceRemote {
             return resp.parsed.details
         },
     })
-
     private searchLogCache = new Map<string, N.SearchResult>()
     private searchCache = new N.AsyncCache<
         N.SearchRequest,
@@ -168,9 +175,305 @@ class LogSourceRemote {
             }
         },
     })
+    // #endregion
 }
+// #endregion
+
+// #region local
+type LocalKey = { world: DbN.HvWorld; id: DbN.LogId }
+const newLocalCache = <T>(
+    self: LogSourceLocal,
+    opts: {
+        fetch: (
+            db: LogDb<true>,
+            conn: LogDbConn,
+            id: DbN.LogId,
+            k: LocalKey,
+        ) => Promise<T>
+        size?: number
+        ttl?: number | null
+    },
+) =>
+    new N.AsyncCache<LocalKey, T>({
+        ttl: opts.ttl ?? null,
+        size: opts.size,
+        fromRaw: (raw) => JSON.parse(raw),
+        toRaw: (k) => JSON.stringify(k),
+        fetch: async (k) => {
+            const db = await self.db[k.world]
+            const conn = await db.conn
+            return opts.fetch(db, conn, k.id, k)
+        },
+    })
+class LogSourceLocal implements N.Protocol {
+    db: Record<DbN.HvWorld, Promise<LogDb<true>>>
+    pool: ReturnType<LogSourceLocal["initWorkerPool"]>
+    prices: Promise<DbN.Prices>
+    world: DbN.HvWorld
+    private logIds: Record<
+        DbN.HvWorld,
+        { ids: Set<string>; fetchedAll: boolean }
+    >
+    private bc: BroadcastChannel
+
+    constructor() {
+        this.db = {
+            persistent: new LogDb({ world: "persistent" }).connect(),
+            isekai: new LogDb({ world: "isekai" }).connect(),
+        }
+        this.pool = this.initWorkerPool()
+        this.prices = Promise.resolve({})
+        this.world = "persistent"
+
+        this.logIds = {
+            persistent: { ids: new Set(), fetchedAll: false },
+            isekai: { ids: new Set(), fetchedAll: false },
+        }
+        this.bc = new BroadcastChannel(DbN.IDB_BC_ID)
+        this.bc.onmessage = (ev) => {
+            const d = ev.data as DbN.IdbEvents
+            switch (d.type) {
+                case DbN.IDB_LOG_INSERT_EVENT:
+                    this.logIds[d.world].ids.add(d.id)
+                    break
+            }
+        }
+    }
+
+    async fetchMeta(id: string) {
+        return await this.metaCache.fetch({ id, world: this.world })
+    }
+    async fetchLog(id: string) {
+        return await this.rawCache.fetch({ id, world: this.world })
+    }
+    async fetchDetails(id: string) {
+        return (await this.entriesDetailsCache.fetch({ id, world: this.world }))
+            .details
+    }
+    async fetchEntries(id: string) {
+        return (await this.entriesDetailsCache.fetch({ id, world: this.world }))
+            .entries
+    }
+    async fetchPrices() {
+        return this.prices
+    }
+    async fetchMonlab(): Promise<any> {
+        throw new Error("not implemented")
+    }
+    async fetchGlobalMonsterSummary(): Promise<any> {
+        throw new Error("not implemented")
+    }
+
+    private static FILTER_CONDITIONS = {
+        battleType: (d, s, m, ms) =>
+            d.some((bt) => s.meta.battleType?.id === bt),
+        primaryStyle: (d, s, m, ms) =>
+            d.some((style) => style === s.style.primary?.id),
+        secondaryStyle: (d, s, m, ms) =>
+            d.some((style) => style === s.style.primary?.id),
+        isImperil: (d, s, m, ms) => s.style.isImperil === d,
+        startDate: (d, s, m, ms) => d <= m.start,
+        endDate: (d, s, m, ms) => d >= m.start,
+        errors: (d, s, m, ms) =>
+            Object.entries(d).some(
+                ([k, v]) => v !== null && (ms as any).errors[k] === v,
+            ) ||
+            (!!d.none && Object.values(ms).every((v) => v === false)),
+        completionType: (d, s, m, ms) => d.some((d) => d === ms.completionType),
+        roundMin: (d, s, m, ms) =>
+            typeof ms.round?.end === "number" && ms.round.end >= d,
+        roundMax: (d, s, m, ms) =>
+            typeof ms.round?.end === "number" && ms.round.end <= d,
+    } as const satisfies Partial<{
+        [K in keyof N.SearchRequest]: (
+            x: Exclude<N.SearchRequest[K], null | undefined>,
+            search: SearchSummary,
+            meta: DbN.LogMeta,
+            metaSummary: MetaSummary,
+        ) => boolean
+    }>
+
+    // #region local caches
+    private metaCache = newLocalCache<DbN.LogMeta>(this, {
+        fetch: async (db, conn, id, k) => {
+            const r = (await conn.get("logsMeta", id))!
+            return {
+                start: r.start,
+                lastUpdate: r.lastUpdate,
+                world: r.world,
+                user_id: null,
+                user_name: null,
+            }
+        },
+    })
+    private rawCache = newLocalCache<string>(this, {
+        size: 10,
+        fetch: async (db, conn, id) => {
+            const r = (await conn.get("logsRaw", id))!
+            if (r.raw !== null) {
+                return r.raw
+            } else {
+                const decompressed = await decompressZstd({ x: r.raw_c })
+                return await new Blob([decompressed]).text()
+            }
+        },
+    })
+    private entriesDetailsCache = newLocalCache(this, {
+        size: 10,
+        fetch: async (db, conn, id, k) => {
+            const raw = await this.rawCache.fetch(k)
+            return await this.pool.parseLogWithDetails({
+                log: raw,
+                createdAt: null,
+            })
+        },
+    })
+    private metaSearchCache = newLocalCache<{
+        search: SearchSummary
+        meta: MetaSummary
+    }>(this, {
+        fetch: async (db, conn, id, k) => {
+            let meta: MetaSummary
+            const metaFromDb = await conn.get("summariesForMeta", k.id)
+            if (!metaFromDb || metaFromDb.version !== LogDb.parserVersion) {
+                const details = (await this.entriesDetailsCache.fetch(k))
+                    .details
+                await conn.put("summariesForMeta", {
+                    id: k.id,
+                    version: LogDb.parserVersion,
+                    data: details.meta,
+                })
+                meta = details.meta
+            } else {
+                meta = metaFromDb.data
+            }
+
+            let search: SearchSummary
+            const searchFromDb = await conn.get("summariesForSearch", k.id)
+            if (!searchFromDb || searchFromDb.version !== LogDb.parserVersion) {
+                const details = (await this.entriesDetailsCache.fetch(k))
+                    .details
+                search = summarizeSearchStats(details, await this.fetchPrices())
+                await conn.put("summariesForSearch", {
+                    id: k.id,
+                    version: LogDb.parserVersion,
+                    data: search,
+                })
+            } else {
+                search = searchFromDb.data
+            }
+
+            return { meta, search }
+        },
+    })
+    // #endregion
+
+    // #region fetchSearch
+    async fetchSearch(req: N.SearchRequest) {
+        const ids = this.logIds[this.world]
+        if (!ids.fetchedAll) {
+            ids.fetchedAll = true
+            const conn = await this.dbConn
+            for (const id of await conn.getAllKeys("logsMeta")) {
+                ids.ids.add(id)
+            }
+        }
+
+        const idsArr = [...ids.ids]
+        const xs = await resolveSequential(
+            idsArr.map((id) =>
+                this.metaSearchCache.fetch({ world: this.world, id }),
+            ),
+        )
+        const metas = await Promise.all(
+            idsArr.map((id) => this.metaCache.fetch({ world: this.world, id })),
+        )
+
+        const matches = zip(metas, xs, idsArr).filter(([m, x]) => {
+            return objectEntries(LogSourceLocal.FILTER_CONDITIONS).every(
+                ([k, cond]) =>
+                    !isTruthy(req[k]) ||
+                    (cond as any)(req[k], x.search, m, x.meta),
+            )
+        })
+
+        let sorted
+        const isDesc = req.sort?.order === "desc"
+        switch (req.sort?.type) {
+            case "date":
+                sorted = alphabeticalBy(matches, ([m, x]) => m.start, isDesc)
+                break
+            case "profit":
+                sorted = sort(
+                    matches,
+                    ([m, x]) => x.search.finances.profit,
+                    isDesc,
+                )
+                break
+            case "turns":
+                sorted = sort(
+                    matches,
+                    ([m, x]) => x.search.meta.turnCount,
+                    isDesc,
+                )
+                break
+            default:
+                sorted = matches
+                break
+        }
+
+        const st = req.pageIdx * req.pageSize
+        const page = sorted.slice(st, st + req.pageSize)
+
+        const results = page.map(([m, x, id]) => ({
+            id,
+            meta: m,
+            search: x.search,
+        }))
+
+        return {
+            currPage: req.pageIdx,
+            lastPage: Math.ceil(matches.length / req.pageSize),
+            resultCount: matches.length,
+            pageSize: req.pageSize,
+            results,
+        }
+    }
+    // #endregion
+
+    get dbConn() {
+        return this.db[this.world].then((db) => db.conn)
+    }
+
+    private initWorkerPool() {
+        return window.HV_LOG.workerPool.registerModule(
+            "LogSourceLocal",
+            () => ({
+                reps: {
+                    parseLogWithDetailsSrc: JSON.stringify(
+                        parseLogWithDetailsSrc,
+                    ),
+                },
+                initCtx: async () => {
+                    ;(globalThis as any).parseLogWithDetails = globalThis.eval(
+                        parseLogWithDetailsSrc,
+                    )
+                },
+                fns: {
+                    parseLogWithDetails: async (opts: {
+                        log: string
+                        createdAt: Date | null
+                    }) => {
+                        return await parseLogWithDetails(opts)
+                    },
+                },
+            }),
+        )
+    }
+}
+// #endregion
 
 export const LOG_SOURCE = newContext<N.Protocol>(() => [
-    IS_REMOTE ? new LogSourceRemote() : (null as any),
+    IS_REMOTE ? new LogSourceRemote() : new LogSourceLocal(),
     () => {},
 ])

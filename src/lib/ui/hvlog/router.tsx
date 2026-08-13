@@ -38,7 +38,6 @@ export function Router(props: {
 
     let sel: RouteSelection | null = null
     if (!!isRouteMatch(prefix, partsPrefix)) {
-        L.log("here", props.routes)
         for (const [patt, factory] of props.routes.entries()) {
             if (!isRouteMatch(patt, partsRem)) {
                 continue

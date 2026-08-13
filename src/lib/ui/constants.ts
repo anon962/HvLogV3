@@ -1,7 +1,7 @@
 export const IS_BROWSER = typeof window !== "undefined"
 export const IS_REMOTE = IS_BROWSER ? !!window.HV_LOG.isRemote : true
 
-export const DEBUG = process.env.NODE_ENV === "development"
+export const DEBUG = 0 && process.env.NODE_ENV === "development"
 
 /**
 https://tailwindcss.com/docs/colors

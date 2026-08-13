@@ -22,9 +22,9 @@ export namespace LogSourceN {
 
     export interface SearchRequest {
         pageIdx: number
+        pageSize: number
 
         seen?: string[]
-        pageSize?: number
         battleType?: string[] | null
         primaryStyle?: string[] | null
         secondaryStyle?: string[] | null
@@ -36,6 +36,8 @@ export namespace LogSourceN {
             boolean | null
         > | null
         completionType?: string[] | null
+        roundMin?: number | null
+        roundMax?: number | null
         idUser?: string | null
         keyUser?: string | null
 
@@ -94,6 +96,7 @@ export namespace LogSourceN {
     export class AsyncCache<TReq, TResp, TMapKey extends string = string> {
         cache: CustomMap<TReq, Dated<TResp>, TMapKey>
         pending: CustomMap<TReq, Promise<TResp>, TMapKey>
+        history: Array<TReq>
 
         constructor(
             public opts: {
@@ -101,6 +104,7 @@ export namespace LogSourceN {
                 toRaw: (req: TReq) => TMapKey
                 fromRaw: (raw: TMapKey) => TReq
                 fetch: (req: TReq) => Promise<TResp>
+                size?: number
             },
         ) {
             this.cache = new CustomMap({
@@ -111,6 +115,7 @@ export namespace LogSourceN {
                 toRaw: this.opts.toRaw,
                 fromRaw: this.opts.fromRaw,
             })
+            this.history = []
         }
 
         async fetch(req: TReq): Promise<TResp> {
@@ -140,7 +145,30 @@ export namespace LogSourceN {
             })
             this.pending.delete(req)
 
+            this.checkOverflow(req)
+
             return data
+        }
+
+        private checkOverflow(req?: TReq) {
+            if (!this.opts.size) {
+                return
+            }
+
+            if (req) {
+                this.history.push(req)
+            }
+
+            if (this.history.length <= this.opts.size) {
+                return
+            }
+
+            const overflowIdx = this.history.length - this.opts.size
+            const overflow = this.history.slice(0, overflowIdx)
+            for (const req of overflow) {
+                this.cache.delete(req)
+            }
+            this.history = this.history.slice(overflowIdx)
         }
     }
 }

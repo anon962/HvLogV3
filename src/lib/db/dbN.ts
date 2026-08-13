@@ -1,5 +1,7 @@
 import { ISODate } from "myutils"
+import { SearchSummary } from "../stats/summary"
 import { BaseHvEvent } from "../utils/eventParser"
+import { MetaSummary } from "../stats/metaStats"
 
 export type LogEntry<TEvent extends BaseHvEvent = BaseHvEvent> =
     | { type: "event"; event: TEvent }
@@ -22,7 +24,6 @@ export namespace DbN {
     export interface LogMeta {
         start: ISODate
         lastUpdate: ISODate
-        version: number
         world: HvWorld
         user_id: string | null
         user_name: string | null
@@ -32,11 +33,32 @@ export namespace DbN {
     //
     //
 
-    export interface Schema {
-        kv: {
-            toCompress: string[]
+    export interface LocalStorageSchema {
+        hvlog_live: {
+            current: null | {
+                id: LogId
+                roundStart: number
+                roundMax: number
+                battleType: string
+                turnCount: number
+            }
+            complete: Array<{ id: LogId; turnCount: number }>
         }
-        logsMeta: Record<LogId, LogMeta & { id: string }>
+    }
+
+    export interface IdbSchema {
+        kv: {
+            compressDone: Array<LogId>
+            prices: DbN.Prices
+        }
+        live: Record<`${LogId}_${number}`, { logId: LogId; lines: string[] }>
+        logsMeta: Record<
+            LogId,
+            LogMeta & {
+                id: LogId
+                importedAt?: ISODate
+            }
+        >
         logsRaw: Record<
             LogId,
             | {
@@ -52,9 +74,33 @@ export namespace DbN {
                   raw_c: Uint8Array<ArrayBuffer>
               }
         >
-        live: Record<number, { logId: LogId; lines: string[] }>
+        summariesForMeta: Record<
+            LogId,
+            {
+                id: LogId
+                version: number
+                data: MetaSummary
+            }
+        >
+        summariesForSearch: Record<
+            LogId,
+            {
+                id: LogId
+                version: number
+                data: SearchSummary
+            }
+        >
 
         /** @deprecated */
         complete: Record<string, any>
+    }
+
+    export const IDB_BC_ID = "hvlog"
+    export type IdbEvents = IdbLogInsertEvent
+    export const IDB_LOG_INSERT_EVENT = "hvlog_log_insert"
+    export type IdbLogInsertEvent = {
+        type: typeof IDB_LOG_INSERT_EVENT
+        world: HvWorld
+        id: LogId
     }
 }

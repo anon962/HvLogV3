@@ -532,14 +532,14 @@ function partitionLog(entries: LogEntries<v91N.HvEvent>): v91.LogPartition {
         const x = entries[logIdx]
         if (!seq && x.type === "event") {
             const pp = (xs: any[]) => (xs ? xs.map((x) => x.event) : null)
-            L.debug(
-                "context for unknown",
-                logIdx,
-                // @ts-ignore
-                entries[logIdx].event,
-                pp(prevSeq),
-                pp(entries.slice(logIdx, logIdx + 30)),
-            )
+            // L.debug(
+            //     "context for unknown",
+            //     logIdx,
+            //     // @ts-ignore
+            //     entries[logIdx].event,
+            //     pp(prevSeq),
+            //     pp(entries.slice(logIdx, logIdx + 30)),
+            // )
             partition["unknown"].push([
                 {
                     logIdx,
