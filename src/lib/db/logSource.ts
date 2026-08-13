@@ -7,7 +7,6 @@ import {
 import { decompressZstd, newContext } from "@/lib/utils/miscUtils"
 import {
     alphabeticalBy,
-    resolveSequential,
     compressGzip,
     isTruthy,
     objectEntries,
@@ -261,6 +260,9 @@ class LogSourceLocal implements N.Protocol {
         return (await this.entriesDetailsCache.fetch({ id, world: this.world }))
             .details
     }
+    async fetchSearch(req: N.SearchRequest): Promise<N.SearchResponse> {
+        return await this.searchResponseCache.fetch(req)
+    }
     async fetchEntries(id: string) {
         return (await this.entriesDetailsCache.fetch({ id, world: this.world }))
             .entries
@@ -387,87 +389,100 @@ class LogSourceLocal implements N.Protocol {
             return { meta, search }
         },
     })
-    // #endregion
+    // #region: local search
+    private searchResponseCache = new N.AsyncCache<
+        N.SearchRequest,
+        N.SearchResponse
+    >({
+        toRaw: (req) => JSON.stringify(req),
+        fromRaw: (raw) => JSON.parse(raw),
+        ttl: (resp) => resp.ttl ?? null,
+        size: 50,
+        fetch: async (req) => {
+            const allIds = this.logIds[this.world]
+            const ids: Array<DbN.LogId> = []
 
-    // #region fetchSearch
-    async fetchSearch(req: N.SearchRequest): Promise<N.SearchResponse> {
-        const allIds = this.logIds[this.world]
-        const ids: Array<DbN.LogId> = []
-
-        const xs: Array<{ meta: MetaSummary; search: SearchSummary }> = []
-        for (const id of allIds) {
-            const k = {
-                world: this.world,
-                id,
+            const xs: Array<{ meta: MetaSummary; search: SearchSummary }> = []
+            for (const id of allIds) {
+                const k = {
+                    world: this.world,
+                    id,
+                }
+                const fromCache = this.metaSearchCache.cache.get(k)?.data
+                if (fromCache) {
+                    xs.push(fromCache)
+                    ids.push(id)
+                } else {
+                    this.metaSearchCache.fetch(k)
+                }
             }
-            const fromCache = this.metaSearchCache.cache.get(k)?.data
-            if (fromCache) {
-                xs.push(fromCache)
-                ids.push(id)
-            } else {
-                this.metaSearchCache.fetch(k)
-            }
-        }
-        const hasPending =
-            xs.length !== allIds.size || !this.logIds.initialFetch
+            const hasPending =
+                xs.length !== allIds.size || !this.logIds.initialFetch
 
-        const metas = await Promise.all(
-            ids.map((id) => this.metaCache.fetch({ world: this.world, id })),
-        )
-
-        const matches = zip(metas, xs, ids).filter(([m, x]) => {
-            return objectEntries(LogSourceLocal.FILTER_CONDITIONS).every(
-                ([k, cond]) =>
-                    !isTruthy(req[k]) ||
-                    (cond as any)(req[k], x.search, m, x.meta),
+            const metas = await Promise.all(
+                ids.map((id) =>
+                    this.metaCache.fetch({ world: this.world, id }),
+                ),
             )
-        })
 
-        let sorted
-        const sortType = req.sort?.type ?? "date"
-        const isDesc = req.sort?.order !== "asc"
-        switch (sortType) {
-            case "date":
-                sorted = alphabeticalBy(matches, ([m, x]) => m.start, isDesc)
-                break
-            case "profit":
-                sorted = sort(
-                    matches,
-                    ([m, x]) => x.search.finances.profit,
-                    isDesc,
+            const matches = zip(metas, xs, ids).filter(([m, x]) => {
+                return objectEntries(LogSourceLocal.FILTER_CONDITIONS).every(
+                    ([k, cond]) =>
+                        !isTruthy(req[k]) ||
+                        (cond as any)(req[k], x.search, m, x.meta),
                 )
-                break
-            case "turns":
-                sorted = sort(
-                    matches,
-                    ([m, x]) => x.search.meta.turnCount,
-                    isDesc,
-                )
-                break
-            default:
-                sorted = matches
-                break
-        }
+            })
 
-        const st = req.pageIdx * req.pageSize
-        const page = sorted.slice(st, st + req.pageSize)
+            let sorted
+            const sortType = req.sort?.type ?? "date"
+            const isDesc = req.sort?.order !== "asc"
+            switch (sortType) {
+                case "date":
+                    sorted = alphabeticalBy(
+                        matches,
+                        ([m, x]) => m.start,
+                        isDesc,
+                    )
+                    break
+                case "profit":
+                    sorted = sort(
+                        matches,
+                        ([m, x]) => x.search.finances.profit,
+                        isDesc,
+                    )
+                    break
+                case "turns":
+                    sorted = sort(
+                        matches,
+                        ([m, x]) => x.search.meta.turnCount,
+                        isDesc,
+                    )
+                    break
+                default:
+                    sorted = matches
+                    break
+            }
 
-        const results = page.map(([m, x, id]) => ({
-            id,
-            meta: m,
-            search: x.search,
-        }))
+            const st = req.pageIdx * req.pageSize
+            const page = sorted.slice(st, st + req.pageSize)
 
-        return {
-            currPage: req.pageIdx,
-            lastPage: Math.ceil(matches.length / req.pageSize),
-            resultCount: matches.length,
-            pageSize: req.pageSize,
-            results,
-            ttl: hasPending ? 1 : 10,
-            stale: hasPending,
-        }
-    }
+            const results = page.map(([m, x, id]) => ({
+                id,
+                meta: m,
+                search: x.search,
+            }))
+
+            return {
+                currPage: req.pageIdx,
+                lastPage: Math.ceil(matches.length / req.pageSize),
+                resultCount: matches.length,
+                pageSize: req.pageSize,
+                results,
+                ttl: hasPending ? 1 : 10,
+                stale: hasPending,
+            }
+        },
+    })
     // #endregion
 
     get dbConn() {

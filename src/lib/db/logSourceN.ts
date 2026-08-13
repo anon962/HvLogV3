@@ -102,7 +102,7 @@ export namespace LogSourceN {
 
         constructor(
             public opts: {
-                ttl: number | null
+                ttl: number | null | ((resp: TResp, req: TReq) => number | null)
                 toRaw: (req: TReq) => TMapKey
                 fromRaw: (raw: TMapKey) => TReq
                 fetch: (req: TReq) => Promise<TResp>
@@ -124,10 +124,12 @@ export namespace LogSourceN {
             if (this.cache.has(req)) {
                 // return from cache
                 const fromCache = this.cache.get(req)!
-                if (
-                    this.opts.ttl === null ||
-                    !isExpired(fromCache, this.opts.ttl)
-                ) {
+
+                const ttl =
+                    typeof this.opts.ttl === "function"
+                        ? this.opts.ttl(fromCache.data, req)
+                        : this.opts.ttl
+                if (ttl === null || !isExpired(fromCache, ttl)) {
                     return fromCache.data
                 }
             }
