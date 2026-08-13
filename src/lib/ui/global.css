@@ -94,161 +94,165 @@
     --color-sidebar-ring: var(--sidebar-ring);
 }
 
-.hvlog-container {
-    padding: 0 !important;
-    margin: 0 !important;
-    background-color: var(--color-background);
-    color: var(--color-foreground);
-    font-family: sans-serif;
-}
+@layer base {
+    .hvlog-container {
+        padding: 0 !important;
+        margin: 0 !important;
+        background-color: var(--color-background);
+        color: var(--color-foreground);
+        font-family: sans-serif;
+    }
 
-html,
-body,
-.hvlog-container,
-.hvlog-host {
-    min-height: 100vh;
-}
+    html,
+    body,
+    .hvlog-container,
+    .hvlog-host {
+        min-height: 100vh;
+    }
 
-* {
-    color: inherit;
-    border-color: var(--color-border);
-    outline-color: color-mix(in oklab, var(--ring) 50%, transparent);
-}
+    * {
+        color: inherit;
+        border-color: var(--color-border);
+        outline-color: color-mix(in oklab, var(--ring) 50%, transparent);
 
-/* From shadcn site: https://www.shadcn-svelte.com/examples/dashboard */
-::-webkit-scrollbar {
-    width: 0.5rem;
-    height: 0.5rem;
-}
-::-webkit-scrollbar-thumb {
-    border-radius: calc(var(--radius) - 4px);
-    background-color: color-mix(
-        in oklab,
-        var(--muted-foreground) 30%,
-        transparent
-    );
-}
-::-webkit-scrollbar-track {
-    background-color: var(--muted);
-    border-radius: calc(var(--radius) - 4px);
-}
+        scrollbar-width: 0.5rem;
+        scrollbar-color: color-mix(
+            in oklab,
+            var(--muted-foreground) 30%,
+            transparent
+        );
+        scrollbar-track-color: var(--muted);
+    }
 
-* {
-    scrollbar-width: 0.5rem;
-    scrollbar-color: color-mix(
-        in oklab,
-        var(--muted-foreground) 30%,
-        transparent
-    );
-    scrollbar-track-color: var(--muted);
-}
+    /* From shadcn site: https://www.shadcn-svelte.com/examples/dashboard */
+    ::-webkit-scrollbar {
+        width: 0.5rem;
+        height: 0.5rem;
+    }
+    ::-webkit-scrollbar-thumb {
+        border-radius: calc(var(--radius) - 4px);
+        background-color: color-mix(
+            in oklab,
+            var(--muted-foreground) 30%,
+            transparent
+        );
+    }
+    ::-webkit-scrollbar-track {
+        background-color: var(--muted);
+        border-radius: calc(var(--radius) - 4px);
+    }
 
-.hvlog-container.dialog-container {
-    background: none;
-    z-index: 10;
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-}
+    .hvlog-container.dialog-container {
+        background: none;
+        z-index: 10;
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+    }
 
-input[type="file"] {
-    padding: 0;
-    line-height: 2em;
-    cursor: pointer;
-}
-input::file-selector-button {
-    border-right: 0.1em solid var(--muted-foreground);
-    padding-right: 0.5em;
-    padding-left: 0.5em;
-    margin-right: 0.5em;
-    line-height: inherit;
-    height: 100%;
-    cursor: inherit;
-}
-input::file-selector-button {
-    background-color: color-mix(
-        in oklab,
-        var(--background) 50%,
-        var(--foreground)
-    );
-}
-input:hover {
-    background-color: color-mix(
-        in oklab,
-        var(--color-background) 35%,
-        transparent
-    );
-}
-input:hover::file-selector-button {
-    background-color: color-mix(
-        in oklab,
-        var(--background) 55%,
-        var(--foreground)
-    );
-}
+    input[type="file"] {
+        padding: 0;
+        line-height: 2em;
+        cursor: pointer;
+    }
+    input::file-selector-button {
+        border-right: 0.1em solid var(--muted-foreground);
+        padding-right: 0.5em;
+        padding-left: 0.5em;
+        margin-right: 0.5em;
+        line-height: inherit;
+        height: 100%;
+        cursor: inherit;
+    }
+    input::file-selector-button {
+        background-color: color-mix(
+            in oklab,
+            var(--background) 50%,
+            var(--foreground)
+        );
+    }
+    input:hover {
+        background-color: color-mix(
+            in oklab,
+            var(--color-background) 35%,
+            transparent
+        );
+    }
+    input:hover::file-selector-button {
+        background-color: color-mix(
+            in oklab,
+            var(--background) 55%,
+            var(--foreground)
+        );
+    }
 
-figure {
-    width: 100%;
-
-    svg {
+    figure {
         width: 100%;
 
-        [aria-label="tip"] {
-            fill: color-mix(in oklab, var(--muted-foreground) 25%, var(--card));
+        svg {
+            width: 100%;
 
-            text {
-                font-family: monospace;
-                color: var(--foreground);
+            [aria-label="tip"] {
+                fill: color-mix(
+                    in oklab,
+                    var(--muted-foreground) 25%,
+                    var(--card)
+                );
+
+                text {
+                    font-family: monospace;
+                    color: var(--foreground);
+                }
             }
         }
     }
-}
 
-a {
-    color: var(--url);
-    text-decoration: underline;
-}
-a:hover {
-    color: var(--url-hover);
-}
+    a {
+        color: var(--url);
+        text-decoration: underline;
+    }
+    a:hover {
+        color: var(--url-hover);
+    }
 
-figure span {
-    white-space: nowrap;
-}
+    figure span {
+        white-space: nowrap;
+    }
 
-nav a:not(href) {
-    color: inherit;
-    text-decoration: inherit;
-}
+    nav a:not(href) {
+        color: inherit;
+        text-decoration: inherit;
+    }
 
-button {
-    cursor: pointer;
-    font-size: inherit;
-}
-button.destructive {
-    background-color: color-mix(
-        in oklch,
-        var(--color-destructive),
-        transparent 10%
-    );
-    &:hover {
+    button {
+        cursor: pointer;
+        font-size: inherit;
+    }
+    button.destructive {
         background-color: color-mix(
             in oklch,
             var(--color-destructive),
-            transparent 20%
+            transparent 10%
         );
+        &:hover {
+            background-color: color-mix(
+                in oklch,
+                var(--color-destructive),
+                transparent 20%
+            );
+        }
     }
-}
-.tooltip {
-    border-bottom: 0.15em dashed
-        color-mix(in oklab, var(--muted-foreground) 75%, transparent);
-}
+    .tooltip {
+        border-bottom: 0.15em dashed
+            color-mix(in oklab, var(--muted-foreground) 75%, transparent);
+    }
 
-:not(nav) > ul {
-    list-style: unset;
-    li {
-        margin-left: 1.5em;
+    :not(nav) > ul {
+        list-style: unset;
+        li {
+            margin-left: 1.5em;
+        }
     }
 }

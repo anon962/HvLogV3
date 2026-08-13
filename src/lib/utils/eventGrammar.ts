@@ -1,8 +1,7 @@
+import { L, sort } from "myutils"
 import { LogEntries, LogEntry } from "../db/dbN"
 import { DEBUG } from "../ui/constants"
 import { BaseHvEvent } from "./eventParser"
-import { sort } from "myutils"
-import { L } from "myutils"
 
 // @todo: Replace with https://chevrotain.io/docs/tutorial/step2_parsing.html#complete-parser
 
@@ -13,7 +12,7 @@ export function takeEvents<TEvent extends BaseHvEvent>(
     root: GrammarRule<TEvent["event_type"]>,
     greedy = true,
 ): [TEvent[], number[]] | [null, null] {
-    const debug = (DEBUG ? {} : null) as any
+    const debug = (DEBUG || 0 ? {} : null) as any
     const debugInc = (key: string, v: number, def: number) => {
         if (debug) {
             debug[key] = debug[key] ?? def
@@ -31,16 +30,14 @@ export function takeEvents<TEvent extends BaseHvEvent>(
     let matches: number[][] = []
 
     const donePaths = new Set<string>()
-    const getPathKey = (numErrors: number, rule: GrammarRule<any>) => {
-        return `${numErrors}|||${JSON.stringify(rule)}`
-    }
+    const pathCache = new WeakMap()
 
     while (toCheck.length > 0) {
         debugInc("n", 1, 0)
 
         // console.log("toCheck", toCheck.length, matches.length)
         let { rule, result, numErrors } = toCheck.shift()!
-        const pathKey = getPathKey(numErrors, rule)
+        const pathKey = getPathKey(pathCache, numErrors, rule)
         const toCheckUpdate: typeof toCheck = []
 
         rule = trySimplify(grammar, rule)
@@ -66,7 +63,7 @@ export function takeEvents<TEvent extends BaseHvEvent>(
         const entryIdx = startIdx + result.length + numErrors
         const entry = entries[entryIdx] as LogEntry<TEvent> | undefined
         if (entry?.type === "error") {
-            toCheckUpdate.push({
+            toCheck.push({
                 rule,
                 result,
                 numErrors: numErrors + 1,
@@ -239,12 +236,12 @@ export function takeEvents<TEvent extends BaseHvEvent>(
     matches = sort(matches, (xs) => xs.length, greedy)
     const best = matches[0]
 
-    if (debug && debug.n > 1000) {
+    if (debug && debug.n > 100) {
         L.debug(
             "takeEvents",
             debug,
             matches,
-            donePaths,
+            "done:" + donePaths.size,
             entries.slice(startIdx, startIdx + 100),
             root,
             greedy,
@@ -267,6 +264,7 @@ export function takeEvents<TEvent extends BaseHvEvent>(
     ]
 }
 
+// #region helpers
 function trySimplify<TEvent extends BaseHvEvent>(
     grammar: EventGrammar<TEvent["event_type"]>,
     rule: GrammarRule<TEvent["event_type"]>,
@@ -276,11 +274,14 @@ function trySimplify<TEvent extends BaseHvEvent>(
         return rule
     }
 
-    const rewrite = rule // JSON.parse(JSON.stringify(rule))
-    for (const term of rewrite) {
+    return rule.map((term) => {
+        if (!term.refs?.length) {
+            return term
+        }
+
         let fail = false
         const keys = [...(term.keys ?? [])]
-        for (const ref of term?.refs ?? []) {
+        for (const ref of term.refs) {
             const otherRule = grammar[ref]
             if (otherRule.length > 1) {
                 fail = true
@@ -290,17 +291,11 @@ function trySimplify<TEvent extends BaseHvEvent>(
                 fail = true
                 break
             }
-
             keys.push(...(otherRule[0].keys ?? []))
         }
 
-        if (!fail) {
-            term.keys = keys
-            term.refs = []
-        }
-    }
-
-    return rewrite
+        return fail ? term : { ...term, keys, refs: [] }
+    })
 }
 
 function peekRepeats<TEvent extends BaseHvEvent>(
@@ -333,6 +328,33 @@ function peekRepeats<TEvent extends BaseHvEvent>(
 
     return result
 }
+
+function getPathKey(
+    cache: WeakMap<any, string>,
+    numErrors: number,
+    rule: GrammarRule<any>,
+) {
+    let key = numErrors + "|"
+    for (let i = 0; i < rule.length; i++) {
+        const x = rule[i]
+        let termKey = cache.get(x)
+        if (termKey === undefined) {
+            termKey = [
+                x.keys ? x.keys.join(",") : "",
+                x.refs ? x.refs.join(",") : "",
+                x.repeat ? x.repeat.min + "-" + x.repeat.max : "",
+            ].join(";")
+            cache.set(x, termKey)
+        }
+
+        key += "[" + termKey + "]"
+    }
+    return key
+}
+
+// #endregion
+
+// #region exported helpers
 
 /**
  * Searches for a sequnce of events that matches root grammar followed by effect grammar
@@ -444,3 +466,5 @@ export function filterEvents<
         return evs.filter((ev) => s.has(ev.event_type as any)) as any[]
     }
 }
+
+// #endregion

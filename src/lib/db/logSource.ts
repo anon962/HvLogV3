@@ -14,6 +14,7 @@ import {
     sleep,
     sort,
     zip,
+    L,
 } from "myutils"
 import { MetaSummary } from "../stats/metaStats"
 import { IS_REMOTE } from "../ui/constants"
@@ -326,6 +327,16 @@ class LogSourceLocal implements N.Protocol {
                 log: raw,
                 createdAt: null,
             })
+            // const st = performance.now()
+            // const result = await parseLogWithDetails({
+            //     log: raw,
+            //     createdAt: null,
+            // })
+            // const elapsed = performance.now() - st
+            // console.debug(
+            //     `Parsed ${result.entries.length} entries in ${elapsed}ms (${((1000 * elapsed) / result.entries.length).toFixed(1)}us per)`,
+            // )
+            // return result
         },
     })
     private metaSearchCache = newLocalCache<{
@@ -464,7 +475,13 @@ class LogSourceLocal implements N.Protocol {
                         log: string
                         createdAt: Date | null
                     }) => {
-                        return await parseLogWithDetails(opts)
+                        // const st = performance.now()
+                        const result = await parseLogWithDetails(opts)
+                        // const elapsed = performance.now() - st
+                        // console.debug(
+                        //     `Parsed ${result.entries.length} entries in ${elapsed}ms (${((1000 * elapsed) / result.entries.length).toFixed(1)}us per)`,
+                        // )
+                        return result
                     },
                 },
             }),
