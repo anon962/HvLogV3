@@ -7,13 +7,12 @@ import {
 } from "@/lib/stats/combatStats"
 import { humanizeBattleType } from "@/lib/stats/metaStats"
 import { formatNumber } from "@/lib/utils/miscUtils"
-import { cn, newContext, range, useAsync } from "myutils"
+import { cn, newContext, range, useAsync, useLocalJsonState } from "myutils"
 import { useEffect, useMemo, useState } from "react"
 import { IS_REMOTE } from "../../constants"
 import { RunIcon, Skull2Icon } from "../../icons/misc"
 import { CheckIcon } from "../../icons/tailwind"
 import { ListTable } from "../../listTable"
-import { useLocalJsonState } from "../hooks"
 import { UrlParamN } from "../router"
 
 export namespace LogListN {

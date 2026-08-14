@@ -106,6 +106,7 @@ export class LogDb<Ready extends boolean = false> {
             "hvlog_stats_kills",
             "hvlog_summary_view",
             "react-resizable-panels:hvlog_detail_split",
+            "hvlog_stats_drops",
         ]) {
             localStorage.removeItem(key)
         }

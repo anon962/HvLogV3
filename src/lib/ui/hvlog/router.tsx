@@ -1,7 +1,9 @@
 import {
+    alphabetical,
     AnyFunction,
     bitmaskToBigint,
     CustomMap,
+    waitUntilStable,
     L,
     newContext,
     normalizeUrlParts,
@@ -16,6 +18,7 @@ import {
     ReactNode,
     useEffect,
     useMemo,
+    useRef,
     useState,
 } from "react"
 import { IS_REMOTE } from "../constants"
@@ -46,6 +49,8 @@ export function Router(props: {
     useEffect(() => {
         ROUTER.setValue(readUrlWithPrefix(prefix))
     }, [prefix])
+
+    useScrollRestoration()
 
     let sel: RouteSelection | null = null
     if (!!isRouteMatch(prefix, partsPrefix)) {
@@ -97,6 +102,113 @@ export function Router(props: {
         return parts
     }
 }
+
+// #region useScrollState
+function useScrollRestoration() {
+    const scrollPos = useRef(
+        new Map<
+            string,
+            Map<string, { scrollTop: number; scrollLeft: number }>
+        >(),
+    )
+    const m = scrollPos.current
+
+    let timerId: any = 0
+    const cancelTimer = () => {
+        clearTimeout(timerId)
+    }
+
+    useEffect(() => {
+        const trackScrollPos = (ev: Event) => {
+            const tgt = ev.target
+            if (!(tgt instanceof HTMLElement)) {
+                return
+            }
+
+            let curr: HTMLElement | null = tgt
+            let path = []
+            while (curr instanceof HTMLElement) {
+                let elHash = curr.tagName
+                if (curr.classList.length > 0) {
+                    elHash += `[class="${curr.className}"]`
+                }
+
+                path.push(elHash)
+                curr = curr.parentElement
+            }
+
+            const elHash = path.reverse().join(" ")
+
+            const { url } = readUrl()
+            const locHash = url.pathname + url.search
+            if (!m.has(locHash)) {
+                m.set(locHash, new Map())
+            }
+
+            cancelTimer()
+            timerId = setTimeout(() => {
+                m.get(locHash)!.set(elHash, {
+                    scrollTop: tgt.scrollTop,
+                    scrollLeft: tgt.scrollLeft,
+                })
+            }, 10)
+        }
+
+        document.addEventListener("scroll", trackScrollPos, true)
+        document.addEventListener("hvlog:urlchange", cancelTimer)
+        return () => {
+            document.removeEventListener("scroll", trackScrollPos)
+            document.removeEventListener("hvlog:urlchange", cancelTimer)
+        }
+    }, [])
+
+    useEffect(() => {
+        const restoreScrollPos = () => {
+            const { url } = readUrl()
+            const locHash = url.pathname + url.search
+
+            const tgts = m.get(locHash)
+            if (!tgts) {
+                return
+            }
+
+            for (const [
+                selector,
+                { scrollTop, scrollLeft },
+            ] of tgts.entries()) {
+                waitUntilStable<{ el: Element; top: number; left: number }>({
+                    parse: async () => {
+                        const el = document.querySelector(selector)
+                        if (!el) {
+                            return null
+                        }
+
+                        return {
+                            el,
+                            top: el.scrollTop,
+                            left: el.scrollLeft,
+                        }
+                    },
+                    stable: (prev, curr) => {
+                        return (
+                            prev.el === curr.el &&
+                            prev.top === curr.top &&
+                            prev.left === curr.left
+                        )
+                    },
+                    minStableFrames: 2,
+                    timeout: 1000,
+                }).then((x) =>
+                    x.state?.el.scrollTo({ top: scrollTop, left: scrollLeft }),
+                )
+            }
+        }
+
+        window.addEventListener("popstate", restoreScrollPos)
+        return () => window.removeEventListener("popstate", restoreScrollPos)
+    }, [])
+}
+// #endregion
 
 // #region ROUTER
 export const ROUTER = newContext(() => {
