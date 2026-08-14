@@ -1,13 +1,13 @@
+import { USERSCRIPT_CONFIG } from "@/lib/db/userscriptConfig"
 import { humanizeFightingType } from "@/lib/stats/combatStats"
 import { IndexMap } from "@/lib/stats/indexMap"
 import { humanizeBattleType } from "@/lib/stats/metaStats"
-import { USERSCRIPT_CONFIG } from "@/lib/db/userscriptConfig"
 // @ts-ignore
 import "@/lib/ui/global.css"
 import { useAsync } from "@/lib/utils/miscUtils"
 import { normalizeUrlParts } from "@/lib/utils/userscriptUtils"
 import * as lucide from "lucide-react"
-import { CustomMap, L, sleep, strip } from "myutils"
+import { CustomMap, sleep } from "myutils"
 import { StrictMode, useMemo } from "react"
 import { LOG_SOURCE } from "../../db/logSource"
 import { IS_REMOTE } from "../constants"
@@ -18,7 +18,6 @@ import { MonsterPage } from "./monsterPage"
 import { RouteDef, RouteLink, ROUTER, Router } from "./router"
 
 // @fixme: count imported from file
-// @fixme: faster local search
 // @fixme: profit history
 // @fixme: equip search
 
@@ -52,27 +51,33 @@ export const HvLog = (props: { prefix?: string[] }) => {
             "/logs": () => ({
                 component: <LogList />,
             }),
-            "/mobs": () => ({
-                component: <MonsterPage />,
-            }),
-        } satisfies Record<string, RouteDef>).map((kv) => [
-            normalizeUrlParts(kv[0].split("/")),
-            kv[1],
-        ]),
+            "/mobs": IS_REMOTE
+                ? () => ({
+                      component: <MonsterPage />,
+                  })
+                : null,
+        } satisfies Record<string, RouteDef | null>).flatMap((kv) =>
+            kv[1] ? [[normalizeUrlParts(kv[0].split("/")), kv[1]]] : [],
+        ),
     })
 
-    const sidebarItems: Array<SidebarItem> = [
-        {
-            icon: <lucide.ScrollText />,
-            path: "/logs/",
-            isActive: (parts) => parts[0] === "logs",
-            isDisabled: (parts) => parts[0] === "logs" && parts.length === 1,
-        },
-        {
-            icon: "ML",
-            path: "/mobs",
-        },
-    ]
+    const sidebarItems = (
+        [
+            {
+                icon: <lucide.ScrollText />,
+                path: "/logs/",
+                isActive: (parts) => parts[0] === "logs",
+                isDisabled: (parts) =>
+                    parts[0] === "logs" && parts.length === 1,
+            },
+            IS_REMOTE
+                ? {
+                      icon: "ML",
+                      path: "/mobs",
+                  }
+                : null,
+        ] satisfies Array<SidebarItem | null>
+    ).filter((x) => x !== null)
 
     const providers = useMemo(
         () =>

@@ -14,6 +14,7 @@ import {
     useMemo,
     useState,
 } from "react"
+import { IS_REMOTE } from "../constants"
 
 type RouteSelection = { component: ReactNode; hideSidebar?: boolean }
 type Sidebar = FC<{ children: ReactNode }>
@@ -93,8 +94,11 @@ export function Router(props: {
     }
 }
 
+// #region ROUTER
 export const ROUTER = newContext(() => {
-    const [data, setData] = useState(readUrlWithPrefix([]))
+    const [data, setData] = useState(
+        readUrlWithPrefix(IS_REMOTE ? [] : ["hvlog"]),
+    )
 
     useEffect(() => {
         patchUrlChange()
@@ -116,6 +120,7 @@ export const ROUTER = newContext(() => {
 
     return [data, setData]
 })
+// #endregion
 
 function readUrlWithPrefix(prefix: string[]) {
     const { url, parts } = readUrl()
@@ -146,15 +151,18 @@ export function RouteLink({
 }) {
     const { prefix } = ROUTER.useContext()
 
-    const hrefResolved = useMemo(
-        () =>
-            "/" +
-            normalizeUrlParts([
-                ...(ignorePrefix ? [] : prefix),
-                href ?? "",
-            ]).join("/"),
-        [prefix, href],
-    )
+    const hrefResolved = useMemo(() => {
+        let prefixResolved
+        if (ignorePrefix === undefined) {
+            prefixResolved = !href?.startsWith("http") ? prefix : []
+        } else {
+            prefixResolved = ignorePrefix ? [] : prefix
+        }
+
+        return (
+            "/" + normalizeUrlParts([...prefixResolved, href ?? ""]).join("/")
+        )
+    }, [prefix, href])
 
     return (
         <a onClick={onClickHijack} {...props} href={hrefResolved}>
