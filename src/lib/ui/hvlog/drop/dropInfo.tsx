@@ -23,7 +23,7 @@ export function DropInfo({
     }
 
     return (
-        <div className="drop-stats h-full overflow-auto flex flex-col">
+        <div className="drop-stats h-full flex flex-col">
             <div className="overview">
                 <CalculationPreview prices={prices} details={stats} />
                 <EquipSummary stats={stats} />

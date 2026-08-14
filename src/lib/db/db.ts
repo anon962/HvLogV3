@@ -6,7 +6,7 @@ import { L } from "myutils"
 const STORAGE_KEY_PERSISTENT = "HvLog"
 const STORAGE_KEY_ISEKAI = "HvLog_isekai"
 
-type IdbSchema = {
+type IdbSchemaRaw = {
     [K in keyof DbN.IdbSchema]: DbN.IdbSchema[K] extends Record<
         infer K2,
         infer V2
@@ -14,7 +14,7 @@ type IdbSchema = {
         ? { key: K2; value: V2 }
         : never
 }
-export type LogDbConn = idb.IDBPDatabase<IdbSchema>
+export type LogDbConn = idb.IDBPDatabase<IdbSchemaRaw>
 export class LogDb<Ready extends boolean = false> {
     world: DbN.HvWorld
     conn: Ready extends true ? Promise<LogDbConn> : Promise<LogDbConn> | null =
@@ -46,10 +46,11 @@ export class LogDb<Ready extends boolean = false> {
                 ? STORAGE_KEY_ISEKAI
                 : STORAGE_KEY_PERSISTENT
 
-        this.conn = idb.openDB<IdbSchema>(dbName, LogDb.schemaVersion, {
+        this.conn = idb.openDB<IdbSchemaRaw>(dbName, LogDb.schemaVersion, {
             upgrade: (conn, oldVersion, newVersion, txn, event) => {
                 L.info("Upgrading HvLog db ...")
                 this.applySchemaMigrations(conn, oldVersion)
+                this.purgeLegacyStorage()
                 L.info(`Upgraded from ${oldVersion} to ${newVersion}`)
             },
             blocked(currentVersion, blockedVersion, event) {
@@ -93,5 +94,51 @@ export class LogDb<Ready extends boolean = false> {
                 throw new Error(`Invalid version ${v}`)
             }
         }
+    }
+
+    private purgeLegacyStorage() {
+        for (const key of [
+            "hvlog_charts",
+            "hvlog_equip_log_filter",
+            "hvlog_log_list_page_size",
+            "hvlog_selected_log",
+            "hvlog_stats",
+            "hvlog_stats_finances",
+            "hvlog_stats_kills",
+            "hvlog_summary_view",
+            "react-resizable-panels:hvlog_detail_split",
+        ]) {
+            localStorage.removeItem(key)
+        }
+    }
+
+    async get<
+        Store extends keyof DbN.IdbSchema,
+        Key extends keyof DbN.IdbSchema[Store],
+    >(
+        storeName: Store,
+        key: Key,
+    ): Promise<DbN.IdbSchema[Store][Key] | undefined> {
+        const db = await this.connect()
+        const conn = await db.conn
+        // @ts-ignore
+        return await conn.get(storeName, key)
+    }
+    async put<
+        Store extends keyof DbN.IdbSchema,
+        Key extends keyof DbN.IdbSchema[Store],
+    >(storeName: Store, value: DbN.IdbSchema[Store][Key], key?: Key) {
+        const db = await this.connect()
+        const conn = await db.conn
+        return await conn.put(storeName, value, key)
+    }
+
+    async transaction<
+        Stores extends Array<keyof DbN.IdbSchema>,
+        Mode extends "readonly" | "readwrite",
+    >(storeNames: Stores, mode?: Mode) {
+        const db = await this.connect()
+        const conn = await db.conn
+        return conn.transaction(storeNames, mode)
     }
 }

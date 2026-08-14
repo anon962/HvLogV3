@@ -1,7 +1,8 @@
-import { ISODate } from "myutils"
+import { ISODate, uuidWithFallback } from "myutils"
 import { SearchSummary } from "../stats/summary"
 import { BaseHvEvent } from "../utils/eventParser"
 import { MetaSummary } from "../stats/metaStats"
+import { UserscriptConfig } from "./userscriptConfig"
 
 export type LogEntry<TEvent extends BaseHvEvent = BaseHvEvent> =
     | { type: "event"; event: TEvent }
@@ -48,6 +49,7 @@ export namespace DbN {
 
     export interface IdbSchema {
         kv: {
+            config: UserscriptConfig
             compressDone: Array<LogId>
             prices: DbN.Prices
         }
@@ -95,16 +97,31 @@ export namespace DbN {
         complete: Record<string, any>
     }
 
-    export function broadcastIdbEvent(ev: IdbEvent) {
+    const sourceId = uuidWithFallback()
+    interface IdbEventRaw {
+        event: IdbEvent
+        sourceId: string
+    }
+    export function broadcastIdbEvent(event: IdbEvent) {
         const bc = new BroadcastChannel(DbN.IDB_BC_ID)
-        bc.postMessage(ev)
+        bc.postMessage({ event, sourceId } satisfies IdbEventRaw)
         bc.close()
     }
     export function listenIdbEvent(
-        onmessage: (ev: IdbEvent, raw: MessageEvent) => void,
+        onmessage: (
+            ev: IdbEvent,
+            opts: {
+                raw: MessageEvent<IdbEventRaw>
+                isSameTab: boolean
+            },
+        ) => void,
     ) {
         const bc = new BroadcastChannel(DbN.IDB_BC_ID)
-        bc.onmessage = (raw) => onmessage(raw.data, raw)
+        bc.onmessage = (raw: MessageEvent<IdbEventRaw>) =>
+            onmessage(raw.data.event, {
+                raw,
+                isSameTab: raw.data.sourceId === sourceId,
+            })
         return () => bc.close()
     }
 
@@ -117,5 +134,8 @@ export namespace DbN {
         ids: Array<LogId>
     }
     export const IDB_CONFIG_CHANGE_EVENT = "hvlog_config_change"
-    export type IdbConfigChangeEvent = { type: typeof IDB_CONFIG_CHANGE_EVENT }
+    export type IdbConfigChangeEvent = {
+        type: typeof IDB_CONFIG_CHANGE_EVENT
+        config: UserscriptConfig
+    }
 }

@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "../shadcn/tabs"
 import { CombatInfo } from "./combat/combatInfo"
 import { DropInfo } from "./drop/dropInfo"
 import { LogEventList } from "./logEventList"
+import { L } from "myutils"
 
 export const LogDetailsPane = React.memo(
     (props: {
@@ -27,7 +28,7 @@ export const LogDetailsPane = React.memo(
                     defaultValue={IS_REMOTE ? "combat" : "stats"}
                     className="details-pane h-full w-full"
                 >
-                    <TabsList className="grid grid-cols-3 w-full mb-2">
+                    <TabsList className="w-full mb-2 flex">
                         <TabsTrigger value="stats" className="font-bold py-1">
                             Drops
                         </TabsTrigger>
@@ -42,7 +43,7 @@ export const LogDetailsPane = React.memo(
                     </TabsList>
 
                     <TabsContent value="stats" className="h-full min-h-0">
-                        <Card className="min-h-full py-0 h-full">
+                        <Card className="min-h-full py-0 h-full overflow-auto">
                             <CardContent className="h-full p-8">
                                 {props.details ? (
                                     <DropInfo
@@ -72,7 +73,10 @@ export const LogDetailsPane = React.memo(
                         </Card>
                     </TabsContent>
 
-                    <TabsContent value="events" className="h-full min-h-0">
+                    <TabsContent
+                        value="events"
+                        className="h-full min-h-0 overflow-auto"
+                    >
                         <Card className="min-h-0 h-full py-0">
                             <CardContent className="p-0 min-h-0">
                                 {props.entries && props.indexMap ? (

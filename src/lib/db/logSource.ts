@@ -12,17 +12,18 @@ import {
     objectEntries,
     sleep,
     sort,
-    zip,
-    L,
     Unsub,
+    zip,
 } from "myutils"
 import { MetaSummary } from "../stats/metaStats"
 import { IS_REMOTE } from "../ui/constants"
+import { parseLogWithDetails } from "../worker"
 import { LogDb, LogDbConn } from "./db"
 import { LogSourceN as N } from "./logSourceN"
-import { parseLogWithDetails } from "../worker"
+import { useEffect, useRef } from "react"
 // @ts-ignore
 import parseLogWithDetailsSrc from "../worker?workerfn=parseLogWithDetails"
+import { USERSCRIPT_CONFIG } from "./userscriptConfig"
 
 // #region remote
 class LogSourceRemote implements N.Protocol {
@@ -218,22 +219,26 @@ class LogSourceLocal implements N.Protocol {
     }
     ainit: Promise<void>
 
-    constructor() {
+    constructor(prices: Promise<DbN.Prices>) {
         this.db = {
             persistent: new LogDb({ world: "persistent" }).connect(),
             isekai: new LogDb({ world: "isekai" }).connect(),
         }
         this.pool = this.initWorkerPool()
-        this.prices = Promise.resolve({})
         this.world = "persistent"
 
+        this.prices = prices
+
         const self: LogSourceLocal = this
-        this.bcSub = DbN.listenIdbEvent((ev) => {
+        this.bcSub = DbN.listenIdbEvent((ev, details) => {
             switch (ev.type) {
                 case DbN.IDB_LOG_INSERT_EVENT:
                     for (const id of ev.ids) {
                         self.logIds[ev.world].add(id)
                     }
+                    break
+                case "hvlog_config_change":
+                    this.prices = prices
                     break
             }
         })
@@ -523,7 +528,19 @@ class LogSourceLocal implements N.Protocol {
 }
 // #endregion
 
-export const LOG_SOURCE = newContext<N.Protocol>(() => [
-    IS_REMOTE ? new LogSourceRemote() : new LogSourceLocal(),
-    () => {},
-])
+export const LOG_SOURCE = newContext<N.Protocol>(() => {
+    const { config, ready: configReady } = USERSCRIPT_CONFIG.useContext()
+    const { promise: prices, resolve: resolvePrices } = useRef(
+        Promise.withResolvers<DbN.Prices>(),
+    ).current
+    useEffect(() => {
+        if (configReady) {
+            resolvePrices(config.prices)
+        }
+    }, [config, configReady])
+
+    return [
+        IS_REMOTE ? new LogSourceRemote() : new LogSourceLocal(prices),
+        () => {},
+    ]
+})
