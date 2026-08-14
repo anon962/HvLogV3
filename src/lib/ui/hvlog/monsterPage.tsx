@@ -1,3 +1,4 @@
+import { lucide } from "@/lib/ui/constants"
 import {
     Autocomplete,
     AutocompleteContent,
@@ -5,14 +6,13 @@ import {
     AutocompleteItem,
     AutocompleteList,
 } from "@/lib/ui/shadcn/autocomplete"
-import { lucide } from "@/lib/ui/constants"
 import { CommonProps } from "@/lib/utils/miscUtils"
+import { cn, dedupe, mapEntries, NgramSearch } from "myutils"
 import { useMemo } from "react"
 import { ListTable } from "../listTable"
 import { Input } from "../shadcn/input"
-import { MonsterPageN } from "./monsterPageN"
-import { cn, dedupe, mapEntries, NgramSearch } from "myutils"
 import * as Tabs from "../shadcn/tabs"
+import { MonsterPageN } from "./monsterPageN"
 
 export function MonsterPage(props: {}) {
     return (

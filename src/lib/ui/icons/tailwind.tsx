@@ -28,7 +28,7 @@ SOFTWARE.
 
 **/
 
-import { cn } from "@/lib/utils/shadcnUtils"
+import { cn } from "myutils"
 import { HTMLAttributes } from "react"
 
 export interface IconProps {

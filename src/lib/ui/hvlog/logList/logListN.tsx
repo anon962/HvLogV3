@@ -1,20 +1,20 @@
+import { LOG_SOURCE } from "@/lib/db/logSource"
+import { LogSourceN } from "@/lib/db/logSourceN"
 import {
     humanizeFightingType,
     MAGE_STYLES,
     MELEE_STYLES,
 } from "@/lib/stats/combatStats"
 import { humanizeBattleType } from "@/lib/stats/metaStats"
-import { LOG_SOURCE } from "@/lib/db/logSource"
-import { formatNumber, newContext, useAsync } from "@/lib/utils/miscUtils"
-import { cn, range, sum } from "myutils"
+import { formatNumber } from "@/lib/utils/miscUtils"
+import { cn, newContext, range, useAsync } from "myutils"
 import { useEffect, useMemo, useState } from "react"
 import { IS_REMOTE } from "../../constants"
 import { RunIcon, Skull2Icon } from "../../icons/misc"
 import { CheckIcon } from "../../icons/tailwind"
 import { ListTable } from "../../listTable"
-import { UrlParamN } from "../router"
 import { useLocalJsonState } from "../hooks"
-import { LogSourceN } from "@/lib/db/logSourceN"
+import { UrlParamN } from "../router"
 
 export namespace LogListN {
     export const COLS = {

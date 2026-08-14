@@ -1,5 +1,5 @@
-import { L, sum, zip } from "myutils"
-import React, { Dispatch, SetStateAction } from "react"
+import { mountReactWrapper, sum } from "myutils"
+import React from "react"
 import { zstdWasm } from "../ui/constants"
 // @ts-ignore
 import __zstdInline__ from "virtual:zstd-inline"
@@ -15,6 +15,13 @@ import {
     ZipReader,
     ZipWriter,
 } from "@zip.js/zip.js"
+// @ts-ignore
+import cssRoot from "@/lib/ui/global.css?inline"
+
+export type CommonProps = Pick<
+    React.ComponentProps<"div">,
+    "className" | "style"
+>
 
 export function formatNumber(x: number, alwaysShowSign?: boolean) {
     // prettier-ignore
@@ -49,245 +56,6 @@ export function concatArrays(xs: Uint8Array[]) {
     }
 
     return total
-}
-
-export function newContext<T = unknown>(
-    init: () => [T, Dispatch<SetStateAction<T>>],
-) {
-    const ctx = React.createContext<T>(null as any)
-
-    let setValue: Dispatch<SetStateAction<T>> = null as any
-    const Provider = React.memo((props: { children: React.ReactNode }) => {
-        const [value, setValue2] = init()
-        setValue = setValue2
-
-        return React.createElement(ctx.Provider, {
-            value,
-            children: props.children,
-        })
-    })
-
-    return {
-        ctx,
-        setValue: (update: SetStateAction<T>) => setValue(update),
-        Provider,
-        useContext: () => React.useContext(ctx),
-    }
-}
-
-export function useAsync<TReq, TRes>(
-    getter: (req: TReq) => Promise<TRes>,
-    init: TReq,
-) {
-    const [request, setRequest] = React.useState<TReq>(init)
-    const [data, setData] = React.useState<TRes | null>(null)
-    const [isPending, setIsPending] = React.useState(true)
-
-    React.useEffect(() => {
-        let isCancelled = false
-
-        const req = request
-        ;(async () => {
-            const d = await getter(req)
-            if (!isCancelled) {
-                setData(d)
-                setIsPending(false)
-            }
-        })()
-
-        setIsPending(true)
-
-        return () => {
-            isCancelled = true
-        }
-    }, [request])
-
-    return {
-        data,
-        isPending,
-        request,
-        setRequest,
-    }
-}
-
-export function useAsync2<TReq, TRes>(
-    getter: (req: TReq) => Promise<TRes>,
-    request: TReq,
-) {
-    const [data, setData] = React.useState<TRes | null>(null)
-    const [isPending, setIsPending] = React.useState(true)
-
-    React.useEffect(() => {
-        let isCancelled = false
-        setIsPending(true)
-        ;(async () => {
-            const d = await getter(request)
-            if (!isCancelled) {
-                setData(d)
-                setIsPending(false)
-            }
-        })()
-        return () => {
-            isCancelled = true
-        }
-    }, [request])
-
-    return { data, isPending }
-}
-
-export function useAsyncGen<TReq, TRes>(
-    getter: (req: TReq) => AsyncGenerator<TRes, TRes, void>,
-    init: TReq,
-) {
-    const [request, setRequest] = React.useState<TReq>(init)
-    const [data, setData] = React.useState<TRes | null>(null)
-    const [isPending, setIsPending] = React.useState(true)
-    const [isStale, setIsStale] = React.useState(true)
-
-    React.useEffect(() => {
-        let isCancelled = false
-
-        const req = request
-        const gen = getter(req)
-        ;(async () => {
-            while (true) {
-                const { value, done } = await gen.next()
-                if (isCancelled) {
-                    return
-                }
-
-                if (done) {
-                    setData(value)
-                    setIsStale(false)
-                    setIsPending(false)
-                    return
-                } else {
-                    setData(value)
-                    setIsStale(true)
-                }
-            }
-        })()
-
-        setIsPending(true)
-        setIsStale(true)
-
-        return () => {
-            isCancelled = true
-            gen.return(null as any)
-        }
-    }, [request])
-
-    return {
-        data,
-        isPending,
-        isStale,
-        request,
-        setRequest,
-    }
-}
-
-export function ReactMemo<T, P = {}>(component: (props: P) => React.ReactNode) {
-    return React.memo(component) as (props: P) => React.ReactNode
-}
-
-export type CommonProps = Pick<
-    React.ComponentProps<"div">,
-    "className" | "style"
->
-
-type MergePropStrategy<T = unknown> =
-    | { type: "override" }
-    | { type: "add"; sep?: T }
-    | {
-          type: "custom"
-          fn: (base: T, override: T) => T
-      }
-type MergePropStrategyMap = {
-    string: MergePropStrategy<string>
-    number: MergePropStrategy<number>
-    bigint: MergePropStrategy<bigint>
-    boolean: MergePropStrategy<boolean>
-}
-
-export function mergeProps<TBase extends React.ComponentProps<"div">>(
-    base: TBase,
-    overrides?: any,
-    strategy?: Partial<MergePropStrategyMap>,
-): any {
-    const result = { ...base } as any
-
-    const strat: MergePropStrategyMap = {
-        string: {
-            type: "add",
-            sep: " ",
-        },
-        number: {
-            type: "override",
-        },
-        bigint: {
-            type: "override",
-        },
-        boolean: {
-            type: "override",
-        },
-        ...strategy,
-    }
-
-    for (const k of Object.keys(overrides ?? {})) {
-        const bv = (base as any)[k]
-        const bt = typeof bv
-        const ov = overrides[k]
-        const ot = typeof ov
-
-        if (!(k in base)) {
-            result[k] = ov
-        } else if (!bv && ov) {
-            result[k] = ov
-        } else if (bv && !ov) {
-            // result[k] = bv
-        } else if (!bv && !ov) {
-            // result[k] = bv
-        } else if (bt !== ot) {
-            L.error(`Cannot merge ${bv} (${bt}) with ${ov} (${ot})`)
-        } else {
-            switch (bt) {
-                case "string":
-                case "number":
-                case "bigint":
-                case "boolean":
-                    const s = strat[bt]
-                    switch (s.type) {
-                        case "override":
-                            result[k] = ov
-                            break
-                        case "add":
-                            if (s.sep) {
-                                result[k] += s.sep
-                            }
-                            result[k] += ov
-                            break
-                        case "custom":
-                            result[k] = (s.fn as any)(bv, ov)
-                            break
-                    }
-                    break
-                case "symbol":
-                case "object":
-                case "function":
-                    L.error(`Cannot merge ${bv} (${bt}) with ${ov} (${ot})`)
-                    break
-            }
-        }
-    }
-
-    return result
-}
-
-export function css(
-    strings: TemplateStringsArray,
-    ...values: unknown[]
-): string {
-    return strings.reduce((acc, s, i) => acc + s + (values[i] ?? ""), "")
 }
 
 export function initZstdWasm() {
@@ -438,3 +206,23 @@ export function randomUint8Array(size: number) {
 
     return result
 }
+export type RootComponent<T = {}> = React.FC<{} & T>
+
+export const mountReact = mountReactWrapper({
+    unmountEventId: "hvlog:unmount",
+    shadowHostClass: "hvlog-shadow",
+    shadowMountSelector: ".hvlog-host",
+    shadowTemplate: (opts) => `
+        <div class="hvlog-container dialog-container dark">
+            <style>
+                :host {
+                    all: initial;
+                }
+
+                ${!opts.skipStyles ? cssRoot : ""}
+            </style>
+            <div class="hvlog-host h-full w-full">
+            </div>
+        </div>
+    `,
+})

@@ -1,5 +1,5 @@
 import { HvLog } from "@/lib/ui/hvlog/hvLog"
-import { mountReact } from "@/lib/utils/userscriptUtils"
+import { mountReact } from "@/lib/utils/miscUtils"
 
 export function registerViewLogs() {
     window.GM_registerMenuCommand(

@@ -1,12 +1,11 @@
 "use client"
 
+import { ScrollArea } from "@/lib/ui/shadcn/scroll-area"
+import { CommonProps } from "@/lib/utils/miscUtils"
 import { Autocomplete as AutocompletePrimitive } from "@base-ui/react/autocomplete"
 import { cva, type VariantProps } from "class-variance-authority"
-
-import { cn } from "@/lib/utils/shadcnUtils"
-import { ScrollArea } from "@/lib/ui/shadcn/scroll-area"
-import { XIcon, ChevronsUpDownIcon } from "lucide-react"
-import { CommonProps } from "@/lib/utils/miscUtils"
+import { ChevronsUpDownIcon, XIcon } from "lucide-react"
+import { cn } from "myutils"
 
 const inputVariants = cva(
     "outline-none flex w-full text-foreground placeholder:text-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 [[readonly]]:bg-muted/80 [[readonly]]:cursor-not-allowed border border-input focus-visible:border-ring aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:aria-invalid:border-destructive/50 rounded-lg bg-transparent dark:bg-input/30 text-sm transition-colors focus-visible:ring-ring/50 focus-visible:ring-3 aria-invalid:ring-3",
@@ -337,22 +336,22 @@ function AutocompleteSeparator({
 
 export {
     Autocomplete,
-    AutocompleteValue,
-    AutocompleteTrigger,
-    AutocompleteInput,
-    AutocompleteStatus,
-    AutocompletePortal,
+    AutocompleteArrow,
     AutocompleteBackdrop,
-    AutocompletePositioner,
-    AutocompleteContent,
-    AutocompleteList,
+    AutocompleteClear,
     AutocompleteCollection,
-    AutocompleteRow,
-    AutocompleteItem,
+    AutocompleteContent,
+    AutocompleteEmpty,
     AutocompleteGroup,
     AutocompleteGroupLabel,
-    AutocompleteEmpty,
-    AutocompleteClear,
-    AutocompleteArrow,
+    AutocompleteInput,
+    AutocompleteItem,
+    AutocompleteList,
+    AutocompletePortal,
+    AutocompletePositioner,
+    AutocompleteRow,
     AutocompleteSeparator,
+    AutocompleteStatus,
+    AutocompleteTrigger,
+    AutocompleteValue,
 }

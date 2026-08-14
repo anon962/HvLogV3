@@ -1,14 +1,14 @@
 import {
+    ChevronFirstIcon,
+    ChevronLastIcon,
     ChevronLeftIcon,
     ChevronRightIcon,
     MoreHorizontalIcon,
-    ChevronFirstIcon,
-    ChevronLastIcon,
 } from "lucide-react"
 import * as React from "react"
 
 import { Button, buttonVariants } from "@/lib/ui/shadcn/button"
-import { cn } from "@/lib/utils/shadcnUtils"
+import { cn } from "myutils"
 import { RouteLink } from "../hvlog/router"
 
 function Pagination({ className, ...props }: React.ComponentProps<"nav">) {
@@ -163,10 +163,10 @@ export {
     Pagination,
     PaginationContent,
     PaginationEllipsis,
+    PaginationFirst,
     PaginationItem,
+    PaginationLast,
     PaginationLink,
     PaginationNext,
     PaginationPrevious,
-    PaginationFirst,
-    PaginationLast,
 }

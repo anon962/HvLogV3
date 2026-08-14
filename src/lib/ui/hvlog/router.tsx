@@ -1,10 +1,14 @@
-import { newContext } from "@/lib/utils/miscUtils"
 import {
+    AnyFunction,
+    bitmaskToBigint,
+    CustomMap,
+    L,
+    newContext,
     normalizeUrlParts,
     patchUrlChange,
+    range,
     readUrl,
-} from "@/lib/utils/userscriptUtils"
-import { AnyFunction, bitmaskToBigint, CustomMap, L, range } from "myutils"
+} from "myutils"
 import {
     ComponentPropsWithoutRef,
     FC,
@@ -101,7 +105,7 @@ export const ROUTER = newContext(() => {
     )
 
     useEffect(() => {
-        patchUrlChange()
+        patchUrlChange("hvlog:urlchange")
 
         const onUrlChange = () => {
             setData((x) => ({ ...readUrlWithPrefix(x.prefix) }))

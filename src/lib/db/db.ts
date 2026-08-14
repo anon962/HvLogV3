@@ -1,7 +1,6 @@
 import * as idb from "idb"
+import { L, readUrl } from "myutils"
 import { DbN } from "./dbN"
-import { readUrl } from "../utils/userscriptUtils"
-import { L } from "myutils"
 
 const STORAGE_KEY_PERSISTENT = "HvLog"
 const STORAGE_KEY_ISEKAI = "HvLog_isekai"

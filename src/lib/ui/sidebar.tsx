@@ -1,10 +1,8 @@
+import { cn, compareArrays, normalizeUrlParts } from "myutils"
 import { ReactNode } from "react"
-import { cn } from "../utils/shadcnUtils"
-import { MyTooltip } from "./myTooltip"
-import { RouteLink, ROUTER } from "./hvlog/router"
 import { CommonProps } from "../utils/miscUtils"
-import { compareArrays } from "myutils"
-import { normalizeUrlParts } from "../utils/userscriptUtils"
+import { RouteLink, ROUTER } from "./hvlog/router"
+import { MyTooltip } from "./myTooltip"
 
 export type SidebarItem = {
     icon: ReactNode

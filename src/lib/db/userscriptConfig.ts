@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react"
-import { newContext } from "../utils/miscUtils"
 import { DbN } from "./dbN"
 import { LogDb } from "./db"
+import { newContext } from "myutils"
 
 export const USERSCRIPT_CONFIG = newContext(() => {
     const [ctx, setCtx] = useState({

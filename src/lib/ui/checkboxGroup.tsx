@@ -1,7 +1,7 @@
-import { cn, range, sort } from "myutils"
-import { CommonProps, mergeProps } from "../utils/miscUtils"
-import { Checkbox } from "./shadcn/checkbox"
+import { cn, mergeProps, range, sort } from "myutils"
 import { useRef, useState } from "react"
+import { CommonProps } from "../utils/miscUtils"
+import { Checkbox } from "./shadcn/checkbox"
 
 export function CheckboxGroup({
     header,

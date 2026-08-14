@@ -1,6 +1,6 @@
 import * as lucide from "lucide-react"
-import React, { useState, useEffect } from "react"
-import { cn } from "../utils/shadcnUtils"
+import { cn } from "myutils"
+import { useEffect, useState } from "react"
 import { CommonProps } from "../utils/miscUtils"
 
 export function Loader(props: { show: boolean; delay?: number } & CommonProps) {
