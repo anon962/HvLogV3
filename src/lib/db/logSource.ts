@@ -408,6 +408,14 @@ class LogSourceLocal implements N.Protocol {
             const allIds = this.logIds[this.world]
             const ids: Array<DbN.LogId> = []
 
+            let toFetch = Promise.resolve<any>(null)
+            const pushToFetch = (k: LocalKey) => {
+                toFetch = toFetch.then(async () => {
+                    await this.metaSearchCache.fetch(k)
+                    await sleep(1)
+                })
+            }
+
             const xs: Array<{ meta: MetaSummary; search: SearchSummary }> = []
             for (const id of allIds) {
                 const k = {
@@ -419,7 +427,7 @@ class LogSourceLocal implements N.Protocol {
                     xs.push(fromCache)
                     ids.push(id)
                 } else {
-                    this.metaSearchCache.fetch(k)
+                    pushToFetch(k)
                 }
             }
             const hasPending = xs.length !== allIds.size

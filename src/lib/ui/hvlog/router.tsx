@@ -33,28 +33,23 @@ export function Router(props: {
     defaultSidebar?: Sidebar
     defaultRoute?: () => RouteSelection
 }) {
-    let { parts, url } = ROUTER.useContext()
+    let { url, partsFull, partsPrefix, partsPath } = ROUTER.useContext()
     const prefix = useMemo(
         () => normalizeUrlParts(props.prefix ?? []),
         [props.prefix],
     )
     useEffect(() => {
-        ROUTER.setValue((x) => ({ ...x, prefix }))
+        ROUTER.setValue(readUrlWithPrefix(prefix))
     }, [prefix])
-
-    const [partsPrefix, partsRem] = useMemo(
-        () => [parts.slice(0, prefix.length), parts.slice(prefix.length)],
-        [parts, prefix],
-    )
 
     let sel: RouteSelection | null = null
     if (!!isRouteMatch(prefix, partsPrefix)) {
         for (const [patt, factory] of props.routes.entries()) {
-            if (!isRouteMatch(patt, partsRem)) {
+            if (!isRouteMatch(patt, partsPath)) {
                 continue
             }
 
-            const x = factory(partsRem, url)
+            const x = factory(partsPath, url)
             if ("redirect" in x) {
                 window.history.replaceState(
                     null,
@@ -69,7 +64,7 @@ export function Router(props: {
     }
 
     if (!sel) {
-        L.error("Invalid route", parts)
+        L.error("Invalid route", partsFull)
         if (props.defaultRoute) {
             sel = props.defaultRoute()
         } else {
@@ -99,13 +94,13 @@ export function Router(props: {
 }
 
 export const ROUTER = newContext(() => {
-    const [data, setData] = useState({ prefix: [] as string[], ...readUrl() })
+    const [data, setData] = useState(readUrlWithPrefix([]))
 
     useEffect(() => {
         patchUrlChange()
 
         const onUrlChange = () => {
-            setData((x) => ({ ...x, ...readUrl() }))
+            setData((x) => ({ ...readUrlWithPrefix(x.prefix) }))
         }
 
         window.addEventListener("popstate", onUrlChange)
@@ -121,6 +116,22 @@ export const ROUTER = newContext(() => {
 
     return [data, setData]
 })
+
+function readUrlWithPrefix(prefix: string[]) {
+    const { url, parts } = readUrl()
+    const [partsPrefix, partsPath] = [
+        parts.slice(0, prefix.length),
+        parts.slice(prefix.length),
+    ]
+
+    return {
+        url,
+        prefix,
+        partsFull: parts,
+        partsPath,
+        partsPrefix,
+    }
+}
 // #endregion
 
 // #region RouteLink

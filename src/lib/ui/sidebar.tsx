@@ -1,16 +1,17 @@
 import { ReactNode } from "react"
 import { cn } from "../utils/shadcnUtils"
-import { readUrl } from "../utils/userscriptUtils"
 import { MyTooltip } from "./myTooltip"
-import { RouteLink } from "./hvlog/router"
+import { RouteLink, ROUTER } from "./hvlog/router"
 import { CommonProps } from "../utils/miscUtils"
+import { compareArrays } from "myutils"
+import { normalizeUrlParts } from "../utils/userscriptUtils"
 
 export type SidebarItem = {
     icon: ReactNode
     path: string
     tooltip?: string
-    isActive?: (url: URL) => boolean
-    isDisabled?: (url: URL, isActive: boolean) => boolean
+    isActive?: (parts: string[], url: URL) => boolean
+    isDisabled?: (parts: string[], isActive: boolean, url: URL) => boolean
 }
 
 export function Sidebar(props: {
@@ -67,11 +68,14 @@ function SidebarLink({
     item: SidebarItem
     target?: string
 } & CommonProps) {
-    const curr = new URL(window.location.href)
+    const { url, partsPath } = ROUTER.useContext()
 
-    const isActive = item.isActive?.(curr) ?? curr.pathname === item.path
+    const isActive =
+        item.isActive?.(partsPath, url) ??
+        compareArrays(partsPath, normalizeUrlParts(item.path.split("/")))
     const isDisabled =
-        item.isDisabled?.(curr, isActive) ?? curr.pathname === item.path
+        item.isDisabled?.(partsPath, isActive, url) ??
+        compareArrays(partsPath, normalizeUrlParts(item.path.split("/")))
 
     return (
         <MyTooltip
