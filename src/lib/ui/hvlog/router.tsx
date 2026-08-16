@@ -217,8 +217,6 @@ export const ROUTER = newContext(() => {
     )
 
     useEffect(() => {
-        patchUrlChange("hvlog:urlchange")
-
         const onUrlChange = () => {
             setData((x) => ({ ...readUrlWithPrefix(x.prefix) }))
         }

@@ -1,7 +1,7 @@
 @layer theme, base, mybase, components, utilities, mine;
-@import "./components.css";
-@import "tw-animate-css";
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "./components.css";
 
 @layer mybase {
     * {

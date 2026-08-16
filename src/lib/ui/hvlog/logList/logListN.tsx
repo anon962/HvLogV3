@@ -7,7 +7,14 @@ import {
 } from "@/lib/stats/combatStats"
 import { humanizeBattleType } from "@/lib/stats/metaStats"
 import { formatNumber } from "@/lib/utils/miscUtils"
-import { cn, newContext, range, useAsync, useLocalJsonState } from "myutils"
+import {
+    cn,
+    isEqual,
+    newContext,
+    range,
+    useAsync,
+    useLocalJsonState,
+} from "myutils"
 import { useEffect, useMemo, useState } from "react"
 import { IS_REMOTE } from "../../constants"
 import { RunIcon, Skull2Icon } from "../../icons/misc"
@@ -54,8 +61,8 @@ export namespace LogListN {
             align: "text-right",
             cell: (x) => ({
                 content: formatDuration(
-                    new Date(x.meta.start),
-                    new Date(x.meta.lastUpdate),
+                    new Date(x.meta.startedAt),
+                    new Date(x.meta.endedAt),
                 ),
                 className: "duration",
             }),
@@ -91,7 +98,7 @@ export namespace LogListN {
                 return xs.map(() => now)
             },
             cell: (x, now) => ({
-                ...formatStartDate(x.meta.start, now),
+                ...formatStartDate(x.meta.startedAt, now),
                 className: "date",
             }),
         } as const satisfies ListTable.Column<LogSourceN.SearchResult, Date>,
@@ -448,7 +455,7 @@ export namespace LogListN {
             const currReq = fetcher.request
             const refetchTimer = setTimeout(
                 () => {
-                    if (fetcher.request === currReq) {
+                    if (isEqual(fetcher.request, currReq)) {
                         fetcher.setRequest({ ...currReq })
                     }
                 },

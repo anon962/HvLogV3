@@ -10,6 +10,8 @@ declare global {
             workerPool: WorkerPoolN.Pool
         }
 
+        unsafeWindow: Window
+
         GM_registerMenuCommand: (
             name: string,
             open: (ev: MouseEvent | KeyboardEvent) => void,

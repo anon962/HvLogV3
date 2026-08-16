@@ -84,14 +84,33 @@ export class LogDb<Ready extends boolean = false> {
                 conn.createObjectStore("summariesForMeta", { keyPath: "id" })
                 conn.createObjectStore("summariesForSearch", { keyPath: "id" })
 
-                conn.deleteObjectStore("live")
-                conn.createObjectStore("live")
+                this.deleteObjectStore(conn, "live")
+                this.deleteObjectStore(conn, "live_meta")
+                this.deleteObjectStore(conn, "live_hash")
+
+                this.createObjectStore(conn, "live")
+                this.createObjectStore(conn, "kv")
 
                 v += 1
                 continue
             } else {
                 throw new Error(`Invalid version ${v}`)
             }
+        }
+    }
+
+    private createObjectStore(
+        conn: LogDbConn,
+        storeId: keyof DbN.IdbSchema,
+        optionalParameters?: IDBObjectStoreParameters,
+    ) {
+        if (!conn.objectStoreNames.contains(storeId)) {
+            conn.createObjectStore(storeId, optionalParameters)
+        }
+    }
+    private deleteObjectStore(conn: LogDbConn, storeId: keyof DbN.IdbSchema) {
+        if (conn.objectStoreNames.contains(storeId)) {
+            conn.deleteObjectStore(storeId)
         }
     }
 
@@ -107,6 +126,7 @@ export class LogDb<Ready extends boolean = false> {
             "hvlog_summary_view",
             "react-resizable-panels:hvlog_detail_split",
             "hvlog_stats_drops",
+            "hvlog_config",
         ]) {
             localStorage.removeItem(key)
         }
@@ -132,7 +152,14 @@ export class LogDb<Ready extends boolean = false> {
         const conn = await db.conn
         return await conn.put(storeName, value, key)
     }
-
+    async add<
+        Store extends keyof DbN.IdbSchema,
+        Key extends keyof DbN.IdbSchema[Store],
+    >(storeName: Store, value: DbN.IdbSchema[Store][Key], key?: Key) {
+        const db = await this.connect()
+        const conn = await db.conn
+        return await conn.add(storeName, value, key)
+    }
     async transaction<
         Stores extends Array<keyof DbN.IdbSchema>,
         Mode extends "readonly" | "readwrite",

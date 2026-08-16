@@ -585,6 +585,7 @@ function useImportState() {
                             lines: oldLog.entries.map((x) =>
                                 MigrateV2.reverseEntry(x),
                             ),
+                            reversed: true,
                         } as const
                         toInsert.push(newLog)
                         count += 1
@@ -640,7 +641,7 @@ function useImportState() {
                     const { byteCount } = await importOldLogs({
                         dbP: opts.dbs.dbP,
                         dbI: opts.dbs.dbI,
-                        logs: fromFile,
+                        logs: fromFile.map((x) => ({ ...x, reversed: true })),
                         cb: (stats, idx) => status(idx, fromFile.length),
                     })
                     stats.byteCount += byteCount
@@ -747,6 +748,7 @@ function useImportState() {
                             lines: l.entries.map((x) =>
                                 MigrateV2.reverseEntry(x),
                             ),
+                            reversed: false,
                         })),
                         cb: (stats, idx) => status(idx, logs.length),
                     })
@@ -854,6 +856,7 @@ function useImportState() {
         world: "persistent" | "isekai"
         meta: MigrateV2.Log["meta"]
         lines: string[]
+        reversed: boolean
     }
     type ImportStats = {
         byteCount: number
@@ -911,7 +914,21 @@ function useImportState() {
                 const txn = db.transaction(["logsMeta", "logsRaw"], "readwrite")
                 for (const l of logs) {
                     if (l.meta.world === world) {
-                        await txn.objectStore("logsMeta").put(l.meta)
+                        await txn.objectStore("logsMeta").put({
+                            id: l.meta.id,
+                            startedAt: l.meta.start,
+                            endedAt: l.meta.lastUpdate,
+                            world,
+                            user_id: null,
+                            user_name: null,
+                            errors: {
+                                missingTurns: false,
+                            },
+                            reversed: {
+                                at: new Date().toISOString(),
+                                version: "v2",
+                            },
+                        })
                         await txn.objectStore("logsRaw").put(l.raw)
                     }
                 }

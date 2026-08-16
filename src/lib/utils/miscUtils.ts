@@ -226,3 +226,47 @@ export const mountReact = mountReactWrapper({
         </div>
     `,
 })
+
+// Monsterbation clears timers on new round which causes sleep() to never return
+// This fixes that by patching clearInterval() to check for any ids that we're using
+export const ACTIVE_TIMERS = new Set<number>()
+export function patchClearInterval() {
+    const clearInterval = window.unsafeWindow.clearInterval
+    window.unsafeWindow.clearInterval = (id: any) => {
+        if (ACTIVE_TIMERS.has(id)) {
+            return
+        }
+
+        clearInterval(id)
+    }
+
+    const clearTimeout = window.unsafeWindow.clearTimeout
+    window.unsafeWindow.clearTimeout = (id: any) => {
+        if (ACTIVE_TIMERS.has(id)) {
+            return
+        }
+
+        clearTimeout(id)
+    }
+}
+export async function sleepWithRegistration(t: number): Promise<void> {
+    return new Promise((resolve) => {
+        // Apparently chrome clears timers if document (body?) is replaced
+        // https://stackoverflow.com/questions/28516274/interval-set-through-content-script-being-cleared-by-webpage
+        // So patching the clearInterval that MB uses above isn't enough to prevent forever-sleeps
+        const forceResolve = () => {
+            console.debug("Force resolving sleep()")
+            resolve()
+            document.removeEventListener("DOMContentLoaded", forceResolve)
+        }
+        document.addEventListener("DOMContentLoaded", forceResolve)
+
+        const cb = () => {
+            ACTIVE_TIMERS.delete(id)
+            document.removeEventListener("DOMContentLoaded", forceResolve)
+            resolve()
+        }
+        let id: any = setTimeout(cb, t)
+        ACTIVE_TIMERS.add(id)
+    })
+}

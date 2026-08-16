@@ -23,34 +23,70 @@ export namespace DbN {
     }
 
     export interface LogMeta {
-        start: ISODate
-        lastUpdate: ISODate
+        startedAt: ISODate
+        endedAt: ISODate
         world: HvWorld
         user_id: string | null
         user_name: string | null
+        errors: {
+            missingTurns: boolean
+        }
+        reversed?: {
+            at: ISODate
+            version: "v2"
+        }
     }
 
     //
     //
     //
 
-    export interface LocalStorageSchema {
-        hvlog_live: {
-            current: null | {
-                id: LogId
-                roundStart: number
-                roundMax: number
-                battleType: string
-                turnCount: number
+    export type HvLogLive = {
+        current: null | {
+            id: LogId
+            startedAt: ISODate
+            updatedAt: ISODate
+            turnCount: number
+            prevTurn: null | {
+                first: string
+                length: number
             }
-            complete: Array<{ id: LogId; turnCount: number }>
         }
+        complete: Record<
+            LogId,
+            {
+                id: LogId
+                turnCount: number
+                startedAt: ISODate
+                endedAt: ISODate
+            }
+        >
+    }
+    export interface LocalStorageSchema {
+        hvlog_live: HvLogLive
+        hvlog_live_isekai: HvLogLive
+    }
+    export function writeLocalStorage<Key extends keyof LocalStorageSchema>(
+        k: Key,
+        v: LocalStorageSchema[Key],
+    ) {
+        localStorage.setItem(k, JSON.stringify(v))
+    }
+    export function readLocalStorage<Key extends keyof LocalStorageSchema>(
+        k: Key,
+        parse: (raw: string) => LocalStorageSchema[Key],
+    ): LocalStorageSchema[Key] | null {
+        const raw = localStorage.getItem(k)
+        if (raw === null) {
+            return null
+        }
+        return parse(raw)
     }
 
     export interface IdbSchema {
         kv: {
             config: UserscriptConfig
-            compressDone: Array<LogId>
+            compressDone: Set<LogId>
             prices: DbN.Prices
         }
         live: Record<`${LogId}_${number}`, { logId: LogId; lines: string[] }>
@@ -58,7 +94,6 @@ export namespace DbN {
             LogId,
             LogMeta & {
                 id: LogId
-                importedAt?: ISODate
             }
         >
         logsRaw: Record<
@@ -95,6 +130,10 @@ export namespace DbN {
 
         /** @deprecated */
         complete: Record<string, any>
+        /** @deprecated */
+        live_meta: Record<string, any>
+        /** @deprecated */
+        live_hash: Record<string, any>
     }
 
     const sourceId = uuidWithFallback()

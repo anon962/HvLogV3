@@ -116,11 +116,14 @@ class LogSourceRemote implements N.Protocol {
             const resp = await fetch(url).then(async (resp) => resp.json())
             return {
                 meta: {
-                    start: resp.created_at.replace("+00:00", "") + "Z",
-                    lastUpdate: resp.created_at.replace("+00:00", "") + "Z",
+                    startedAt: resp.created_at.replace("+00:00", "") + "Z",
+                    endedAt: resp.created_at.replace("+00:00", "") + "Z",
                     world: "persistent",
                     user_id: resp.id_user,
                     user_name: resp.name,
+                    errors: {
+                        missingTurns: false,
+                    },
                 } as const,
                 entries: resp.parsed.events.entries,
             }
@@ -290,8 +293,8 @@ class LogSourceLocal implements N.Protocol {
         secondaryStyle: (d, s, m, ms) =>
             d.some((style) => style === s.style.primary?.id),
         isImperil: (d, s, m, ms) => s.style.isImperil === d,
-        startDate: (d, s, m, ms) => d <= m.start,
-        endDate: (d, s, m, ms) => d >= m.start,
+        startDate: (d, s, m, ms) => d <= m.startedAt,
+        endDate: (d, s, m, ms) => d >= m.startedAt,
         errors: (d, s, m, ms) =>
             Object.entries(d).some(
                 ([k, v]) => v !== null && (ms as any).errors[k] === v,
@@ -316,11 +319,14 @@ class LogSourceLocal implements N.Protocol {
         fetch: async (db, conn, id, k) => {
             const r = (await conn.get("logsMeta", id))!
             return {
-                start: r.start,
-                lastUpdate: r.lastUpdate,
+                startedAt: r.startedAt,
+                endedAt: r.endedAt,
                 world: r.world,
                 user_id: null,
                 user_name: null,
+                errors: {
+                    missingTurns: false,
+                },
             }
         },
     })
@@ -454,7 +460,7 @@ class LogSourceLocal implements N.Protocol {
                 case "date":
                     sorted = alphabeticalBy(
                         matches,
-                        ([m, x]) => m.start,
+                        ([m, x]) => m.startedAt,
                         isDesc,
                     )
                     break

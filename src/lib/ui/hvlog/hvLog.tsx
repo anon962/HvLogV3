@@ -34,6 +34,9 @@ import { RouteDef, RouteLink, ROUTER, Router } from "./router"
 // @todo: select with version filter
 // @todo: monster cast rate
 // @todo: faster local parse
+// @todo: deletion option
+// @todo: unified userscript-server config
+// @todo: same page spa to avoid 404
 
 export const HvLog = (props: { prefix?: string[] }) => {
     const routes = new CustomMap({
@@ -142,7 +145,7 @@ function LogDetailsRoute(props: { id: string }) {
 
     let title
     if (meta && details) {
-        const d = new Date(meta.start)
+        const d = new Date(meta.startedAt)
         const m = details.meta
         const zfill = (x: number, n = 2) => x.toString().padStart(n, "0")
 
