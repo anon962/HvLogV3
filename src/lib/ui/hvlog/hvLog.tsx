@@ -5,7 +5,7 @@ import { humanizeBattleType } from "@/lib/stats/metaStats"
 // @ts-ignore
 import "@/lib/ui/global.css"
 import * as lucide from "lucide-react"
-import { CustomMap, normalizeUrlParts, sleep, useAsync } from "myutils"
+import { CustomMap, last, normalizeUrlParts, sleep, useAsync } from "myutils"
 import { StrictMode, useMemo } from "react"
 import { LOG_SOURCE } from "../../db/logSource"
 import { IS_REMOTE } from "../../constants"
@@ -15,29 +15,26 @@ import { LogList } from "./logList/logList"
 import { MonsterPage } from "./monsterPage"
 import { RouteDef, RouteLink, ROUTER, Router } from "./router"
 
+// @fixme: back button url should retain query params
 // @fixme: count imported from file
-// @fixme: profit history
+// @fixme: profit history (bar graph, day month)
+// @fixme: avg drops per battle type (including equips)
 // @fixme: equip search
 // @fixme: log import / export / delete old / delete imports
 // @fixme: isekai
-// @fixme: userscript tasks
-
+// @fixme: event log pagination (filters, default to player actions)
+// @fixme: uploads
 // @fixme: item world
-// @fixme: equip drop search
-// @fixme: off by one charts
-// @fixme: event log pagination
-// @fixme: back button url should retain query params
 
 // @todo: per round / avgs (config?)
 // @todo: effect blame
 // @todo: chart utils
 // @todo: consistent chart colors
 // @todo: rotate web cli log
-// @todo: select with version filter
 // @todo: monster cast rate
 // @todo: faster local parse
 // @todo: deletion option
-// @todo: unified userscript-server config
+// @todo: off by one charts
 
 export const HvLog = (props: { prefix?: string[] }) => {
     const routes = new CustomMap({
@@ -169,10 +166,22 @@ function LogDetailsRoute(props: { id: string }) {
         )
     }
 
+    const { history } = ROUTER.useContext()
+    let backHref = "/logs/"
+    if (history.length >= 2) {
+        const u = history[history.length - 2].url
+        backHref = u.pathname + u.search + u.hash
+    }
+
     return (
         <div className="w-full h-full flex flex-col overflow-hidden gap-4 p-4 pb-8">
             <div className="flex justify-between gap-4">
-                <RouteLink href="/logs/" className="max-w-1/4">
+                <RouteLink
+                    href={backHref}
+                    ignorePrefix={true}
+                    // action="popState"
+                    className="max-w-1/4"
+                >
                     Back
                 </RouteLink>
 

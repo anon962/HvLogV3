@@ -522,8 +522,8 @@ export namespace MonsterPageN {
             }
         }, [allRows])
 
-        return [
-            {
+        return {
+            value: {
                 data,
                 pageIndex,
                 pageSize,
@@ -536,7 +536,7 @@ export namespace MonsterPageN {
                 mode,
                 setMode,
             },
-            () => {},
-        ]
+            setValue: () => {},
+        }
     })
 }

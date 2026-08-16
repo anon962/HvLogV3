@@ -465,8 +465,8 @@ export namespace LogListN {
             return () => clearTimeout(refetchTimer)
         }, [fetcher.data, fetcher.request])
 
-        return [
-            {
+        return {
+            value: {
                 params,
                 setParams,
                 pageSizeStorage,
@@ -474,8 +474,8 @@ export namespace LogListN {
                 fetcher,
                 logSource,
             },
-            () => {},
-        ]
+            setValue: () => {},
+        }
     })
 }
 

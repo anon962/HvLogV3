@@ -5,17 +5,17 @@ import { DbN } from "./dbN"
 import { runUserscriptTasks } from "./userscriptTasks"
 
 export const USERSCRIPT_CONFIG = newContext(() => {
-    const [ctx, setCtx] = useState({
+    const [value, setValue] = useState({
         config: DEFAULT_USERSCRIPT_CONFIG(),
         ready: false,
     })
 
-    window.HV_LOG.userscriptConfig = ctx.config
+    window.HV_LOG.userscriptConfig = value.config
 
     useEffect(() => {
         ;(async () => {
             const config = await loadUserscriptConfig()
-            setCtx({
+            setValue({
                 config,
                 ready: true,
             })
@@ -31,16 +31,16 @@ export const USERSCRIPT_CONFIG = newContext(() => {
                 return
             }
 
-            setCtx({ config: ev.config, ready: true })
+            setValue({ config: ev.config, ready: true })
             saveUserscriptConfig(ev.config)
         })
     })
 
     useEffect(() => {
         return runUserscriptTasks({
-            config: ctx.config,
+            config: value.config,
             setConfig: (update) =>
-                setCtx((curr) => ({
+                setValue((curr) => ({
                     ...curr,
                     config: {
                         ...curr.config,
@@ -48,12 +48,12 @@ export const USERSCRIPT_CONFIG = newContext(() => {
                     },
                 })),
         })
-    }, [ctx])
+    }, [value])
 
-    return [
-        ctx,
-        (update) => {
-            setCtx((curr) => {
+    return {
+        value,
+        setValue: (update) => {
+            setValue((curr) => {
                 let next
                 if (typeof update === "function") {
                     next = update(curr)
@@ -64,7 +64,7 @@ export const USERSCRIPT_CONFIG = newContext(() => {
                 return next
             })
         },
-    ]
+    }
 })
 
 export const DEFAULT_USERSCRIPT_CONFIG = () => ({

@@ -554,8 +554,8 @@ export const LOG_SOURCE = newContext<N.Protocol>(() => {
         }
     }, [config, configReady])
 
-    return [
-        IS_REMOTE ? new LogSourceRemote() : new LogSourceLocal(prices),
-        () => {},
-    ]
+    return {
+        value: IS_REMOTE ? new LogSourceRemote() : new LogSourceLocal(prices),
+        setValue: () => {},
+    }
 })

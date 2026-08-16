@@ -10,6 +10,8 @@ import {
     patchUrlChange,
     range,
     readUrl,
+    UrlChangeEvent,
+    last,
 } from "myutils"
 import {
     ComponentPropsWithoutRef,
@@ -47,7 +49,10 @@ export function Router(props: {
         [props.prefix],
     )
     useEffect(() => {
-        ROUTER.setValue(readUrlWithPrefix(prefix))
+        ROUTER.setValue((x) => ({
+            ...x,
+            ...readUrlWithPrefix(prefix),
+        }))
     }, [prefix])
 
     useScrollRestoration()
@@ -212,27 +217,51 @@ function useScrollRestoration() {
 
 // #region ROUTER
 export const ROUTER = newContext(() => {
-    const [data, setData] = useState(
-        readUrlWithPrefix(IS_REMOTE ? [] : ["hvlog"]),
-    )
+    const [value, setValue] = useState({
+        ...readUrlWithPrefix(IS_REMOTE ? [] : ["hvlog"]),
+        history: [readUrlWithPrefix(IS_REMOTE ? [] : ["hvlog"])],
+    })
 
     useEffect(() => {
-        const onUrlChange = () => {
-            setData((x) => ({ ...readUrlWithPrefix(x.prefix) }))
+        const onUrlChange = (ev: UrlChangeEvent) => {
+            console.log("ev", ev)
+            setValue((x) => {
+                const entry = readUrlWithPrefix(x.prefix)
+                const history = [...x.history]
+                switch (ev.detail.source) {
+                    case "pushState":
+                        history.push(entry)
+                        break
+                    case "replaceState":
+                    case "hashchange":
+                        if (history.length > 0) {
+                            history[history.length - 1] = entry
+                        }
+                        break
+                    case "popstate":
+                        history.pop()
+                }
+
+                return {
+                    ...x,
+                    ...readUrlWithPrefix(x.prefix),
+                    history,
+                }
+            })
         }
 
-        window.addEventListener("popstate", onUrlChange)
-        window.addEventListener("hvlog:urlchange", onUrlChange)
-        window.addEventListener("hashchange", onUrlChange)
-
+        window.addEventListener("hvlog:urlchange", onUrlChange as any)
         return () => {
-            window.removeEventListener("popstate", onUrlChange)
-            window.removeEventListener("hvlog:urlchange", onUrlChange)
-            window.removeEventListener("hashchange", onUrlChange)
+            window.removeEventListener("hvlog:urlchange", onUrlChange as any)
         }
     }, [])
 
-    return [data, setData]
+    console.log("here", value.history)
+
+    return {
+        value,
+        setValue,
+    }
 })
 // #endregion
 
@@ -262,6 +291,7 @@ export function RouteLink({
     ...props
 }: ComponentPropsWithoutRef<"a"> & {
     ignorePrefix?: boolean
+    action?: "pushState" | "replaceState" | "popState"
 }) {
     const { prefix } = ROUTER.useContext()
 
@@ -297,7 +327,16 @@ export function RouteLink({
 
         if (!isModified && props.target !== "_blank" && hrefResolved) {
             ev.preventDefault()
-            history.pushState(null, "", hrefResolved)
+
+            const action = props.action ?? "pushState"
+            switch (action) {
+                case "pushState":
+                    return history.pushState(null, "", hrefResolved)
+                case "replaceState":
+                    return history.replaceState(null, "", hrefResolved)
+                case "popState":
+                    return history.back()
+            }
         }
     }
 }
