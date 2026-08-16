@@ -16,7 +16,7 @@ import {
     useLocalJsonState,
 } from "myutils"
 import { useEffect, useMemo, useState } from "react"
-import { IS_REMOTE } from "../../constants"
+import { IS_REMOTE } from "../../../constants"
 import { RunIcon, Skull2Icon } from "../../icons/misc"
 import { CheckIcon } from "../../icons/tailwind"
 import { ListTable } from "../../listTable"

@@ -1,6 +1,6 @@
 import { mountReactWrapper, sum } from "myutils"
 import React from "react"
-import { zstdWasm } from "../ui/constants"
+import { zstdWasm } from "../constants"
 // @ts-ignore
 import __zstdInline__ from "virtual:zstd-inline"
 // @ts-ignore

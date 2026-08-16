@@ -1,4 +1,4 @@
-import { lucide } from "@/lib/ui/constants"
+import { lucide } from "@/lib/constants"
 import {
     Autocomplete,
     AutocompleteContent,

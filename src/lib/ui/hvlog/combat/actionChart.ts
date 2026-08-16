@@ -4,7 +4,7 @@ import { IndexMap } from "@/lib/stats/indexMap"
 import { MetaSummary } from "@/lib/stats/metaStats"
 import * as Plot from "@observablehq/plot"
 import { last, sort, sum, zip } from "myutils"
-import { TAILWIND_COLORS, TAILWIND_SHADES } from "../../constants"
+import { TAILWIND_COLORS, TAILWIND_SHADES } from "../../../constants"
 
 interface PointData {
     value: number

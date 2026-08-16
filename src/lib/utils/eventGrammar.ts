@@ -1,6 +1,6 @@
 import { L, sort } from "myutils"
 import { LogEntries, LogEntry } from "../db/dbN"
-import { DEBUG } from "../ui/constants"
+import { DEBUG } from "../constants"
 import { BaseHvEvent } from "./eventParser"
 
 // @todo: Replace with https://chevrotain.io/docs/tutorial/step2_parsing.html#complete-parser

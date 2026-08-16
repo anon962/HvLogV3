@@ -3,7 +3,7 @@ import { DROP_CATEGORIES, DropSummary } from "@/lib/stats/dropStats"
 import { ItemUsageSummary } from "@/lib/stats/itemUsageStats"
 import { formatNumber } from "@/lib/utils/miscUtils"
 import * as Plot from "@observablehq/plot"
-import { TAILWIND_COLORS, TAILWIND_SHADES } from "../../../ui/constants"
+import { TAILWIND_COLORS, TAILWIND_SHADES } from "../../../constants"
 import {
     alphabeticalBy,
     groupBy,

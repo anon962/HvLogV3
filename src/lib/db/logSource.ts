@@ -6,25 +6,25 @@ import {
 } from "@/lib/stats/summary"
 import { decompressZstd } from "@/lib/utils/miscUtils"
 import {
-    newContext,
     alphabeticalBy,
     compressGzip,
     isTruthy,
+    newContext,
     objectEntries,
     sleep,
     sort,
     Unsub,
     zip,
 } from "myutils"
+import { useEffect, useRef } from "react"
+import { IS_REMOTE } from "../constants"
 import { MetaSummary } from "../stats/metaStats"
-import { IS_REMOTE } from "../ui/constants"
 import { parseLogWithDetails } from "../worker"
 import { LogDb, LogDbConn } from "./db"
 import { LogSourceN as N } from "./logSourceN"
-import { useEffect, useRef } from "react"
 // @ts-ignore
 import parseLogWithDetailsSrc from "../worker?workerfn=parseLogWithDetails"
-import { USERSCRIPT_CONFIG } from "./userscriptConfig"
+import { USERSCRIPT_CONFIG, UserscriptConfig } from "./userscriptConfig"
 
 // #region remote
 class LogSourceRemote implements N.Protocol {
@@ -214,7 +214,7 @@ const newLocalCache = <T>(
 class LogSourceLocal implements N.Protocol {
     db: Record<DbN.HvWorld, Promise<LogDb<true>>>
     pool: ReturnType<LogSourceLocal["initWorkerPool"]>
-    prices: Promise<DbN.Prices>
+    prices: Promise<UserscriptConfig["prices"]>
     world: DbN.HvWorld
     private bcSub: Unsub
     private logIds = {
@@ -223,7 +223,7 @@ class LogSourceLocal implements N.Protocol {
     }
     ainit: Promise<void>
 
-    constructor(prices: Promise<DbN.Prices>) {
+    constructor(prices: Promise<UserscriptConfig["prices"]>) {
         this.db = {
             persistent: new LogDb({ world: "persistent" }).connect(),
             isekai: new LogDb({ world: "isekai" }).connect(),
@@ -276,7 +276,7 @@ class LogSourceLocal implements N.Protocol {
             .entries
     }
     async fetchPrices() {
-        return this.prices
+        return (await this.prices)[this.world]
     }
     async fetchMonlab(): Promise<any> {
         throw new Error("not implemented")
@@ -546,7 +546,7 @@ class LogSourceLocal implements N.Protocol {
 export const LOG_SOURCE = newContext<N.Protocol>(() => {
     const { config, ready: configReady } = USERSCRIPT_CONFIG.useContext()
     const { promise: prices, resolve: resolvePrices } = useRef(
-        Promise.withResolvers<DbN.Prices>(),
+        Promise.withResolvers<UserscriptConfig["prices"]>(),
     ).current
     useEffect(() => {
         if (configReady) {

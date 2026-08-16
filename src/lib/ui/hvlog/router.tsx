@@ -21,7 +21,7 @@ import {
     useRef,
     useState,
 } from "react"
-import { IS_REMOTE } from "../constants"
+import { IS_REMOTE } from "../../constants"
 
 type RouteSelection = { component: ReactNode; hideSidebar?: boolean }
 type Sidebar = FC<{ children: ReactNode }>

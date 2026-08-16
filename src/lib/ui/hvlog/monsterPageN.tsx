@@ -13,7 +13,7 @@ import {
 } from "myutils"
 import { useMemo, useState } from "react"
 import { LOG_SOURCE } from "../../db/logSource"
-import { lucide } from "../constants"
+import { lucide } from "../../constants"
 import { ListTable } from "../listTable"
 import { UrlParamN } from "./router"
 

@@ -10,7 +10,7 @@ import {
 } from "./lib/stats/summary"
 import { parseLog } from "./lib/utils/parseLog"
 import { v91 } from "./lib/v91/v91"
-import { zstdWasm } from "./lib/ui/constants"
+import { zstdWasm } from "./lib/constants"
 
 export {}
 

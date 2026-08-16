@@ -11,7 +11,7 @@ import {
     sum,
     zip,
 } from "myutils"
-import { TAILWIND_COLORS, TAILWIND_SHADES } from "../../constants"
+import { TAILWIND_COLORS, TAILWIND_SHADES } from "../../../constants"
 
 interface PointData {
     value: number

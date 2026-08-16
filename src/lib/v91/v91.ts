@@ -23,7 +23,7 @@ import {
     SHARDS,
     SPIRIT_ITEMS,
     TROPHIES,
-} from "../ui/constants"
+} from "../constants"
 import { EventGrammar, filterEvents, takeEvents } from "../utils/eventGrammar"
 import { _ALL_PARSERS, v91N } from "./_parsers"
 import { _summarizeCombat } from "./_summarizeCombat"
