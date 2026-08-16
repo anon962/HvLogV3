@@ -18,6 +18,9 @@ import { RouteDef, RouteLink, ROUTER, Router } from "./router"
 // @fixme: count imported from file
 // @fixme: profit history
 // @fixme: equip search
+// @fixme: log import / export / delete old / delete imports
+// @fixme: isekai
+// @fixme: userscript tasks
 
 // @fixme: item world
 // @fixme: equip drop search
@@ -25,7 +28,6 @@ import { RouteDef, RouteLink, ROUTER, Router } from "./router"
 // @fixme: event log pagination
 // @fixme: back button url should retain query params
 
-// @todo: log source cache eviction
 // @todo: per round / avgs (config?)
 // @todo: effect blame
 // @todo: chart utils
@@ -36,7 +38,6 @@ import { RouteDef, RouteLink, ROUTER, Router } from "./router"
 // @todo: faster local parse
 // @todo: deletion option
 // @todo: unified userscript-server config
-// @todo: same page spa to avoid 404
 
 export const HvLog = (props: { prefix?: string[] }) => {
     const routes = new CustomMap({

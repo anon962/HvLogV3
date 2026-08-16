@@ -1,4 +1,5 @@
 import { WorkerPoolN } from "myutils"
+import { UserscriptConfig } from "./db/userscriptConfig"
 
 export {}
 
@@ -8,6 +9,7 @@ declare global {
             isRemote?: boolean
             zstdInit?: Promise<void>
             workerPool: WorkerPoolN.Pool
+            userscriptConfig: UserscriptConfig
         }
 
         unsafeWindow: Window

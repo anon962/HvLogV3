@@ -5,9 +5,19 @@ import { DbN } from "./lib/db/dbN.ts"
 import { HvLog } from "./lib/ui/hvlog/hvLog.tsx"
 import { BattleLogger } from "./lib/utils/battleLogger.ts"
 import { mountReact } from "./lib/utils/miscUtils.ts"
+import {
+    DEFAULT_USERSCRIPT_CONFIG,
+    loadUserscriptConfig,
+} from "./lib/db/userscriptConfig.ts"
 
 async function main() {
     patchUrlChange("hvlog:urlchange")
+
+    window.HV_LOG.userscriptConfig = DEFAULT_USERSCRIPT_CONFIG()
+    loadUserscriptConfig().then(
+        (config) => (window.HV_LOG.userscriptConfig = config),
+    )
+
     const { parts } = readUrl()
 
     // Logger
@@ -19,15 +29,23 @@ async function main() {
 
     // Log UI
     if (parts[0] === "hvlog") {
-        window.HV_LOG.workerPool = new WorkerPoolN.Pool()
+        init(window)
+    }
 
-        document.title = "HvLog"
-        document.body.innerHTML = ""
+    // Userscript extension UI
+    registerViewLogs(init)
+    registerLogExport()
 
-        const hostEl = document.createElement("div")
-        document.body.appendChild(hostEl)
-        hostEl.classList.add("hvlog-container")
-        hostEl.classList.add("dark")
+    async function init(w: Window) {
+        w.HV_LOG.workerPool ??= new WorkerPoolN.Pool()
+
+        w.document.head.innerHTML = ""
+        w.document.title = "HvLog"
+
+        w.document.body.className = "hvlog-container dark"
+        w.document.body.innerHTML = `<div class="hvlog-host"></div>`
+
+        const hostEl = w.document.querySelector(".hvlog-host")!
 
         await mountReact(
             HvLog,
@@ -39,10 +57,6 @@ async function main() {
             },
         )
     }
-
-    // Userscript extension UI
-    registerLogExport()
-    registerViewLogs()
 }
 
 main()

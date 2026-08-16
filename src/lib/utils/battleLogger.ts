@@ -180,6 +180,8 @@ export class BattleLogger {
                 ),
             )
             return
+        } else if (!!document.querySelector("#riddlemaster")) {
+            return
         } else {
             this.flushComplete(hvlog_live)
             resolveSequential(
@@ -208,6 +210,7 @@ export class BattleLogger {
                 turnCount: current.turnCount,
             }
             this.writeLive(hvlog_live)
+            console.debug("flush complete", current.id, hvlog_live)
         }
     }
 
@@ -233,9 +236,11 @@ export class BattleLogger {
         )
         if (done() || !(log.id in hvlog_live.complete)) {
             txn.abort()
+            console.debug("abort persist", log.id, hvlog_live)
             return
         }
 
+        console.debug("persist", log.id, hvlog_live)
         const liveKeys = range(log.turnCount).map(
             (idx) => `${log.id}_${idx}` as const,
         )

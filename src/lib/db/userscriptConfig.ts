@@ -9,10 +9,15 @@ export const USERSCRIPT_CONFIG = newContext(() => {
         ready: false,
     })
 
+    window.HV_LOG.userscriptConfig = ctx.config
+
     useEffect(() => {
         ;(async () => {
             const config = await loadUserscriptConfig()
-            setCtx({ config, ready: true })
+            setCtx({
+                config,
+                ready: true,
+            })
         })()
     }, [])
 
@@ -50,19 +55,24 @@ export const USERSCRIPT_CONFIG = newContext(() => {
 export const DEFAULT_USERSCRIPT_CONFIG = () => ({
     prices: DEFAULT_PRICES() as DbN.Prices,
     pricesUpdatedAt: "2026-08-14T01:01:01.001Z",
-    hvdataUploadMode: "disabled" as "disabled" | "manual" | "auto",
-    priceSource: "none" as "hvdata" | "fapspreader" | "none",
-    detailsEquipFilter: "legendary" as "magnificent" | "legendary" | "peerless",
+    hvdataUploadMode: "default" as "default" | "disabled" | "manual" | "auto",
+    priceSource: "default" as "default" | "hvdata" | "fapspreader" | "none",
+    detailsEquipFilter: "default" as "magnificent" | "legendary" | "peerless",
+    samePageLoad: "default" as "default" | "always" | "never",
+    defaultLogWorld: "default" as "default" | "persistent" | "isekai",
 })
 
 export type UserscriptConfig = ReturnType<typeof DEFAULT_USERSCRIPT_CONFIG>
 
-export async function loadUserscriptConfig() {
+export async function loadUserscriptConfig(): Promise<UserscriptConfig> {
     const db = new LogDb({ world: "persistent" })
 
     const fromDb = await db.get("kv", "config")
     if (fromDb) {
-        return fromDb
+        return {
+            ...DEFAULT_USERSCRIPT_CONFIG(),
+            ...fromDb,
+        }
     }
 
     const config = DEFAULT_USERSCRIPT_CONFIG()
