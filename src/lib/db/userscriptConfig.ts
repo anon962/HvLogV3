@@ -36,20 +36,6 @@ export const USERSCRIPT_CONFIG = newContext(() => {
         })
     })
 
-    useEffect(() => {
-        return runUserscriptTasks({
-            config: value.config,
-            setConfig: (update) =>
-                setValue((curr) => ({
-                    ...curr,
-                    config: {
-                        ...curr.config,
-                        ...update,
-                    },
-                })),
-        })
-    }, [value])
-
     return {
         value,
         setValue: (update) => {
@@ -63,6 +49,9 @@ export const USERSCRIPT_CONFIG = newContext(() => {
                 saveUserscriptConfig(next.config)
                 return next
             })
+        },
+        fns: {
+            setConfigRaw: setValue,
         },
     }
 })

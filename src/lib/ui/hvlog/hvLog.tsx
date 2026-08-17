@@ -6,7 +6,7 @@ import { humanizeBattleType } from "@/lib/stats/metaStats"
 import "@/lib/ui/global.css"
 import * as lucide from "lucide-react"
 import { CustomMap, normalizeUrlParts, sleep, useAsync } from "myutils"
-import { StrictMode, useMemo } from "react"
+import { StrictMode, useEffect, useMemo } from "react"
 import { IS_LOCAL, IS_REMOTE } from "../../constants"
 import { LOG_SOURCE } from "../../db/logSource"
 import { Sidebar, SidebarItem } from "../sidebar"
@@ -15,6 +15,7 @@ import { LogList } from "./logList/logList"
 import { MonsterPage } from "./monsterPage"
 import { RouteDef, RouteLink, ROUTER, Router } from "./router"
 import { EquipPage } from "./equipsPage"
+import { runUserscriptTasks } from "@/lib/db/userscriptTasks"
 
 // @fixme: profit history (bar graph, day month)
 // @fixme: avg drops per battle type (including equips)
@@ -28,6 +29,8 @@ import { EquipPage } from "./equipsPage"
 // @fixme: item world
 // @fixme: useAppCache
 // @fixme: local log cols (duration)
+// @fixme: clear cache command
+// @fixme: invalidate secondary caches
 
 // @todo: per round / avgs (config?)
 // @todo: effect blame
@@ -83,6 +86,12 @@ export const HvLog = (props: { prefix?: string[] }) => {
                       path: "/mobs",
                   }
                 : null,
+            IS_LOCAL
+                ? {
+                      icon: "EQ",
+                      path: "/equips",
+                  }
+                : null,
         ] satisfies Array<SidebarItem | null>
     ).filter((x) => x !== null)
 
@@ -99,13 +108,17 @@ export const HvLog = (props: { prefix?: string[] }) => {
     )
 
     const inner = (
-        <Router
-            prefix={props.prefix}
-            routes={routes}
-            defaultSidebar={({ children }) => (
-                <Sidebar items={sidebarItems}>{children}</Sidebar>
-            )}
-        />
+        <>
+            <Router
+                prefix={props.prefix}
+                routes={routes}
+                defaultSidebar={({ children }) => (
+                    <Sidebar items={sidebarItems}>{children}</Sidebar>
+                )}
+            />
+
+            {IS_LOCAL && <UserscriptTaskRunner />}
+        </>
     )
 
     return (
@@ -118,6 +131,32 @@ export const HvLog = (props: { prefix?: string[] }) => {
             )}
         </StrictMode>
     )
+}
+
+function UserscriptTaskRunner(props: {}) {
+    const {
+        fns: { setConfigRaw },
+    } = USERSCRIPT_CONFIG
+    const configCtx = USERSCRIPT_CONFIG.useContext()
+
+    const logSource = LOG_SOURCE.useContext()
+
+    useEffect(() => {
+        return runUserscriptTasks({
+            logSource,
+            config: configCtx.config,
+            setConfig: (update) =>
+                setConfigRaw((curr) => ({
+                    ...curr,
+                    config: {
+                        ...curr.config,
+                        ...update,
+                    },
+                })),
+        })
+    }, [configCtx])
+
+    return <></>
 }
 
 function LogDetailsRoute(props: { id: string }) {

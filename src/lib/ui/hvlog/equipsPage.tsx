@@ -1,6 +1,6 @@
+import { LogDb } from "@/lib/db/db"
 import { DbN } from "@/lib/db/dbN"
-import { LOG_SOURCE } from "@/lib/db/logSource"
-import { DetailsSummary } from "@/lib/stats/summary"
+import { decompressZstd } from "@/lib/utils/miscUtils"
 import {
     alphabeticalBy,
     ISODate,
@@ -8,12 +8,11 @@ import {
     newContext,
     objectValues,
     range,
-    resolveSequential,
     sleep,
     sort,
     useAsync2,
 } from "myutils"
-import { useMemo, useState } from "react"
+import { useMemo, useRef, useState } from "react"
 import { CheckIcon } from "../icons/tailwind"
 import { ListTable, ListTableN } from "../listTable"
 import { LogListN } from "./logList/logListN"
@@ -33,10 +32,10 @@ function EquipPageInner(props: {}) {
         <ListTable
             data={ctx.page}
             cols={[
-                N.COLS_.name,
-                N.COLS_.date,
-                N.COLS_.battleType,
-                N.COLS_.bonus,
+                EquipPageN.COLS_.name,
+                EquipPageN.COLS_.date,
+                EquipPageN.COLS_.battleType,
+                EquipPageN.COLS_.bonus,
             ]}
             sortCriteria={
                 ctx.params.s.v
@@ -50,10 +49,10 @@ function EquipPageInner(props: {}) {
             getId={(r) => r.id}
             sortCols={
                 new Set([
-                    N.COLS_.name.id,
-                    N.COLS_.date.id,
-                    N.COLS_.battleType.id,
-                    N.COLS_.bonus.id,
+                    EquipPageN.COLS_.name.id,
+                    EquipPageN.COLS_.date.id,
+                    EquipPageN.COLS_.battleType.id,
+                    EquipPageN.COLS_.bonus.id,
                 ])
             }
             count={ctx.count}
@@ -71,60 +70,68 @@ function EquipPageInner(props: {}) {
 // #region EQUIP_PAGE
 const EQUIP_PAGE = newContext(() => {
     const [params, setParams] = UrlParamN.useUrlParams({
-        schema: N.PARAM_SCHEMA,
+        schema: EquipPageN.PARAM_SCHEMA,
     })
 
-    const src = LOG_SOURCE.useContext()
-    const [data, setData] = useState<Array<N.Row>>([])
-    const [seen, setSeen] = useState(new Set<DbN.LogId>())
+    const data = useRef([] as Array<EquipPageN.Row>).current
+    const [dataVersion, setDataVersion] = useState(0)
     const [isLoading, setIsLoading] = useState(true)
     useAsync2(async () => {
+        const dbP = await new LogDb({ world: "persistent" }).connect()
+        let equips: EquipPageN.IdbStorage
         while (true) {
-            const ids = new Set(await src.fetchLogIds())
-            const rem = ids.difference(seen)
-            if (!rem) {
-                await sleep(30_000)
+            const equipTally = await dbP.get("kv", "equipTally")
+            if (!equipTally || equipTally.equips.byteLength === 0) {
+                setIsLoading(true)
+                await sleep(5_000)
                 continue
             }
 
-            const slice = [...rem].slice(0, seen.size > 0 ? 250 : 100)
+            const decompressed = await decompressZstd({ x: equipTally.equips })
+            const text = await new Blob([decompressed]).text()
+            equips = JSON.parse(text)
 
-            const xs = (
-                await resolveSequential(
-                    slice.map((id) => async () => {
-                        console.log("here", id)
-                        const [meta, details] = await Promise.all([
-                            src.fetchMeta(id),
-                            src.fetchDetails(id),
-                        ])
-                        return { meta, details }
+            if (data.length === equips.id.length) {
+                if (equipTally.pending) {
+                    if (data.length < 50) {
+                        await sleep(10_000)
+                    } else {
+                        await sleep(30_000)
+                    }
+                } else {
+                    setIsLoading(false)
+                    await sleep(30_000)
+                }
+                continue
+            }
+
+            let idx = data.length - 1
+            while (idx < equips.id.length) {
+                idx += 1
+
+                const i = idx
+                data.push(
+                    new Proxy({} as EquipPageN.Row, {
+                        get(target, key) {
+                            return (equips as any)[key][i]
+                        },
                     }),
                 )
-            ).flatMap(({ meta, details }, idx) =>
-                Object.values(details.drops)
-                    .filter((x) => x.isEquip)
-                    .map((x) => ({
-                        id: String(data.length + idx),
-                        name: x.name,
-                        battleType: details.meta.battleType?.id ?? "???",
-                        date: meta.startedAt,
-                        isBonus: x.isBonus,
-                    })),
-            )
+            }
 
-            setSeen(seen.union(new Set(rem)))
-            setData([...data, ...xs])
-            setIsLoading(slice.length < rem.size)
+            setIsLoading(equipTally.pending)
+            setDataVersion((v) => v + 1)
+
             return
         }
-    }, seen)
+    }, [])
 
-    const page: N.Row[] = useMemo(() => {
+    const page: EquipPageN.Row[] = useMemo(() => {
         let idxs = range(data.length)
 
         if (params.bt.v) {
             const bts = new Set(params.bt.v)
-            idxs = idxs.filter((idx) => bts.has(data[idx].battleType))
+            idxs = idxs.filter((idx) => bts.has(data[idx].battleType ?? ""))
         }
         if (params.d0.v) {
             const d0 = params.d0.v.toISOString()
@@ -138,7 +145,7 @@ const EQUIP_PAGE = newContext(() => {
             const bs = !!params.bs.v
             idxs = idxs.filter((idx) => data[idx].isBonus === bs)
         }
-        if (params.nm.v) {
+        if (params.nm.v.length > 0) {
             const clauses: string[][] = params.nm.v.map((text) =>
                 text
                     .split(" ")
@@ -166,7 +173,7 @@ const EQUIP_PAGE = newContext(() => {
             case "battleType":
                 idxs = alphabeticalBy(
                     idxs,
-                    (idx) => data[idx].battleType,
+                    (idx) => data[idx].battleType ?? (sortDesc ? "aaa" : "zzz"),
                     sortDesc,
                 )
                 break
@@ -178,7 +185,10 @@ const EQUIP_PAGE = newContext(() => {
         const st = params.p.v * params.n.v
         const page = idxs.slice(st, st + params.n.v)
         return page.map((idx) => data[idx])
-    }, [data, ...objectValues(mapEntries(params, (k, v) => ({ [k]: v.raw })))])
+    }, [
+        dataVersion,
+        ...objectValues(mapEntries(params, (k, v) => ({ [k]: v.raw }))),
+    ])
 
     return {
         value: {
@@ -198,13 +208,17 @@ const EQUIP_PAGE = newContext(() => {
 // #endregion
 
 // #region namespace
-namespace N {
+export namespace EquipPageN {
     export interface Row {
         id: string
         name: string
-        battleType: string
+        battleType: string | null
         date: ISODate
         isBonus: boolean
+        world: DbN.HvWorld
+    }
+    export type IdbStorage = {
+        [K in keyof Row]: Array<Row[K]>
     }
 
     export const COLS_ = {

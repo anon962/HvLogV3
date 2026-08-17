@@ -3,6 +3,7 @@ import { SearchSummary } from "../stats/summary"
 import { BaseHvEvent } from "../utils/eventParser"
 import { MetaSummary } from "../stats/metaStats"
 import { UserscriptConfig } from "./userscriptConfig"
+import { EquipPageN } from "../ui/hvlog/equipsPage"
 
 export type LogEntry<TEvent extends BaseHvEvent = BaseHvEvent> =
     | { type: "event"; event: TEvent }
@@ -88,6 +89,12 @@ export namespace DbN {
             config: UserscriptConfig
             prices: DbN.Prices
             compressDone: Set<LogId>
+            equipTally: {
+                version: number
+                done: Set<LogId>
+                equips: Uint8Array<ArrayBuffer>
+                pending: boolean
+            }
         }
         live: Record<`${LogId}_${number}`, { logId: LogId; lines: string[] }>
         logsMeta: Record<
