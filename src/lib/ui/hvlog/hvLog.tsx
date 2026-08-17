@@ -5,26 +5,27 @@ import { humanizeBattleType } from "@/lib/stats/metaStats"
 // @ts-ignore
 import "@/lib/ui/global.css"
 import * as lucide from "lucide-react"
-import { CustomMap, last, normalizeUrlParts, sleep, useAsync } from "myutils"
+import { CustomMap, normalizeUrlParts, sleep, useAsync } from "myutils"
 import { StrictMode, useMemo } from "react"
-import { LOG_SOURCE } from "../../db/logSource"
 import { IS_REMOTE } from "../../constants"
+import { LOG_SOURCE } from "../../db/logSource"
 import { Sidebar, SidebarItem } from "../sidebar"
 import { LogDetailsPane } from "./logDetailsPane"
 import { LogList } from "./logList/logList"
 import { MonsterPage } from "./monsterPage"
 import { RouteDef, RouteLink, ROUTER, Router } from "./router"
 
-// @fixme: back button url should retain query params
-// @fixme: count imported from file
 // @fixme: profit history (bar graph, day month)
 // @fixme: avg drops per battle type (including equips)
 // @fixme: equip search
 // @fixme: log import / export / delete old / delete imports
-// @fixme: isekai
 // @fixme: event log pagination (filters, default to player actions)
-// @fixme: uploads
+
+// @fixme: count imported from file
+// @fixme: isekai
+// @fixme: uploads / deletes
 // @fixme: item world
+// @fixme: useAppCache
 
 // @todo: per round / avgs (config?)
 // @todo: effect blame

@@ -12,6 +12,7 @@ import {
     isEqual,
     newContext,
     range,
+    sum,
     useAsync,
     useLocalJsonState,
 } from "myutils"
@@ -159,7 +160,7 @@ export namespace LogListN {
         { label: "RoB (Asahina)", ids: new Set([...btA(106)]) },
         { label: "RoB (Konata)", ids: new Set([...btA(105)]) },
     ]
-    type BattleType = (typeof BATTLE_TYPES)[number]
+    const battleTypeCount = sum(BATTLE_TYPES.map((bt) => bt.ids.size))
 
     export const STYLES = [
         { ...MAGE_STYLES["Dark Mage"] },
@@ -174,12 +175,14 @@ export namespace LogListN {
         { ...MELEE_STYLES["Niten"] },
         { ...MELEE_STYLES["Bonk"] },
     ]
+    const stylesCount = STYLES.length
 
     export const COMPLETION_TYPES = [
         { id: "finish", label: "Finish" },
         { id: "flee", label: "Flee" },
         { id: "die", label: "Die" },
     ] as const
+    const completionTypeCount = COMPLETION_TYPES.length
 
     export const ERRORS = [
         { id: "none", label: "(none)" },
@@ -196,6 +199,7 @@ export namespace LogListN {
         p: {
             type: "number",
             deser: (x) => (x !== null && x >= 1 ? x - 1 : 0),
+            init: () => 0,
         },
         n: {
             type: "number",
@@ -216,35 +220,29 @@ export namespace LogListN {
         // Filter options
         bt: {
             type: "bitmask",
-            deser: (xs) =>
-                new Set<BattleType["label"]>(
-                    xs
-                        .map((idx) => BATTLE_TYPES[idx]?.label)
-                        .filter((x) => !!x),
-                ),
+            deser: (xs) => {
+                let battleTypes = xs
+                    .map((idx) => BATTLE_TYPES[idx])
+                    .filter((x) => !!x)
+
+                if (battleTypes.length === 0) {
+                    return null
+                }
+
+                return battleTypes.flatMap((bt) => [...bt.ids])
+            },
         },
         ct: {
             type: "bitmask",
-            deser: (xs) =>
-                new Set<string>(
-                    xs
-                        .map((idx) => COMPLETION_TYPES[idx]?.id)
-                        .filter((x) => !!x),
-                ),
+            deser: (xs) => xs.map((idx) => COMPLETION_TYPES[idx]?.id),
         },
         sp: {
             type: "bitmask",
-            deser: (xs) =>
-                new Set<string>(
-                    xs.map((idx) => STYLES[idx]?.id).filter((x) => !!x),
-                ),
+            deser: (xs) => xs.map((idx) => STYLES[idx]?.id).filter((x) => !!x),
         },
         ss: {
             type: "bitmask",
-            deser: (xs) =>
-                new Set<string>(
-                    xs.map((idx) => STYLES[idx]?.id).filter((x) => !!x),
-                ),
+            deser: (xs) => xs.map((idx) => STYLES[idx]?.id).filter((x) => !!x),
         },
         i: {
             type: "bitmask",
@@ -293,73 +291,45 @@ export namespace LogListN {
             "hvlog_log_list_page_size",
         )
 
-        const pageIdx = params["p"] ?? 0
-        const pageSize = params["n"] ?? pageSizeStorage
-        const sortCid = params["s"]
-        const sortDesc = params["desc"]
-        const battleType =
-            params.bt.size > 0
-                ? BATTLE_TYPES.filter((cat) => params["bt"].has(cat.label))
-                : BATTLE_TYPES
-        const primaryStyle =
-            params.sp.size > 0
-                ? STYLES.filter((style) => params["sp"].has(style.id))
-                : STYLES
-        const secondaryStyle =
-            params.ss.size > 0
-                ? STYLES.filter((style) => params["ss"].has(style.id))
-                : STYLES
-        const completionType =
-            params.ct.size > 0
-                ? COMPLETION_TYPES.filter((x) => params["ct"].has(x.id))
-                : COMPLETION_TYPES
-        const roundMin = params["rmn"]
-        const roundMax = params["rmx"]
+        const pageSize = params["n"].v ?? pageSizeStorage
+        const roundMin = params["rmn"].v
+        const roundMax = params["rmx"].v
         const errors =
-            params.e.size > 0
-                ? ERRORS.filter((x) => params["e"].has(x.label))
+            params["e"].v.size > 0
+                ? ERRORS.filter((x) => params["e"].v.has(x.label))
                 : ERRORS
 
         const request = useMemo(
             () =>
                 ({
-                    pageIdx,
+                    pageIdx: params["p"].v,
                     pageSize,
-                    idUser: params["id_user"],
-                    keyUser: params["key_user"],
-                    sortCriteria: sortCid
+                    idUser: params["id_user"].v,
+                    keyUser: params["key_user"].v,
+                    sortCriteria: params["s"].v
                         ? {
-                              cid: sortCid,
+                              cid: params["s"].v,
                               order:
-                                  sortDesc === true
+                                  params["desc"].v === true
                                       ? ("desc" as const)
                                       : ("asc" as const),
                           }
                         : null,
-                    battleType:
-                        battleType.length === BATTLE_TYPES.length
-                            ? null
-                            : battleType.flatMap((cat) => [...cat.ids]),
-                    primaryStyle:
-                        primaryStyle.length === STYLES.length
-                            ? null
-                            : primaryStyle.map((style) => style.id),
-                    secondaryStyle:
-                        secondaryStyle.length === STYLES.length
-                            ? null
-                            : secondaryStyle.map((style) => style.id),
+                    battleType: maxToNull(params["bt"].v, battleTypeCount),
+                    primaryStyle: maxToNull(params["sp"].v, stylesCount),
+                    secondaryStyle: maxToNull(params["ss"].v, stylesCount),
                     isImperil:
-                        params["i"] === "yes"
+                        params["i"].v === "yes"
                             ? true
-                            : params["i"] === "no"
+                            : params["i"].v === "no"
                               ? false
                               : null,
-                    startDate: params["ds"]?.toISOString() ?? null,
-                    endDate: params["de"]?.toISOString() ?? null,
-                    completionType:
-                        completionType.length === COMPLETION_TYPES.length
-                            ? null
-                            : completionType.map((x) => x.id),
+                    startDate: params["ds"].v?.toISOString() ?? null,
+                    endDate: params["de"].v?.toISOString() ?? null,
+                    completionType: maxToNull(
+                        params["ct"].v,
+                        completionTypeCount,
+                    ),
                     roundMin,
                     roundMax,
                     errors:
@@ -372,19 +342,19 @@ export namespace LogListN {
                               ),
                 }) as const,
             [
-                pageIdx,
+                params["p"].v,
                 pageSize,
-                params["id_user"],
-                params["key_user"],
-                sortCid,
-                sortDesc,
-                battleType.join("|"),
-                primaryStyle.join("|"),
-                secondaryStyle.join("|"),
-                params["i"],
-                params["ds"]?.toISOString(),
-                params["de"]?.toISOString(),
-                completionType.join("|"),
+                params["id_user"].v,
+                params["key_user"].v,
+                params["s"].v,
+                params["desc"].v,
+                params["bt"].v?.join("|"),
+                params["sp"].v.join("|"),
+                params["ss"].v.join("|"),
+                params["i"].v,
+                params["ds"].v?.toISOString(),
+                params["de"].v?.toISOString(),
+                params["ct"].v.join("|"),
                 roundMin,
                 roundMax,
                 errors.join("|"),
@@ -477,6 +447,26 @@ export namespace LogListN {
             setValue: () => {},
         }
     })
+}
+
+function maxToNull<T extends Array<any> | Set<any> | Map<any, any> | null>(
+    xs: T,
+    max: number,
+): T | null {
+    let size = 0
+    if (Array.isArray(xs)) {
+        size = xs.length
+    } else if (xs instanceof Set) {
+        size = xs.size
+    } else if (xs instanceof Map) {
+        size = xs.size
+    }
+
+    if (size >= max) {
+        return null
+    } else {
+        return xs
+    }
 }
 
 function formatDuration(start: Date, end: Date) {

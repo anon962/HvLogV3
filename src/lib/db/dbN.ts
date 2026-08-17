@@ -86,8 +86,8 @@ export namespace DbN {
     export interface IdbSchema {
         kv: {
             config: UserscriptConfig
-            compressDone: Set<LogId>
             prices: DbN.Prices
+            compressDone: Set<LogId>
         }
         live: Record<`${LogId}_${number}`, { logId: LogId; lines: string[] }>
         logsMeta: Record<

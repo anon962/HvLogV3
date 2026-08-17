@@ -225,12 +225,12 @@ export namespace MonsterPageN {
             {},
         )
 
-        const [params, setParams, rawParams] = UrlParamN.useUrlParams({
+        const [params, setParams] = UrlParamN.useUrlParams({
             schema: PARAM_SCHEMA,
         })
 
         const [mode, setMode] = useState(
-            params.m === "t" ? "trainers" : "monsters",
+            params.m.v === "t" ? "trainers" : "monsters",
         )
 
         const monsterRows: Array<MonsterPageN.Row> = useMemo(() => {
@@ -381,7 +381,7 @@ export namespace MonsterPageN {
         const filtered = useMemo(() => {
             let xs = range(allRows.length)
 
-            const nm = params.nm
+            const nm = params.nm.v
                 .map((x) => x.trim().toLowerCase())
                 .filter((x) => x.length > 0)
             if (nm.length > 0) {
@@ -391,7 +391,7 @@ export namespace MonsterPageN {
                 )[0].map((x) => midToIdx.get(x.id)!)
             }
 
-            const tr = params.tr
+            const tr = params.tr.v
                 .map((x) => x.trim().toLowerCase())
                 .filter((x) => x.length > 0)
             if (tr.length > 0) {
@@ -401,7 +401,7 @@ export namespace MonsterPageN {
                 )[0].map((x) => midToIdx.get(x.id)!)
             }
 
-            const rc = params.rc
+            const rc = params.rc.v
                 .map((x) => x.trim().toLowerCase())
                 .filter((x) => x.length > 0)
             if (rc.length > 0) {
@@ -415,25 +415,25 @@ export namespace MonsterPageN {
                     ),
                 )
             }
-            if (Number.isInteger(params.l0)) {
-                xs = xs.filter((x) => (allRows[x].pl ?? 0) >= params.l0!)
+            if (Number.isInteger(params.l0.v)) {
+                xs = xs.filter((x) => (allRows[x].pl ?? 0) >= params.l0.v!)
             }
-            if (Number.isInteger(params.l1)) {
-                xs = xs.filter((x) => (allRows[x].pl ?? 0) <= params.l1!)
+            if (Number.isInteger(params.l1.v)) {
+                xs = xs.filter((x) => (allRows[x].pl ?? 0) <= params.l1.v!)
             }
-            if (Number.isInteger(params.v0)) {
-                xs = xs.filter((x) => allRows[x].appearances >= params.v0!)
+            if (Number.isInteger(params.v0.v)) {
+                xs = xs.filter((x) => allRows[x].appearances >= params.v0.v!)
             }
-            if (Number.isInteger(params.a0)) {
+            if (Number.isInteger(params.a0.v)) {
                 xs = xs.filter(
-                    (x) => allRows[x].damage.given * 1000 >= params.a0!,
+                    (x) => allRows[x].damage.given * 1000 >= params.a0.v!,
                 )
             }
-            if (Number.isInteger(params.d0)) {
-                xs = xs.filter((x) => allRows[x].damage.taken >= params.d0!)
+            if (Number.isInteger(params.d0.v)) {
+                xs = xs.filter((x) => allRows[x].damage.taken >= params.d0.v!)
             }
-            if (Number.isInteger(params.c0)) {
-                xs = xs.filter((x) => allRows[x].filterIds.size >= params.c0!)
+            if (Number.isInteger(params.c0.v)) {
+                xs = xs.filter((x) => allRows[x].filterIds.size >= params.c0.v!)
             }
 
             return xs
@@ -450,8 +450,8 @@ export namespace MonsterPageN {
         ])
 
         const sorted = useMemo(() => {
-            const cid = params.s?.id ?? COLS_.frequency.id
-            const reverse = params.d !== null ? params.d : true
+            const cid = params.s.v?.id ?? COLS_.frequency.id
+            const reverse = params.d.v !== null ? params.d.v : true
             let xs = filtered
 
             const lastNum = reverse ? 0 : 999_999_999
@@ -492,9 +492,9 @@ export namespace MonsterPageN {
             return xs
         }, [filtered, params.s, params.d])
 
-        const pageSize = params.n ?? 25
+        const pageSize = params.n.v ?? 25
         const pageCount = Math.ceil(sorted.length / pageSize) || 1
-        const pageIndex = clamp(params.p, 0, pageCount - 1)
+        const pageIndex = clamp(params.p.v, 0, pageCount - 1)
         const data = useMemo(() => {
             const st = pageIndex * pageSize
             return sorted.slice(st, st + pageSize).map((idx) => allRows[idx])
@@ -530,7 +530,6 @@ export namespace MonsterPageN {
                 pageCount,
                 params,
                 setParams,
-                rawParams,
                 sortCol: params.s,
                 options,
                 mode,

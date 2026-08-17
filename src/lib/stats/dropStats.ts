@@ -23,6 +23,7 @@ type DropInfo = {
     name: string
     priceKey: string
     isEquip: boolean
+    isBonus: boolean
 }
 export type DropSummary = Record<
     string,
@@ -44,6 +45,7 @@ export function summarizeItemDrops<T extends BaseHvEvent>(
         priceKey?: string
         count: number
         isEquip?: boolean
+        isBonus?: boolean
     }>,
     groups: Record<DropCategory, Set<string> | ((info: DropInfo) => boolean)>,
 ): DropSummary {
@@ -67,6 +69,7 @@ export function summarizeItemDrops<T extends BaseHvEvent>(
                     name: x.name ?? x.key,
                     priceKey: x.priceKey ?? x.key,
                     isEquip: x.isEquip ?? false,
+                    isBonus: x.isBonus ?? false,
                     category: null,
                     events: {
                         logIdx: [],

@@ -16,6 +16,7 @@ import {
     BUBBLE_VASE,
     CONSUMABLES,
     DEBUG,
+    EQUIP_PREFIXES,
     HEALTH_ITEMS,
     MANA_ITEMS,
     MATERIALS,
@@ -250,7 +251,8 @@ function _summarizeItemDrops(entries: LogEntries<v91N.HvEvent>) {
                         {
                             key: ev.item,
                             count: 1,
-                            isEquip: true,
+                            isEquip: isEquip(ev.item),
+                            isBonus: true,
                         },
                     ]
                 }
@@ -259,7 +261,8 @@ function _summarizeItemDrops(entries: LogEntries<v91N.HvEvent>) {
                         {
                             key: ev.item,
                             count: ev.value,
-                            isEquip: true,
+                            isEquip: isEquip(ev.item),
+                            isBonus: true,
                         },
                     ]
                 }
@@ -287,7 +290,7 @@ function _summarizeItemDrops(entries: LogEntries<v91N.HvEvent>) {
                             {
                                 key: ev.item,
                                 count: 1,
-                                isEquip: true,
+                                isEquip: isEquip(ev.item),
                             },
                         ]
                     }
@@ -307,7 +310,7 @@ function _summarizeItemDrops(entries: LogEntries<v91N.HvEvent>) {
                             {
                                 key: ev.item,
                                 count: 1,
-                                isEquip: true,
+                                isEquip: isEquip(ev.item),
                             },
                         ]
                     }
@@ -355,6 +358,7 @@ function _summarizeItemDrops(entries: LogEntries<v91N.HvEvent>) {
                             key: ev.item,
                             count: 1,
                             isEquip: false,
+                            isBonus: true,
                         },
                     ]
                 }
@@ -387,6 +391,10 @@ function _summarizeItemDrops(entries: LogEntries<v91N.HvEvent>) {
             Equips: (x) => x.isEquip,
         },
     )
+
+    function isEquip(text: string) {
+        return EQUIP_PREFIXES.some((tier) => text.startsWith(tier + " "))
+    }
 }
 
 function partitionLog(entries: LogEntries<v91N.HvEvent>): v91.LogPartition {

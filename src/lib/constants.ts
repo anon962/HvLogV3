@@ -388,11 +388,14 @@ export const TAILWIND_SHADES = {
 } as const
 
 export const EQUIP_PREFIXES = [
+    "Ultimate",
     "Peerless",
     "Legendary",
     "Magnificent",
     "Exquisite",
     "Superior",
+    "Average",
+    "Fair",
     "Crude",
 ] as const
 

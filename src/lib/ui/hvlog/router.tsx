@@ -12,6 +12,7 @@ import {
     readUrl,
     UrlChangeEvent,
     last,
+    mapEntries,
 } from "myutils"
 import {
     ComponentPropsWithoutRef,
@@ -344,54 +345,42 @@ export function RouteLink({
 
 // #region UrlParamN
 export namespace UrlParamN {
+    type SchemaEntry<TypeId extends string, Type, Type2> = {
+        type: TypeId
+        init?: () => Type | Type2
+        deser?: (x: Type | Type2) => any
+    }
     export type Schema = Record<
         string,
         (
-            | {
-                  type: "string"
+            | (SchemaEntry<"string", string, null> & {
                   skipTrim?: boolean
                   allowEmpty?: boolean
-                  deser?: (x: string | null) => any
-              }
-            | {
-                  type: "string[]"
+              })
+            | (SchemaEntry<"string[]", string[], never> & {
                   skipTrim?: boolean
                   allowEmpty?: boolean
-                  deser?: (x: string[]) => any
-              }
-            | {
-                  type: "number"
+              })
+            | (SchemaEntry<"number", number, null> & {
                   asFloat?: boolean
-                  deser?: (x: number | null) => any
-              }
-            | {
-                  type: "number[]"
+              })
+            | (SchemaEntry<"number[]", number[], never> & {
                   asFloat?: boolean
-                  deser?: (x: number[]) => any
-              }
-            | {
-                  type: "boolean"
-                  deser?: (x: boolean | null) => any
-              }
-            | {
-                  type: "boolean[]"
+              })
+            | SchemaEntry<"boolean", boolean, null>
+            | (SchemaEntry<"boolean[]", boolean[], never> & {
                   asFloat?: boolean
-                  deser?: (x: boolean[]) => any
-              }
-            | {
+              })
+            | (SchemaEntry<"date", Date, null> & {
                   type: "date"
-                  deser?: (x: Date | null) => any
                   ser?: (x: Date) => string
-              }
-            | {
-                  type: "bitmask"
-                  deser?: (x: number[]) => any
-              }
+              })
+            | SchemaEntry<"bitmask", number[], never>
         ) & {}
     >
 
     // prettier-ignore
-    export type Object<T extends Schema> = {
+    export type Resolve<T extends Schema> = {
         [K in keyof T]:
             T[K]['type'] extends 'string' ? Read<T[K] & { type: "string" }, string> :
             T[K]['type'] extends 'string[]' ? Read<T[K] & { type: "string[]" }, string[]> :
@@ -415,7 +404,11 @@ export namespace UrlParamN {
             : never
         : V extends Array<any>
           ? V
-          : V | null
+          : T extends {
+                  init: infer I extends AnyFunction
+              }
+            ? ReturnType<I>
+            : V | null
 
     // prettier-ignore
     export type UpdateObject<T extends Schema> = {
@@ -434,12 +427,19 @@ export namespace UrlParamN {
         history: "push" | "replace"
     }
 
-    export function useUrlParams<T extends Schema>(opts: {
-        schema: T
+    export function useUrlParams<S extends Schema>(opts: {
+        schema: S
     }): [
-        Object<T>,
-        (update: Partial<UpdateObject<T>>, opts?: UpdateOpts) => void,
-        Record<string, string>,
+        {
+            [K in keyof S]: {
+                raw: string | null
+                v: Resolve<S>[K]
+                init: S[K] extends { init: infer I extends AnyFunction }
+                    ? ReturnType<I>
+                    : null
+            }
+        },
+        (update: Partial<UpdateObject<S>>, opts?: UpdateOpts) => void,
     ] {
         const { url } = ROUTER.useContext()
 
@@ -530,7 +530,7 @@ export namespace UrlParamN {
         }, [url.href])
 
         const setParams = (
-            update: Partial<UpdateObject<T>>,
+            update: Partial<UpdateObject<S>>,
             opts2?: UpdateOpts,
         ) => {
             const u = new URL(url.href)
@@ -615,7 +615,17 @@ export namespace UrlParamN {
             }
         }
 
-        return [params, setParams, rawParams] as any
+        const result: any = Object.fromEntries(
+            Object.keys(opts.schema).map((k) => [
+                k,
+                {
+                    raw: rawParams[k],
+                    mapped: params[k],
+                    init: opts.schema[k].init ? opts.schema[k].init() : null,
+                },
+            ]),
+        )
+        return [result, setParams]
 
         function parseString(
             raw: string,
