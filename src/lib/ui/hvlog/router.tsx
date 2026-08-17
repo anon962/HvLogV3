@@ -257,8 +257,6 @@ export const ROUTER = newContext(() => {
         }
     }, [])
 
-    console.log("here", value.history)
-
     return {
         value,
         setValue,
@@ -489,6 +487,8 @@ export namespace UrlParamN {
                     }
 
                     parsed[key] = v2
+                } else if (s.init) {
+                    parsed[key] = s.init()
                 }
             }
 
@@ -620,7 +620,7 @@ export namespace UrlParamN {
                 k,
                 {
                     raw: rawParams[k],
-                    mapped: params[k],
+                    v: params[k],
                     init: opts.schema[k].init ? opts.schema[k].init() : null,
                 },
             ]),

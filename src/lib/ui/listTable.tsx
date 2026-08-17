@@ -37,7 +37,7 @@ import {
     TooltipTrigger,
 } from "./shadcn/tooltip"
 
-export namespace ListTable {
+export namespace ListTableN {
     export interface Column<TValue = unknown, TImpureValue = null> {
         id: string
         align?: "text-left" | "text-right" | "text-center"
@@ -69,9 +69,9 @@ export namespace ListTable {
 export function ListTable<T>(
     props: {
         data: Array<T>
-        cols: Array<ListTable.Column<T, any>>
-        sortCriteria: ListTable.SortCriteria | null
-        setSortCriteria: (crit: ListTable.SortCriteria | null) => void
+        cols: Array<ListTableN.Column<T, any>>
+        sortCriteria: ListTableN.SortCriteria | null
+        setSortCriteria: (crit: ListTableN.SortCriteria | null) => void
         selectedId?: string
         setSelectedId?: (id: string) => void
         getId: (d: T) => string
@@ -135,9 +135,9 @@ export function ListTable<T>(
 const TableInner = <T,>(
     props: {
         data: Array<T>
-        cols: Array<ListTable.Column<T, any>>
-        sortCriteria: ListTable.SortCriteria | null
-        setSortCriteria: (crit: ListTable.SortCriteria | null) => void
+        cols: Array<ListTableN.Column<T, any>>
+        sortCriteria: ListTableN.SortCriteria | null
+        setSortCriteria: (crit: ListTableN.SortCriteria | null) => void
         selectedId?: string
         setSelectedId?: (id: string) => void
         getId: (d: T) => string
@@ -159,7 +159,7 @@ const TableInner = <T,>(
 
             let component
             const className = ["sort-icon"]
-            let nextOrder: ListTable.SortCriteria["order"] | null = "desc"
+            let nextOrder: ListTableN.SortCriteria["order"] | null = "desc"
             if (isActive) {
                 className.push("active")
 
@@ -220,6 +220,7 @@ const TableInner = <T,>(
                                     col.header.tooltip
                                         ? "tooltip pb-[0.2em]"
                                         : "",
+                                    `col-${col.id}`,
                                 )}
                             >
                                 {col.header.content}
@@ -303,7 +304,7 @@ const Row = ReactMemo(
     <T,>(props: {
         d: T
         extras: Array<any>
-        cols: Array<ListTable.Column<T, any>>
+        cols: Array<ListTableN.Column<T, any>>
         isSelected: boolean
         isNextSelected: boolean
         onClick?: (d: T) => void
@@ -329,7 +330,7 @@ const Row = ReactMemo(
             return (
                 <Cell
                     key={idx}
-                    className={cn(col.align, cell.className)}
+                    className={cn(col.align, cell.className, `col-${col.id}`)}
                     title={cell.title}
                     content={cell.content}
                     href={href}
@@ -636,7 +637,7 @@ function PageSizeSelect(props: {
 // Workaround for calling preprocess (which involve hooks) for dynamic col array
 const Preprocessor = ReactMemo(
     <T, T2>(props: {
-        col: ListTable.Column<T, T2>
+        col: ListTableN.Column<T, T2>
         data: Array<T>
         setExtras: (extras: Array<T2>) => void
     }) => {

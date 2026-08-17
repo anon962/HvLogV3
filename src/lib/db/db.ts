@@ -19,7 +19,7 @@ export class LogDb<Ready extends boolean = false> {
     conn: Ready extends true ? Promise<LogDbConn> : Promise<LogDbConn> | null =
         null as any
     static schemaVersion = 5
-    static parserVersion = 2
+    static parserVersion = 3
 
     constructor(
         public opts: {

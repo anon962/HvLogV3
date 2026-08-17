@@ -66,7 +66,6 @@ function Table() {
         pageCount,
         params,
         setParams,
-        rawParams,
         sortCol,
         mode,
     } = MonsterPageN.ctx.useContext()
@@ -92,7 +91,7 @@ function Table() {
                 getId={(d) => d.id}
                 pageIndex={pageIndex}
                 pageUrl={(pageIdx) => ({
-                    ...rawParams,
+                    ...mapEntries(params, (k, v) => ({ [k]: v.raw })),
                     p: String(pageIdx + 1),
                 })}
                 setPageSize={{
@@ -104,9 +103,9 @@ function Table() {
                 pageSize={pageSize}
                 sortCols={new Set(cols.map((c) => c.id))}
                 sortCriteria={
-                    sortCol
+                    sortCol.v
                         ? {
-                              cid: sortCol.id,
+                              cid: sortCol.v.id,
                               order: params.d ? "desc" : "asc",
                           }
                         : null
@@ -223,7 +222,7 @@ function MultiSelect(
     } & CommonProps,
 ) {
     const { params, setParams } = MonsterPageN.ctx.useContext()
-    const patts = params[props.param] ?? ""
+    const patts = params[props.param].v ?? ""
     const sources = patts.map((p) => p ?? "")
     const currValue =
         sources.length > 0 ? sources[sources.length - 1].toLowerCase() : ""
@@ -296,7 +295,7 @@ function NumberInput(props: {
                 type="number"
                 min={props.min ?? 0}
                 max={props.max}
-                value={params[props.param] ?? ""}
+                value={params[props.param].v ?? ""}
                 placeholder={props.placeholder ?? "0"}
                 onInput={(ev) => {
                     const x = parseInt(ev.target.value)

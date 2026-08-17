@@ -1,5 +1,6 @@
 export const IS_BROWSER = typeof window !== "undefined"
 export const IS_REMOTE = IS_BROWSER ? !!window.HV_LOG.isRemote : true
+export const IS_LOCAL = !IS_REMOTE
 
 export const DEBUG = 0 && process.env.NODE_ENV === "development"
 

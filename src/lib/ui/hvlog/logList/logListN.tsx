@@ -20,7 +20,7 @@ import { useEffect, useMemo, useState } from "react"
 import { IS_REMOTE } from "../../../constants"
 import { RunIcon, Skull2Icon } from "../../icons/misc"
 import { CheckIcon } from "../../icons/tailwind"
-import { ListTable } from "../../listTable"
+import { ListTableN } from "../../listTable"
 import { UrlParamN } from "../router"
 
 export namespace LogListN {
@@ -102,7 +102,7 @@ export namespace LogListN {
                 ...formatStartDate(x.meta.startedAt, now),
                 className: "date",
             }),
-        } as const satisfies ListTable.Column<LogSourceN.SearchResult, Date>,
+        } as const satisfies ListTableN.Column<LogSourceN.SearchResult, Date>,
         status: {
             id: "status",
             header: { content: "Status" },
@@ -129,7 +129,7 @@ export namespace LogListN {
         // >,
     } as const satisfies Record<
         string,
-        ListTable.Column<LogSourceN.SearchResult, any>
+        ListTableN.Column<LogSourceN.SearchResult, any>
     >
 
     export const SORT_IDS = new Set([COLS.turns.id, COLS.date.id] as const)
@@ -225,10 +225,6 @@ export namespace LogListN {
                     .map((idx) => BATTLE_TYPES[idx])
                     .filter((x) => !!x)
 
-                if (battleTypes.length === 0) {
-                    return null
-                }
-
                 return battleTypes.flatMap((bt) => [...bt.ids])
             },
         },
@@ -268,10 +264,7 @@ export namespace LogListN {
         },
         e: {
             type: "bitmask",
-            deser: (xs) =>
-                new Set<string>(
-                    xs.map((idx) => ERRORS[idx]?.label).filter((x) => !!x),
-                ),
+            deser: (xs) => xs.map((idx) => ERRORS[idx]).filter((x) => !!x),
         },
         rmn: {
             type: "number",
@@ -292,12 +285,6 @@ export namespace LogListN {
         )
 
         const pageSize = params["n"].v ?? pageSizeStorage
-        const roundMin = params["rmn"].v
-        const roundMax = params["rmx"].v
-        const errors =
-            params["e"].v.size > 0
-                ? ERRORS.filter((x) => params["e"].v.has(x.label))
-                : ERRORS
 
         const request = useMemo(
             () =>
@@ -315,9 +302,9 @@ export namespace LogListN {
                                       : ("asc" as const),
                           }
                         : null,
-                    battleType: maxToNull(params["bt"].v, battleTypeCount),
-                    primaryStyle: maxToNull(params["sp"].v, stylesCount),
-                    secondaryStyle: maxToNull(params["ss"].v, stylesCount),
+                    battleType: withMaxMin(params["bt"].v, battleTypeCount),
+                    primaryStyle: withMaxMin(params["sp"].v, stylesCount),
+                    secondaryStyle: withMaxMin(params["ss"].v, stylesCount),
                     isImperil:
                         params["i"].v === "yes"
                             ? true
@@ -326,17 +313,18 @@ export namespace LogListN {
                               : null,
                     startDate: params["ds"].v?.toISOString() ?? null,
                     endDate: params["de"].v?.toISOString() ?? null,
-                    completionType: maxToNull(
+                    completionType: withMaxMin(
                         params["ct"].v,
                         completionTypeCount,
                     ),
-                    roundMin,
-                    roundMax,
+                    roundMin: params["rmn"].v,
+                    roundMax: params["rmx"].v,
                     errors:
-                        errors.length === ERRORS.length
+                        params["e"].v.length === ERRORS.length ||
+                        params["e"].v.length === 0
                             ? null
                             : Object.fromEntries(
-                                  errors.map(
+                                  params["e"].v.map(
                                       (x) => [x.id as any, true] as const,
                                   ),
                               ),
@@ -348,16 +336,16 @@ export namespace LogListN {
                 params["key_user"].v,
                 params["s"].v,
                 params["desc"].v,
-                params["bt"].v?.join("|"),
+                params["bt"].v.join("|"),
                 params["sp"].v.join("|"),
                 params["ss"].v.join("|"),
                 params["i"].v,
                 params["ds"].v?.toISOString(),
                 params["de"].v?.toISOString(),
                 params["ct"].v.join("|"),
-                roundMin,
-                roundMax,
-                errors.join("|"),
+                params["rmn"].v,
+                params["rmx"].v,
+                params["e"].v.map((x) => x.label).join("|"),
             ],
         )
         useEffect(() => {
@@ -368,7 +356,7 @@ export namespace LogListN {
         const fetcher = useAsync(async (req) => {
             const get = (
                 pageIdx: number,
-                sortCriteria?: ListTable.SortCriteria,
+                sortCriteria?: ListTableN.SortCriteria,
             ) => {
                 return logSource.fetchSearch({
                     ...req,
@@ -449,9 +437,10 @@ export namespace LogListN {
     })
 }
 
-function maxToNull<T extends Array<any> | Set<any> | Map<any, any> | null>(
+function withMaxMin<T extends Array<any> | Set<any> | Map<any, any> | null>(
     xs: T,
     max: number,
+    min = 0,
 ): T | null {
     let size = 0
     if (Array.isArray(xs)) {
@@ -462,7 +451,7 @@ function maxToNull<T extends Array<any> | Set<any> | Map<any, any> | null>(
         size = xs.size
     }
 
-    if (size >= max) {
+    if (size >= max || size <= min) {
         return null
     } else {
         return xs

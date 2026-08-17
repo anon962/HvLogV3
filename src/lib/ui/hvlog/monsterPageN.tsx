@@ -14,7 +14,7 @@ import {
 import { useMemo, useState } from "react"
 import { LOG_SOURCE } from "../../db/logSource"
 import { lucide } from "../../constants"
-import { ListTable } from "../listTable"
+import { ListTableN } from "../listTable"
 import { UrlParamN } from "./router"
 
 // region cols
@@ -127,7 +127,7 @@ const COLS_ = {
             className: "mobcount",
         }),
     },
-} as const satisfies Record<string, ListTable.Column<MonsterPageN.Row, any>>
+} as const satisfies Record<string, ListTableN.Column<MonsterPageN.Row, any>>
 
 // region params
 const PARAM_SCHEMA = {

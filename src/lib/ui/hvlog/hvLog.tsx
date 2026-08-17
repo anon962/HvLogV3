@@ -7,13 +7,14 @@ import "@/lib/ui/global.css"
 import * as lucide from "lucide-react"
 import { CustomMap, normalizeUrlParts, sleep, useAsync } from "myutils"
 import { StrictMode, useMemo } from "react"
-import { IS_REMOTE } from "../../constants"
+import { IS_LOCAL, IS_REMOTE } from "../../constants"
 import { LOG_SOURCE } from "../../db/logSource"
 import { Sidebar, SidebarItem } from "../sidebar"
 import { LogDetailsPane } from "./logDetailsPane"
 import { LogList } from "./logList/logList"
 import { MonsterPage } from "./monsterPage"
 import { RouteDef, RouteLink, ROUTER, Router } from "./router"
+import { EquipPage } from "./equipsPage"
 
 // @fixme: profit history (bar graph, day month)
 // @fixme: avg drops per battle type (including equips)
@@ -26,6 +27,7 @@ import { RouteDef, RouteLink, ROUTER, Router } from "./router"
 // @fixme: uploads / deletes
 // @fixme: item world
 // @fixme: useAppCache
+// @fixme: local log cols (duration)
 
 // @todo: per round / avgs (config?)
 // @todo: effect blame
@@ -54,6 +56,11 @@ export const HvLog = (props: { prefix?: string[] }) => {
             "/mobs": IS_REMOTE
                 ? () => ({
                       component: <MonsterPage />,
+                  })
+                : null,
+            "/equips": IS_LOCAL
+                ? () => ({
+                      component: <EquipPage />,
                   })
                 : null,
         } satisfies Record<string, RouteDef | null>).flatMap((kv) =>

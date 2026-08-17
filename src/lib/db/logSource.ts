@@ -34,6 +34,9 @@ class LogSourceRemote implements N.Protocol {
     private globalMonsterSummary: Promise<any> | null = null
     private monlab: Promise<Record<number, N.MonlabMonster>> | null = null
 
+    async fetchLogIds(): Promise<string[]> {
+        throw new Error("not implemented")
+    }
     async fetchSearch(req: N.SearchRequest): Promise<N.SearchResponse> {
         const resp = await this.searchCache.fetch(req)
         const result = {
@@ -258,6 +261,9 @@ class LogSourceLocal implements N.Protocol {
         })()
     }
 
+    async fetchLogIds(): Promise<string[]> {
+        return [...this.logIds[this.world]]
+    }
     async fetchMeta(id: string) {
         return await this.metaCache.fetch({ id, world: this.world })
     }

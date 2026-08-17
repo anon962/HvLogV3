@@ -102,13 +102,13 @@ export function Table() {
                 trigger: <SlidersHorizontal className="size-full" />,
                 content: <Filter />,
                 active:
-                    params.bt.size > 0 ||
-                    params.ct.size > 0 ||
-                    params.sp.size > 0 ||
-                    params.ss.size > 0 ||
-                    params.e.size > 0 ||
-                    params.i === "yes" ||
-                    params.i === "no" ||
+                    params.bt.v.length > 0 ||
+                    params.ct.v.length > 0 ||
+                    params.sp.v.length > 0 ||
+                    params.ss.v.length > 0 ||
+                    params.e.v.length > 0 ||
+                    params.i.v === "yes" ||
+                    params.i.v === "no" ||
                     !!params.ds ||
                     !!params.de ||
                     !!params.rmn ||
@@ -122,6 +122,9 @@ export function Table() {
 function Filter() {
     const { params, setParams } = LogListN.ctx.useContext()
 
+    const bt = new Set(params.bt.v)
+    const ct = new Set(params.ct.v)
+
     return (
         <form className="rounded-md border flex p-4 text-xs">
             <div className="flex flex-col gap-4">
@@ -130,8 +133,8 @@ function Filter() {
                     options={LogListN.BATTLE_TYPES.map(({ label }) => ({
                         label,
                     }))}
-                    checked={LogListN.BATTLE_TYPES.map(({ label }) =>
-                        params.bt.has(label),
+                    checked={LogListN.BATTLE_TYPES.map(
+                        ({ ids }) => ids.intersection(bt).size > 0,
                     )}
                     onCheckedChange={({ checked }) => {
                         setParams({
@@ -150,7 +153,7 @@ function Filter() {
                         label,
                     }))}
                     checked={LogListN.COMPLETION_TYPES.map(({ id }) =>
-                        params.ct.has(id),
+                        ct.has(id),
                     )}
                     onCheckedChange={({ checked }) => {
                         setParams({
@@ -166,7 +169,7 @@ function Filter() {
                         label,
                     }))}
                     checked={LogListN.ERRORS.map(({ label }) =>
-                        params.e.has(label),
+                        params.e.v.some((x) => x.label === label),
                     )}
                     onCheckedChange={({ checked }) => {
                         setParams({
@@ -187,8 +190,8 @@ function Filter() {
                     hideAll={true}
                     options={["Yes", "No"].map((label) => ({ label }))}
                     checked={[
-                        params["i"] === "yes" || params["i"] === "both",
-                        params["i"] === "no" || params["i"] === "both",
+                        params["i"].v === "yes" || params["i"].v === "both",
+                        params["i"].v === "no" || params["i"].v === "both",
                     ]}
                     onCheckedChange={({ checked }) => {
                         setParams({
@@ -204,7 +207,9 @@ function Filter() {
                     options={LogListN.STYLES.map(({ id }) => ({
                         label: FIGHTING_STYLE_NAMES[id].short,
                     }))}
-                    checked={LogListN.STYLES.map(({ id }) => params.sp.has(id))}
+                    checked={LogListN.STYLES.map(({ id }) =>
+                        params.sp.v.includes(id),
+                    )}
                     onCheckedChange={({ checked }) => {
                         setParams({
                             sp: checked.map((x) => +x as 0 | 1),
@@ -225,7 +230,9 @@ function Filter() {
                     options={LogListN.STYLES.map(({ id }) => ({
                         label: FIGHTING_STYLE_NAMES[id].short,
                     }))}
-                    checked={LogListN.STYLES.map(({ id }) => params.ss.has(id))}
+                    checked={LogListN.STYLES.map(({ id }) =>
+                        params.ss.v.includes(id),
+                    )}
                     onCheckedChange={({ checked }) => {
                         setParams({
                             ss: checked.map((x) => +x as 0 | 1),
@@ -247,7 +254,7 @@ function Filter() {
                             type="number"
                             className="h-[2em] w-[10ch] p-2 text-[length:inherit]"
                             min="0"
-                            defaultValue={params.rmn || ""}
+                            defaultValue={params.rmn.v || ""}
                             onChange={(ev) => {
                                 const value = parseInt(ev.target.value)
                                 setParams({
@@ -265,7 +272,7 @@ function Filter() {
                             type="number"
                             className="h-[2em] w-[10ch] py-0 text-inherit"
                             min="0"
-                            defaultValue={params.rmx || ""}
+                            defaultValue={params.rmx.v || ""}
                             onChange={(ev) => {
                                 const value = parseInt(ev.target.value)
                                 setParams({
@@ -282,7 +289,7 @@ function Filter() {
                 <div className="flex gap-4">
                     <MonthYearPicker
                         label="From"
-                        value={params.ds}
+                        value={params.ds.v}
                         onPick={(date) => {
                             setParams({ ds: date })
                         }}
@@ -290,7 +297,7 @@ function Filter() {
                     />
                     <MonthYearPicker
                         label="To"
-                        value={params.de}
+                        value={params.de.v}
                         onPick={(date) => {
                             setParams({ de: date })
                         }}
