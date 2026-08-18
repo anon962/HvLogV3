@@ -225,7 +225,6 @@ export const ROUTER = newContext(() => {
 
     useEffect(() => {
         const onUrlChange = (ev: UrlChangeEvent) => {
-            console.log("ev", ev)
             setValue((x) => {
                 const entry = readUrlWithPrefix(x.prefix)
                 const history = [...x.history]

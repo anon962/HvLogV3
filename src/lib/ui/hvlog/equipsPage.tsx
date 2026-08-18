@@ -17,6 +17,7 @@ import { CheckIcon } from "../icons/tailwind"
 import { ListTable, ListTableN } from "../listTable"
 import { LogListN } from "./logList/logListN"
 import { UrlParamN } from "./router"
+import { EQUIP_TIERS } from "@/lib/constants"
 
 export function EquipPage(props: {}) {
     return (
@@ -45,7 +46,19 @@ function EquipPageInner(props: {}) {
                       }
                     : null
             }
-            setSortCriteria={() => {}}
+            setSortCriteria={(s) => {
+                if (s) {
+                    ctx.setParams({
+                        s: s.cid,
+                        d: s.order === "desc",
+                    })
+                } else {
+                    ctx.setParams({
+                        s: null,
+                        d: null,
+                    })
+                }
+            }}
             getId={(r) => r.id}
             sortCols={
                 new Set([
@@ -59,9 +72,10 @@ function EquipPageInner(props: {}) {
             pageSize={ctx.pageSize}
             setPageSize={{
                 options: [25, 100, 1000, 999999],
-                handler: () => {},
+                handler: (sz) => ctx.setParams({ n: sz }),
             }}
             pageIndex={ctx.pageIndex}
+            setPageIndex={(idx) => ctx.setParams({ p: idx })}
             isLoading={ctx.isLoading}
         />
     )
@@ -78,6 +92,8 @@ const EQUIP_PAGE = newContext(() => {
     const [isLoading, setIsLoading] = useState(true)
     useAsync2(async () => {
         const dbP = await new LogDb({ world: "persistent" }).connect()
+        const dummy: any = {}
+
         let equips: EquipPageN.IdbStorage
         while (true) {
             const equipTally = await dbP.get("kv", "equipTally")
@@ -105,15 +121,16 @@ const EQUIP_PAGE = newContext(() => {
                 continue
             }
 
-            let idx = data.length - 1
-            while (idx < equips.id.length) {
-                idx += 1
-
+            for (let idx = data.length; idx < equips.id.length; idx += 1) {
                 const i = idx
                 data.push(
                     new Proxy({} as EquipPageN.Row, {
                         get(target, key) {
-                            return (equips as any)[key][i]
+                            if (key in equips) {
+                                return (equips as any)[key][i]
+                            } else {
+                                return dummy[key]
+                            }
                         },
                     }),
                 )
@@ -126,9 +143,15 @@ const EQUIP_PAGE = newContext(() => {
         }
     }, [])
 
-    const page: EquipPageN.Row[] = useMemo(() => {
+    const [page, count]: [EquipPageN.Row[], number] = useMemo(() => {
         let idxs = range(data.length)
-
+        if (params.et.v.length > 0) {
+            idxs = idxs.filter((idx) =>
+                params.et.v.some((tier) =>
+                    data[idx].name.startsWith(tier + " "),
+                ),
+            )
+        }
         if (params.bt.v) {
             const bts = new Set(params.bt.v)
             idxs = idxs.filter((idx) => bts.has(data[idx].battleType ?? ""))
@@ -170,7 +193,7 @@ const EQUIP_PAGE = newContext(() => {
             case "name":
                 idxs = alphabeticalBy(idxs, (idx) => data[idx].name, sortDesc)
                 break
-            case "battleType":
+            case "type":
                 idxs = alphabeticalBy(
                     idxs,
                     (idx) => data[idx].battleType ?? (sortDesc ? "aaa" : "zzz"),
@@ -184,7 +207,7 @@ const EQUIP_PAGE = newContext(() => {
 
         const st = params.p.v * params.n.v
         const page = idxs.slice(st, st + params.n.v)
-        return page.map((idx) => data[idx])
+        return [page.map((idx) => data[idx]), idxs.length] as const
     }, [
         dataVersion,
         ...objectValues(mapEntries(params, (k, v) => ({ [k]: v.raw }))),
@@ -195,8 +218,8 @@ const EQUIP_PAGE = newContext(() => {
             page,
             pageSize: params.n.v,
             pageIndex: params.p.v,
-            pageCount: Math.ceil(data.length / params.n.v),
-            count: data.length,
+            pageCount: Math.ceil(count / params.n.v),
+            count,
             params,
             setParams,
             sortCol: params.s,
@@ -232,7 +255,7 @@ export namespace EquipPageN {
             }),
         },
         battleType: {
-            id: "battleType",
+            id: "type",
             header: {
                 content: "Battle Type",
             },
@@ -256,11 +279,19 @@ export namespace EquipPageN {
         bonus: {
             id: "bonus",
             header: {
-                content: "Clear Bonus?",
+                content: (
+                    <>
+                        Clear
+                        <br />
+                        Bonus?
+                    </>
+                ),
             },
             cell: (r) => ({
                 content: r.isBonus ? <CheckIcon /> : " ",
+                className: "flex justify-center",
             }),
+            align: "text-center",
         },
     } as const satisfies Record<string, ListTableN.Column<Row>>
 
@@ -311,6 +342,12 @@ export namespace EquipPageN {
         },
         bs: {
             type: "boolean",
+        },
+        et: {
+            type: "bitmask",
+            deser: (idxs) =>
+                idxs.map((idx) => EQUIP_TIERS[idx]).filter((x) => !!x),
+            init: () => [1, 2],
         },
     } as const satisfies UrlParamN.Schema
 }

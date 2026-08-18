@@ -16,7 +16,7 @@ import {
     BUBBLE_VASE,
     CONSUMABLES,
     DEBUG,
-    EQUIP_PREFIXES,
+    EQUIP_TIERS,
     HEALTH_ITEMS,
     MANA_ITEMS,
     MATERIALS,
@@ -393,7 +393,7 @@ function _summarizeItemDrops(entries: LogEntries<v91N.HvEvent>) {
     )
 
     function isEquip(text: string) {
-        return EQUIP_PREFIXES.some((tier) => text.startsWith(tier + " "))
+        return EQUIP_TIERS.some((tier) => text.startsWith(tier + " "))
     }
 }
 

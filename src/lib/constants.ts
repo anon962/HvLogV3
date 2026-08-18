@@ -388,7 +388,7 @@ export const TAILWIND_SHADES = {
     950: 10,
 } as const
 
-export const EQUIP_PREFIXES = [
+export const EQUIP_TIERS = [
     "Ultimate",
     "Peerless",
     "Legendary",
