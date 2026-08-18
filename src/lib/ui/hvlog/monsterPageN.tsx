@@ -13,9 +13,9 @@ import {
 } from "myutils"
 import { useMemo, useState } from "react"
 import { LOG_SOURCE } from "../../db/logSource"
-import { lucide } from "../../constants"
 import { ListTableN } from "../listTable"
 import { UrlParamN } from "./router"
+import { Eye, Shield, Sword } from "lucide-react"
 
 // region cols
 const COLS_ = {
@@ -40,7 +40,7 @@ const COLS_ = {
     frequency: {
         id: "frequency",
         header: {
-            content: <lucide.Eye />,
+            content: <Eye />,
             tooltip: "Number of appearances (all-time).",
         },
         align: "text-right",
@@ -51,7 +51,7 @@ const COLS_ = {
     dtaken: {
         id: "dtaken",
         header: {
-            content: <lucide.Shield />,
+            content: <Shield />,
             tooltip:
                 "Monster's average damage taken per hit as percentage of max HP.",
         },
@@ -67,7 +67,7 @@ const COLS_ = {
     dgiven: {
         id: "dgiven",
         header: {
-            content: <lucide.Sword />,
+            content: <Sword />,
             tooltip: "Average damage per appearance.",
         },
         align: "text-right",

@@ -1,7 +1,7 @@
-import * as lucide from "lucide-react"
 import { cn } from "myutils"
 import { useEffect, useState } from "react"
 import { CommonProps } from "../utils/miscUtils"
+import { LoaderCircle } from "lucide-react"
 
 export function Loader(props: { show: boolean; delay?: number } & CommonProps) {
     const [show, setShow] = useState(false)
@@ -21,7 +21,7 @@ export function Loader(props: { show: boolean; delay?: number } & CommonProps) {
     }, [props.show, props.delay])
 
     return (
-        <lucide.LoaderCircle
+        <LoaderCircle
             className={cn(
                 show ? "" : "invisible pointer-none:",
                 "animate-spin text-blue-500 size-6",

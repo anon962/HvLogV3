@@ -1,4 +1,3 @@
-import { lucide } from "@/lib/constants"
 import {
     Autocomplete,
     AutocompleteContent,
@@ -7,6 +6,7 @@ import {
     AutocompleteList,
 } from "@/lib/ui/shadcn/autocomplete"
 import { CommonProps } from "@/lib/utils/miscUtils"
+import { SlidersHorizontal } from "lucide-react"
 import { cn, dedupe, mapEntries, NgramSearch } from "myutils"
 import { useMemo } from "react"
 import { ListTable } from "../listTable"
@@ -120,7 +120,7 @@ function Table() {
                 className="monster-list"
                 tableProps={{ className: "overflow-hidden" }}
                 filter={{
-                    trigger: <lucide.SlidersHorizontal className="size-full" />,
+                    trigger: <SlidersHorizontal className="size-full" />,
                     content: <Filter />,
                     active: Object.entries(params).some(
                         ([k, v]) =>

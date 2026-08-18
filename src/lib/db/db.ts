@@ -169,3 +169,19 @@ export class LogDb<Ready extends boolean = false> {
         return conn.transaction(storeNames, mode)
     }
 }
+
+export async function deleteLogs(
+    txn: idb.IDBPTransaction<
+        IdbSchemaRaw,
+        ("logsRaw" | "logsMeta" | "summariesForMeta" | "summariesForSearch")[],
+        "readwrite"
+    >,
+    ids: Iterable<DbN.LogId>,
+) {
+    for (const id of ids) {
+        await txn.objectStore("logsMeta").delete(id)
+        await txn.objectStore("logsRaw").delete(id)
+        await txn.objectStore("summariesForMeta").delete(id)
+        await txn.objectStore("summariesForSearch").delete(id)
+    }
+}

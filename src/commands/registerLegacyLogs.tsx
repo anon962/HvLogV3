@@ -2,7 +2,7 @@ import { LogDb, LogDbConn } from "@/lib/db/db"
 import { DbN } from "@/lib/db/dbN"
 import { MigrateV2 } from "@/lib/db/migrateV2"
 import { LabeledCheckbox } from "@/lib/ui/checkboxGroup"
-import { lucide } from "@/lib/constants"
+import { XIcon } from "lucide-react"
 import { Loader } from "@/lib/ui/loader"
 import { Button } from "@/lib/ui/shadcn/button"
 import { Input } from "@/lib/ui/shadcn/input"
@@ -111,7 +111,7 @@ function Dialog() {
                     disabled={status.action !== null}
                     className="absolute rounded-full bg-transparent hover:bg-foreground/10 top-[0.5em] right-[0.5em] h-[2.5em] w-[2.5em] p-[0.25em]"
                 >
-                    <lucide.XIcon className="size-full" />
+                    <XIcon className="size-full" />
                 </button>
 
                 <Section

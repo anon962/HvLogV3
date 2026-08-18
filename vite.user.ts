@@ -80,6 +80,7 @@ var process = {
             rolldownOptions: {
                 output: {
                     format: "iife",
+                    codeSplitting: false,
                     intro:
                         "var _documentCurrentScript = typeof document !== 'undefined' ? document.currentScript : null;" +
                         `var __import_meta_url__ = (_documentCurrentScript && _documentCurrentScript.tagName.toUpperCase() === 'SCRIPT' && _documentCurrentScript.src || new URL('main.js', document.baseURI).href)`,

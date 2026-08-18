@@ -39,7 +39,7 @@
         "date-fns": "^4.4.0",
         "esbuild": "^0.28.2",
         "idb": "^8.0.2",
-        "lucide-react": "^0.483.0",
+        "lucide-react": "^1.31.0",
         "myutils": "link:../myutils.js",
         "next-themes": "^0.4.6",
         "react": "^19.2.8",

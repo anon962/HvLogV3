@@ -1,6 +1,10 @@
+import {
+    type init as ZstdInit,
+    type compress as ZstdCompress,
+    type decompress as ZstdDecompress,
+} from "@bokuweb/zstd-wasm"
 import { mountReactWrapper, sum } from "myutils"
 import React from "react"
-import { zstdWasm } from "../constants"
 // @ts-ignore
 import __zstdInline__ from "virtual:zstd-inline"
 // @ts-ignore

@@ -1,5 +1,6 @@
 import { WorkerPoolN } from "myutils"
 import { UserscriptConfig } from "./db/userscriptConfig"
+import { init, compress, decompress } from "@bokuweb/zstd-wasm"
 
 export {}
 
@@ -28,5 +29,11 @@ declare global {
                 accessKey?: string
             },
         ) => void
+    }
+
+    var zstdWasm: {
+        init: typeof init
+        compress: typeof compress
+        decompress: typeof decompress
     }
 }

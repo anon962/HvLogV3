@@ -4,7 +4,7 @@ import { IndexMap } from "@/lib/stats/indexMap"
 import { humanizeBattleType } from "@/lib/stats/metaStats"
 // @ts-ignore
 import "@/lib/ui/global.css"
-import * as lucide from "lucide-react"
+import { ScrollText } from "lucide-react"
 import { CustomMap, normalizeUrlParts, sleep, useAsync } from "myutils"
 import { StrictMode, useEffect, useMemo } from "react"
 import { IS_LOCAL, IS_REMOTE } from "../../constants"
@@ -73,7 +73,7 @@ export const HvLog = (props: { prefix?: string[] }) => {
     const sidebarItems = (
         [
             {
-                icon: <lucide.ScrollText />,
+                icon: <ScrollText />,
                 path: "/logs/",
                 isActive: (parts) => parts[0] === "logs",
                 isDisabled: (parts) =>

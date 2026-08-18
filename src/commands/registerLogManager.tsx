@@ -1,5 +1,5 @@
-import { lucide } from "@/lib/constants"
-import { LogDb } from "@/lib/db/db"
+import { HV_WORLDS } from "@/lib/constants"
+import { deleteLogs, LogDb } from "@/lib/db/db"
 import { DbN } from "@/lib/db/dbN"
 import { COMPRESS_LOCK } from "@/lib/db/userscriptTasks"
 import { Loader } from "@/lib/ui/loader"
@@ -14,6 +14,7 @@ import {
     readZip,
     writeZip,
 } from "@/lib/utils/miscUtils"
+import { XIcon } from "lucide-react"
 import {
     alphabeticalBy,
     AsyncLock,
@@ -52,7 +53,8 @@ function Dialog() {
         dialogRef.current?.showModal()
     }, [dialogRef?.current])
 
-    const { status, log, exportLogs, importLogs } = useManagerState()
+    const { status, log, exportLogs, importLogs, deleteLogs_ } =
+        useManagerState()
     const isBusy = useMemo(
         () =>
             (status.action !== null && status.action !== "initLogs") ||
@@ -88,14 +90,20 @@ function Dialog() {
     const [delStart, setDelStart] = useState(new Date("2000-01-01"))
     const [delEnd, setDelEnd] = useState(new Date("2099-01-01"))
 
-    const toDelete = useMemo(() => {
+    const dateDeletions = useMemo(() => {
         const st = delStart.toISOString()
         const end = delStart.toISOString()
         const ids = Object.values(status.logs)
             .filter((l) => l.startedAt >= st)
             .filter((l) => l.startedAt <= end)
             .map((l) => l.id)
-        return new Set(ids)
+        return ids
+    }, [status])
+    const legacyDeletions = useMemo(() => {
+        const ids = Object.values(status.logs)
+            .filter((l) => l.isLegacy)
+            .map((l) => l.id)
+        return ids
     }, [status])
 
     const actions: Array<[ReactNode, ReactNode]> = [
@@ -131,7 +139,7 @@ function Dialog() {
             <div className="flex flex-col">
                 <span className="inline-flex gap-1 w-full justify-end items-center">
                     <span className="shrink-0">
-                        Delete {toDelete.size} old logs from
+                        Delete {dateDeletions.length} old logs from
                     </span>
                     <Input
                         className="max-w-[12em]"
@@ -148,20 +156,24 @@ function Dialog() {
                 <span className="text-end">(including end date, utc time)</span>
             </div>,
             <ActionButton
-                onClick={() => {}}
+                onClick={() => {
+                    deleteLogs_(dateDeletions)
+                }}
                 label="Delete Old Logs"
                 loading={isBusy}
-                disabled={toDelete.size === 0}
+                disabled={dateDeletions.length === 0}
             />,
         ],
     ]
     if (totals.legacyCount > 0) {
         actions.push([
             <span>
-                Delete {totals.legacyCount} logs from version {"<"}2.x
+                Delete {legacyDeletions.length} logs from version {"<"}2.x
             </span>,
             <ActionButton
-                onClick={() => {}}
+                onClick={() => {
+                    deleteLogs_(legacyDeletions)
+                }}
                 label="Delete Jank Logs"
                 loading={isBusy}
             />,
@@ -192,7 +204,7 @@ function Dialog() {
                     disabled={isBusy}
                     className="absolute rounded-full bg-transparent hover:bg-foreground/10 top-[0.5em] right-[0.5em] h-[2.5em] w-[2.5em] p-[0.25em] disabled:text-muted"
                 >
-                    <lucide.XIcon className="size-full" />
+                    <XIcon className="size-full" />
                 </button>
 
                 <Section
@@ -335,8 +347,7 @@ function useManagerState() {
         pending: {
             export: null as null | {},
             import: null as null | { files: File[] },
-            deleteOld: null as null | { start: Date; end: Date },
-            deleteLegacy: null as null | {},
+            delete: null as null | { ids: Array<DbN.LogId> },
         },
     })
     type Status = typeof status
@@ -365,9 +376,7 @@ function useManagerState() {
         log: logLines,
         exportLogs: () => queueAction("export", {}),
         importLogs: (files: File[]) => queueAction("import", { files }),
-        deleteOldLogs: (start: Date, end: Date) =>
-            queueAction("deleteOld", { start, end }),
-        deleteLegacy: () => queueAction("deleteLegacy", {}),
+        deleteLogs_: (ids: Array<DbN.LogId>) => queueAction("delete", { ids }),
     }
 
     // #region useLogScan
@@ -520,6 +529,13 @@ function useManagerState() {
                     "import",
                     importLogs({
                         ...status.pending.import,
+                    }),
+                )
+            } else if (status.pending.delete) {
+                runAction(
+                    "delete",
+                    deleteLogs_({
+                        ...status.pending.delete,
                     }),
                 )
             }
@@ -786,6 +802,35 @@ function useManagerState() {
                 "compressDone",
             )
             cLock.release()
+        }
+    }
+    // #endregion
+    // #region deleteLogs
+    async function deleteLogs_(opts: { ids: Array<DbN.LogId> }) {
+        const dbs = await dbFetch
+        for (const world of HV_WORLDS) {
+            const idsForWorld = [...opts.ids].filter(
+                (id) => status.logs[id].world === world,
+            )
+            if (!idsForWorld) {
+                continue
+            }
+
+            L.info(`Deleting ${idsForWorld.length} ${world} logs ...`)
+            const txn = dbs[world].transaction(
+                [
+                    "logsRaw",
+                    "logsMeta",
+                    "summariesForMeta",
+                    "summariesForSearch",
+                ],
+                "readwrite",
+            )
+            await deleteLogs(txn, idsForWorld)
+
+            for (const id of idsForWorld) {
+                delete status.logs[id]
+            }
         }
     }
     // #endregion
