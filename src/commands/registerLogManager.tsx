@@ -1,7 +1,8 @@
 import { HV_WORLDS } from "@/lib/constants"
 import { deleteLogs, LogDb } from "@/lib/db/db"
 import { DbN } from "@/lib/db/dbN"
-import { COMPRESS_LOCK } from "@/lib/db/userscriptTasks"
+import { LOG_PROCESSING_LOCK } from "@/lib/db/logSource"
+import { TASK_LOCK } from "@/lib/db/userscriptTasks"
 import { Loader } from "@/lib/ui/loader"
 import { Button } from "@/lib/ui/shadcn/button"
 import { Input } from "@/lib/ui/shadcn/input"
@@ -26,12 +27,12 @@ import {
     ISODate,
     L,
     objectValues,
-    sleep,
     sum,
     throttle,
     truncateString,
 } from "myutils"
 import {
+    Fragment,
     ReactNode,
     useCallback,
     useEffect,
@@ -167,7 +168,9 @@ function Dialog() {
             </div>,
             <ActionButton
                 onClick={() => {
-                    deleteLogs_(dateDeletions)
+                    if (confirm(`Logs can not be un-deleted! Are you sure?`)) {
+                        deleteLogs_(dateDeletions)
+                    }
                 }}
                 label="Delete Old Logs"
                 loading={isBusy}
@@ -182,7 +185,9 @@ function Dialog() {
             </span>,
             <ActionButton
                 onClick={() => {
-                    deleteLogs_(legacyDeletions)
+                    if (confirm(`Logs can not be un-deleted! Are you sure?`)) {
+                        deleteLogs_(legacyDeletions)
+                    }
                 }}
                 label="Delete Jank Logs"
                 loading={isBusy}
@@ -263,7 +268,7 @@ function Section(
         }
 
         for (const ln of newLines) {
-            lines.els.push(<pre>{ln}</pre>)
+            lines.els.push(<pre key={lines.els.length}>{ln}</pre>)
         }
         setLineEls({
             els: lines.els,
@@ -279,7 +284,9 @@ function Section(
 
             <hr></hr>
             <div className="actions">
-                {...props.actions.flatMap(([l, r]) => [l, r])}
+                {...props.actions
+                    .flatMap(([l, r]) => [l, r])
+                    .map((x, idx) => <Fragment key={idx}>{x}</Fragment>)}
             </div>
 
             <hr></hr>
@@ -717,6 +724,11 @@ function useManagerState() {
                 }
             }
 
+            const locks = [
+                await TASK_LOCK.acquire(),
+                await LOG_PROCESSING_LOCK.acquire(),
+            ]
+
             const dbs = await dbFetch
             const stats = {
                 count: 0,
@@ -790,17 +802,6 @@ function useManagerState() {
             )
             cancelStatusLog()
 
-            const [cLog, stopCLog] = throttle({
-                fn: () => L.info(`Waiting for log compression to finish ...`),
-                interval: 30_000,
-            })
-            while (COMPRESS_LOCK.locked) {
-                await sleep(5_000)
-                cLog()
-            }
-            stopCLog()
-
-            const cLock = await COMPRESS_LOCK.acquire()
             const done =
                 ((await dbs.persistent.get(
                     "kv",
@@ -811,7 +812,7 @@ function useManagerState() {
                 done.union(stats.ids),
                 "compressDone",
             )
-            cLock.release()
+            locks.forEach((lock) => lock.release())
         }
     }
     // #endregion

@@ -121,14 +121,16 @@ export const HvLog = (props: { prefix?: string[] }) => {
     )
 
     return (
-        <StrictMode>
+        <>
+            {/* <StrictMode> */}
             {providers.reduceRight(
                 (el, Provider) => (
                     <Provider>{el}</Provider>
                 ),
                 inner,
             )}
-        </StrictMode>
+            {/* </StrictMode> */}
+        </>
     )
 }
 
@@ -141,6 +143,10 @@ function UserscriptTaskRunner(props: {}) {
     const logSource = LOG_SOURCE.useContext()
 
     useEffect(() => {
+        if (!configCtx.ready) {
+            return
+        }
+
         return runUserscriptTasks({
             logSource,
             config: configCtx.config,

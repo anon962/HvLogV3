@@ -61,7 +61,7 @@ function EquipPageInner(props: {}) {
                     })
                 }
             }}
-            getId={(r) => r.id}
+            getId={(r) => r.id + r.idx}
             sortCols={
                 new Set([
                     EquipPageN.COLS_.name.id,
@@ -73,7 +73,7 @@ function EquipPageInner(props: {}) {
             count={ctx.count}
             pageSize={ctx.pageSize}
             setPageSize={{
-                options: [25, 100, 1000, 999999],
+                options: [25, 100, 1000, 12345, 999999],
                 handler: (sz) => ctx.setParams({ n: sz }),
             }}
             pageIndex={ctx.pageIndex}
@@ -237,7 +237,8 @@ const EQUIP_PAGE = newContext(() => {
 export namespace EquipPageN {
     type Bt = Exclude<MetaSummary["battleType"], null>
     export interface Row {
-        id: string
+        id: DbN.LogId
+        idx: number
         name: string
         battleTypeId: Bt["id"] | null
         battleTypeCategory: Bt["category"] | null

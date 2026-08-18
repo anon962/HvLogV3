@@ -1,6 +1,12 @@
 import { formatNumber } from "@/lib/utils/miscUtils"
 import { enumerate } from "myutils"
-import { CSSProperties, ReactElement, ReactNode, useState } from "react"
+import {
+    CSSProperties,
+    Fragment,
+    ReactElement,
+    ReactNode,
+    useState,
+} from "react"
 import {
     Tooltip,
     TooltipContent,
@@ -96,7 +102,7 @@ export function TallyTable({
         setColWidth(idx + 1, maxWidth)
 
         return (
-            <span className={className}>
+            <span key={idx} className={className}>
                 {col.tooltip ? (
                     <TooltipProvider>
                         <Tooltip>
@@ -156,16 +162,17 @@ export function TallyTable({
     const { rowEls, totals } = zip(rows, cells).reduce(
         (acc, [row, cs], idx) => {
             acc.rowEls.push(
-                Row({
-                    onClick: () => toggleActive(idx),
-                    cells: cs,
-                    row: row,
-                    columns: columns,
-                    subColumns: subColumns ?? [],
-                    isActive: active.has(idx),
-                    isNextActive: active.has(idx + 1),
-                    style: { ...gridStyles, ...rowStyle },
-                }),
+                <Row
+                    key={idx}
+                    onClick={() => toggleActive(idx)}
+                    cells={cs}
+                    row={row}
+                    columns={columns}
+                    subColumns={subColumns ?? []}
+                    isActive={active.has(idx)}
+                    isNextActive={active.has(idx + 1)}
+                    style={{ ...gridStyles, ...rowStyle }}
+                />,
             )
 
             for (const [colIdx, col] of enumerate(columns)) {
@@ -200,7 +207,11 @@ export function TallyTable({
                 label = formatNumber(x)
             }
 
-            return <span className="count footer text-right">{label}</span>
+            return (
+                <span key={idx} className="count footer text-right">
+                    {label}
+                </span>
+            )
         })
 
         const footerClass = `row footer-row ${
@@ -224,7 +235,7 @@ export function TallyTable({
                     className={titleRowClasses}
                     style={{ ...gridStyles, ...rowStyle }}
                 >
-                    <span className="category header">
+                    <span key={-1} className="category header">
                         {categoryLabel ?? "Category"}
                     </span>
                     {...columnHeaderEls}
@@ -283,9 +294,10 @@ function Row({
         )
     }
 
-    const cellEls = cells.map((cell) => {
+    const cellEls = cells.map((cell, idx) => {
         return (
             <div
+                key={idx}
                 className="cell"
                 style={
                     {
@@ -331,7 +343,7 @@ function SubTable({ subValues, subColumns, span }: SubRowProps) {
         const cls = `subheader ${alignClass[idx]} ${subCol.tooltip ? "tooltip" : ""}`
 
         return (
-            <div className={cls}>
+            <div key={idx} className={cls}>
                 {subCol.tooltip ? (
                     <TooltipProvider>
                         <Tooltip>
@@ -371,7 +383,11 @@ function SubTable({ subValues, subColumns, span }: SubRowProps) {
 
             const cls = `subcell ${alignClass[idx]}`
 
-            return <div className={cls}>{valueStr}</div>
+            return (
+                <div key={`${subCol.label}_${idx}`} className={cls}>
+                    {valueStr}
+                </div>
+            )
         }),
     )
 
@@ -400,9 +416,9 @@ function formatLabel(x: string) {
 
         maxWidth = Math.max(ln.length, maxWidth)
 
-        parts.push(<>{ln}</>)
+        parts.push(<Fragment key={"text_" + idx}>{ln}</Fragment>)
         if (idx !== lines.length - 1) {
-            parts.push(<br />)
+            parts.push(<br key={"br_" + idx} />)
         }
     }
 

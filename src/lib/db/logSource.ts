@@ -7,6 +7,7 @@ import {
 import { decompressZstd } from "@/lib/utils/miscUtils"
 import {
     alphabeticalBy,
+    AsyncLock,
     compressGzip,
     isTruthy,
     newContext,
@@ -25,6 +26,8 @@ import { LogSourceN as N } from "./logSourceN"
 // @ts-ignore
 import parseLogWithDetailsSrc from "../worker?workerfn=parseLogWithDetails"
 import { USERSCRIPT_CONFIG, UserscriptConfig } from "./userscriptConfig"
+
+export const LOG_PROCESSING_LOCK = new AsyncLock()
 
 // #region remote
 class LogSourceRemote implements N.Protocol {
@@ -428,8 +431,10 @@ class LogSourceLocal implements N.Protocol {
             let toFetch = Promise.resolve<any>(null)
             const pushToFetch = (k: LocalKey) => {
                 toFetch = toFetch.then(async () => {
-                    await this.metaSearchCache.fetch(k)
-                    await sleep(1)
+                    if (!LOG_PROCESSING_LOCK.locked) {
+                        await this.metaSearchCache.fetch(k)
+                        await sleep(1)
+                    }
                 })
             }
 

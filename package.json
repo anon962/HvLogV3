@@ -5,7 +5,7 @@
     "scripts": {
         "sdev": "vite build --mode development --watch --config vite.server.ts",
         "sbuild": "vite build --mode production --watch --config vite.server.ts",
-        "udev": "vite build --mode development --watch --config vite.user.ts & python3 -m http.server -d dist 6767",
+        "udev": "vite build --mode development --watch --config vite.user.ts & python3 -m http.server -d dist 6767 2>&1  | grep -v ' 304 '",
         "ubuild": "vite build --mode production --watch --config vite.user.ts",
         "test": "vitest --passWithNoTests"
     },
