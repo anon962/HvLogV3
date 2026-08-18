@@ -185,6 +185,16 @@ function inlineZstdWasm(): Plugin {
 // #endregion
 
 // #region inlineWorkerFunction
+// Errors about "missing )" or "right-hand side of in should be..."
+//   usually mean the stringified worker function is failing to eval()
+// Expected output (meant for eval()) looks something like this
+//   (function() {
+//   	async function parseLogWithDetails(opts) {
+//        ...
+//   	}
+//   	return parseLogWithDetails;
+//   })();
+
 function inlineWorkerFunction(): Plugin {
     const FN_RE = /\?workerfn(?:=([A-Za-z_$][\w$]*))?$/
 
@@ -216,69 +226,88 @@ function inlineWorkerFunction(): Plugin {
             if (id in cache) {
                 return cache[id]
             }
-            console.log(`Rebuilding worker function ${id}`)
 
             const entry = id.slice(0, m.index)
             const name = m[1] ?? "default"
+
+            const proxyId = path.join(
+                path.dirname(entry),
+                `__workerfn_${name}__.js`,
+            )
             const proxySrc = `export { ${name} as default } from ${JSON.stringify(entry)}`
 
+            let result: Awaited<ReturnType<typeof build>>
             try {
-                const out = await esbuild.build({
-                    stdin: {
-                        contents: proxySrc,
-                        resolveDir: path.dirname(entry),
-                        loader: "js",
-                    },
-                    bundle: true,
-                    write: false,
-                    metafile: true,
-                    format: "iife",
-                    globalName: "__FN__",
-                    target: "es2022",
-                    tsconfig: "./tsconfig.json",
+                result = (await build({
+                    configFile: false,
+                    logLevel: "warn",
+                    resolve: { alias: config.resolve.alias },
                     define: {
                         ...config.define,
                         "import.meta.url": "self.location.href",
                     },
                     plugins: [
                         {
-                            name: "stub-css",
-                            setup(b) {
-                                b.onResolve(
-                                    { filter: /\.css(\?.*)?$/ },
-                                    (args) => ({
-                                        path: args.path,
-                                        namespace: "css-stub",
-                                    }),
-                                )
-                                b.onLoad(
-                                    { filter: /.*/, namespace: "css-stub" },
-                                    () => ({
-                                        contents: "export default ''",
-                                        loader: "js",
-                                    }),
-                                )
-                            },
+                            name: "workerfn-proxy-entry",
+                            resolveId: (i) => (i === proxyId ? proxyId : null),
+                            load: (i) => (i === proxyId ? proxySrc : null),
                         },
                     ],
-                })
-
-                const code = out.outputFiles[0].text.replace(
-                    /^var\s+__FN__\s*=\s*/,
-                    "",
-                )
-                for (const dep of Object.keys(out.metafile.inputs)) {
-                    if (path.isAbsolute(dep)) this.addWatchFile(dep)
-                }
-
-                cache[id] =
-                    `export default ${JSON.stringify(`(${code}).default`)}\n`
-                return cache[id]
+                    build: {
+                        write: false,
+                        target: "es2022",
+                        minify: config.build.minify,
+                        assetsInlineLimit: config.build.assetsInlineLimit,
+                        lib: {
+                            entry: proxyId,
+                            name: "__FN__",
+                            formats: ["iife"],
+                            fileName: () => "fn.js",
+                        },
+                        rollupOptions: {
+                            output: {
+                                inlineDynamicImports: true,
+                                extend: false,
+                                exports: "default",
+                            },
+                            external: (id) =>
+                                id === "react" ||
+                                id.startsWith("react/") ||
+                                id === "react-dom" ||
+                                id.startsWith("react-dom/"),
+                        },
+                    },
+                })) as Rollup.RollupOutput
             } catch (e) {
                 this.error(
                     `failed to inline worker function ${name} from ${entry}: ${e instanceof Error ? e.message : e}`,
                 )
             }
+
+            const outputs = (
+                Array.isArray(result!) ? result! : [result!]
+            ) as Rollup.RollupOutput[]
+
+            const chunk = outputs[0].output.find(
+                (o): o is Rollup.OutputChunk => o.type === "chunk" && o.isEntry,
+            )
+            if (!chunk) {
+                this.error(`no entry chunk produced for ${name} from ${entry}`)
+                return
+            }
+
+            for (const dep of Object.keys(chunk.modules)) {
+                if (dep !== proxyId && path.isAbsolute(dep))
+                    this.addWatchFile(dep)
+            }
+
+            const stripped = chunk.code.replace(/^var\s+[\w$]+\s*=\s*/, "")
+            if (stripped === chunk.code) {
+                this.error(`invalid iife`)
+            }
+
+            cache[id] = `export default ${JSON.stringify(stripped)}\n`
+            return cache[id]
         },
     }
 }

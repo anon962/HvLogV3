@@ -1,8 +1,3 @@
-import {
-    type init as ZstdInit,
-    type compress as ZstdCompress,
-    type decompress as ZstdDecompress,
-} from "@bokuweb/zstd-wasm"
 import { mountReactWrapper, sum } from "myutils"
 import React from "react"
 // @ts-ignore
@@ -90,13 +85,13 @@ export async function compressZstd(opts: {
             "compressZstd",
             () => ({
                 reps: {
-                    __zstdInline__: JSON.stringify(__zstdInline__),
-                    __zstdWasmUrl__: JSON.stringify(__zstdWasmUrl__),
+                    '"__zstdInline__"': JSON.stringify(__zstdInline__),
+                    '"__zstdWasmUrl__"': JSON.stringify(__zstdWasmUrl__),
                 },
                 initCtx: async () => {
-                    globalThis.eval(__zstdInline__)
+                    globalThis.eval("__zstdInline__")
                     // @ts-ignore
-                    await zstdWasm.init(__zstdWasmUrl__)
+                    await zstdWasm.init("__zstdWasmUrl__")
                 },
                 fns: {
                     compress: async (opts: {

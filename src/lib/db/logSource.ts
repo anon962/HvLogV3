@@ -126,6 +126,7 @@ class LogSourceRemote implements N.Protocol {
                     world: "persistent",
                     user_id: resp.id_user,
                     user_name: resp.name,
+                    importedAt: null,
                     errors: {
                         missingTurns: false,
                     },
@@ -332,6 +333,7 @@ class LogSourceLocal implements N.Protocol {
                 world: r.world,
                 user_id: null,
                 user_name: null,
+                importedAt: null,
                 errors: {
                     missingTurns: false,
                 },
@@ -522,13 +524,13 @@ class LogSourceLocal implements N.Protocol {
             "LogSourceLocal",
             () => ({
                 reps: {
-                    parseLogWithDetailsSrc: JSON.stringify(
+                    '"parseLogWithDetailsSrc"': JSON.stringify(
                         parseLogWithDetailsSrc,
                     ),
                 },
                 initCtx: async () => {
                     ;(globalThis as any).parseLogWithDetails = globalThis.eval(
-                        parseLogWithDetailsSrc,
+                        "parseLogWithDetailsSrc",
                     )
                 },
                 fns: {

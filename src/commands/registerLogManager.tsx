@@ -92,13 +92,13 @@ function Dialog() {
 
     const dateDeletions = useMemo(() => {
         const st = delStart.toISOString()
-        const end = delStart.toISOString()
+        const end = delEnd.toISOString()
         const ids = Object.values(status.logs)
             .filter((l) => l.startedAt >= st)
             .filter((l) => l.startedAt <= end)
             .map((l) => l.id)
         return ids
-    }, [status])
+    }, [status, delStart, delEnd])
     const legacyDeletions = useMemo(() => {
         const ids = Object.values(status.logs)
             .filter((l) => l.isLegacy)
@@ -145,12 +145,22 @@ function Dialog() {
                         className="max-w-[12em]"
                         type="date"
                         value={delStart.toISOString().split("T")[0]}
+                        onInput={(ev) =>
+                            ev.target.valueAsDate
+                                ? setDelStart(ev.target.valueAsDate)
+                                : null
+                        }
                     />
                     <span>to</span>
                     <Input
                         className="max-w-[12em]"
                         type="date"
                         value={delEnd.toISOString().split("T")[0]}
+                        onInput={(ev) =>
+                            ev.target.valueAsDate
+                                ? setDelEnd(ev.target.valueAsDate)
+                                : null
+                        }
                     />
                 </span>
                 <span className="text-end">(including end date, utc time)</span>
@@ -827,10 +837,10 @@ function useManagerState() {
                 "readwrite",
             )
             await deleteLogs(txn, idsForWorld)
+        }
 
-            for (const id of idsForWorld) {
-                delete status.logs[id]
-            }
+        for (const id of opts.ids) {
+            delete status.logs[id]
         }
     }
     // #endregion
