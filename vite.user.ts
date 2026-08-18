@@ -1,10 +1,11 @@
 import tailwindcss from "@tailwindcss/vite"
-import react from "@vitejs/plugin-react"
+import react from "@vitejs/plugin-react-swc"
 import * as esbuild from "esbuild"
+import { createHash } from "node:crypto"
 import { fileURLToPath } from "node:url"
 import path from "path"
 import { minify } from "terser"
-import { build, defineConfig, Plugin, ResolvedConfig, type Rollup } from "vite"
+import { defineConfig, Plugin, ResolvedConfig } from "vite"
 
 // #region config
 export default defineConfig((config) => {
@@ -13,12 +14,7 @@ export default defineConfig((config) => {
             inlineWorkerFunction(),
             tailwindcss(),
             inlineZstdWasm(),
-            react({
-                babel: {
-                    minified: false,
-                },
-            }),
-            // cssInjectedByJsPlugin(),
+            react({}),
             (config.mode === "production" && minifyDeps()) as any,
             prepend(`
 if (typeof unsafeWindow === 'undefined') {
@@ -91,6 +87,8 @@ var process = {
 
 // #region minifyDeps
 function minifyDeps() {
+    const cache: any = {}
+
     return {
         name: "minify-deps",
         async transform(code: any, id: any) {
@@ -98,16 +96,17 @@ function minifyDeps() {
                 return null
             }
 
-            const result = await minify(code, {
-                compress: true,
-                mangle: true,
-                format: { beautify: false },
-            })
-            if (!result.code) {
-                return null
+            const cacheKey = createHash("sha1").update(code).digest("base64")
+            if (!(cacheKey in cache)) {
+                const result = await minify(code, {
+                    compress: true,
+                    mangle: true,
+                    format: { beautify: false },
+                })
+                cache[cacheKey] = result.code || null
             }
 
-            return { code: result.code, map: null }
+            return { code: cache[cacheKey], map: null }
         },
     }
 }
@@ -174,10 +173,11 @@ function inlineZstdWasm(): Plugin {
 // #endregion
 
 // #region inlineWorkerFunction
-export function inlineWorkerFunction(): Plugin {
+function inlineWorkerFunction(): Plugin {
     const FN_RE = /\?workerfn(?:=([A-Za-z_$][\w$]*))?$/
 
     let config: ResolvedConfig
+    const cache: any = {}
 
     return {
         name: "inline-worker-function",
@@ -201,82 +201,185 @@ export function inlineWorkerFunction(): Plugin {
             const m = FN_RE.exec(id)
             if (!m) return null
 
+            if (id in cache) {
+                return cache[id]
+            }
+            console.log(`Rebuilding worker function ${id}`)
+
             const entry = id.slice(0, m.index)
             const name = m[1] ?? "default"
-
-            const proxyId = path.join(
-                path.dirname(entry),
-                `__workerfn_${name}__.js`,
-            )
             const proxySrc = `export { ${name} as default } from ${JSON.stringify(entry)}`
 
-            let result: Awaited<ReturnType<typeof build>>
             try {
-                result = (await build({
-                    configFile: false,
-                    logLevel: "warn",
-                    resolve: { alias: config.resolve.alias },
+                const out = await esbuild.build({
+                    stdin: {
+                        contents: proxySrc,
+                        resolveDir: path.dirname(entry),
+                        loader: "js",
+                    },
+                    bundle: true,
+                    write: false,
+                    metafile: true,
+                    format: "iife",
+                    globalName: "__FN__",
+                    target: "es2022",
+                    tsconfig: "./tsconfig.json",
                     define: {
                         ...config.define,
                         "import.meta.url": "self.location.href",
                     },
                     plugins: [
                         {
-                            name: "workerfn-proxy-entry",
-                            resolveId: (i) => (i === proxyId ? proxyId : null),
-                            load: (i) => (i === proxyId ? proxySrc : null),
-                        },
-                    ],
-                    build: {
-                        write: false,
-                        target: "es2022",
-                        minify: config.build.minify,
-                        assetsInlineLimit: config.build.assetsInlineLimit,
-                        lib: {
-                            entry: proxyId,
-                            name: "__FN__",
-                            formats: ["iife"],
-                            fileName: () => "fn.js",
-                        },
-                        rollupOptions: {
-                            output: {
-                                inlineDynamicImports: true,
-                                extend: false,
-                                exports: "default",
+                            name: "stub-css",
+                            setup(b) {
+                                b.onResolve(
+                                    { filter: /\.css(\?.*)?$/ },
+                                    (args) => ({
+                                        path: args.path,
+                                        namespace: "css-stub",
+                                    }),
+                                )
+                                b.onLoad(
+                                    { filter: /.*/, namespace: "css-stub" },
+                                    () => ({
+                                        contents: "export default ''",
+                                        loader: "js",
+                                    }),
+                                )
                             },
                         },
-                    },
-                })) as Rollup.RollupOutput
+                    ],
+                })
+
+                const code = out.outputFiles[0].text.replace(
+                    /^var\s+__FN__\s*=\s*/,
+                    "",
+                )
+                for (const dep of Object.keys(out.metafile.inputs)) {
+                    if (path.isAbsolute(dep)) this.addWatchFile(dep)
+                }
+
+                cache[id] =
+                    `export default ${JSON.stringify(`(${code}).default`)}\n`
+                return cache[id]
             } catch (e) {
                 this.error(
                     `failed to inline worker function ${name} from ${entry}: ${e instanceof Error ? e.message : e}`,
                 )
             }
-
-            const outputs = (
-                Array.isArray(result!) ? result! : [result!]
-            ) as Rollup.RollupOutput[]
-
-            const chunk = outputs[0].output.find(
-                (o): o is Rollup.OutputChunk => o.type === "chunk" && o.isEntry,
-            )
-            if (!chunk) {
-                this.error(`no entry chunk produced for ${name} from ${entry}`)
-                return
-            }
-
-            for (const dep of Object.keys(chunk.modules)) {
-                if (dep !== proxyId && path.isAbsolute(dep))
-                    this.addWatchFile(dep)
-            }
-
-            const stripped = chunk.code.replace(/^var\s+[\w$]+\s*=\s*/, "")
-            if (stripped === chunk.code) {
-                this.error(`invalid iife`)
-            }
-
-            return `export default ${JSON.stringify(stripped)}\n`
         },
     }
 }
 // #endregion
+
+// function inlineWorkerFunction2(): Plugin {
+//     const FN_RE = /\?workerfn(?:=([A-Za-z_$][\w$]*))?$/
+
+//     let config: ResolvedConfig
+//     const cache: any = {}
+
+//     return {
+//         name: "inline-worker-function",
+//         enforce: "pre",
+
+//         configResolved(c) {
+//             config = c
+//         },
+
+//         async resolveId(id, importer) {
+//             const m = FN_RE.exec(id)
+//             if (!m) return null
+
+//             const r = await this.resolve(id.slice(0, m.index), importer, {
+//                 skipSelf: true,
+//             })
+//             return r ? r.id + m[0] : null
+//         },
+
+//         async load(id) {
+//             const m = FN_RE.exec(id)
+//             if (!m) return null
+
+//             if (id in cache) {
+//                 return cache[id]
+//             }
+
+//             const entry = id.slice(0, m.index)
+//             const name = m[1] ?? "default"
+
+//             const proxyId = path.join(
+//                 path.dirname(entry),
+//                 `__workerfn_${name}__.js`,
+//             )
+//             const proxySrc = `export { ${name} as default } from ${JSON.stringify(entry)}`
+
+//             let result: Awaited<ReturnType<typeof build>>
+//             try {
+//                 result = (await build({
+//                     configFile: false,
+//                     logLevel: "warn",
+//                     resolve: { alias: config.resolve.alias },
+//                     define: {
+//                         ...config.define,
+//                         "import.meta.url": "self.location.href",
+//                     },
+//                     plugins: [
+//                         {
+//                             name: "workerfn-proxy-entry",
+//                             resolveId: (i) => (i === proxyId ? proxyId : null),
+//                             load: (i) => (i === proxyId ? proxySrc : null),
+//                         },
+//                     ],
+//                     build: {
+//                         write: false,
+//                         target: "es2022",
+//                         minify: config.build.minify,
+//                         assetsInlineLimit: config.build.assetsInlineLimit,
+//                         lib: {
+//                             entry: proxyId,
+//                             name: "__FN__",
+//                             formats: ["iife"],
+//                             fileName: () => "fn.js",
+//                         },
+//                         rollupOptions: {
+//                             output: {
+//                                 inlineDynamicImports: true,
+//                                 extend: false,
+//                                 exports: "default",
+//                             },
+//                         },
+//                     },
+//                 })) as Rollup.RollupOutput
+//             } catch (e) {
+//                 this.error(
+//                     `failed to inline worker function ${name} from ${entry}: ${e instanceof Error ? e.message : e}`,
+//                 )
+//             }
+
+//             const outputs = (
+//                 Array.isArray(result!) ? result! : [result!]
+//             ) as Rollup.RollupOutput[]
+
+//             const chunk = outputs[0].output.find(
+//                 (o): o is Rollup.OutputChunk => o.type === "chunk" && o.isEntry,
+//             )
+//             if (!chunk) {
+//                 this.error(`no entry chunk produced for ${name} from ${entry}`)
+//                 return
+//             }
+
+//             for (const dep of Object.keys(chunk.modules)) {
+//                 if (dep !== proxyId && path.isAbsolute(dep))
+//                     this.addWatchFile(dep)
+//             }
+
+//             const stripped = chunk.code.replace(/^var\s+[\w$]+\s*=\s*/, "")
+//             if (stripped === chunk.code) {
+//                 this.error(`invalid iife`)
+//             }
+
+//             cache[id] = `export default ${JSON.stringify(stripped)}\n`
+//             return cache[id]
+//         },
+//     }
+// }

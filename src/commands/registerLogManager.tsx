@@ -114,7 +114,7 @@ function Dialog() {
                         setImportFiles([...(ev.target.files ?? [])])
                     }}
                     type="file"
-                    accept=".zip.zstd,.zip,.json"
+                    accept=".zip.zst,.zip,.json"
                     multiple
                     className="inline"
                     disabled={isBusy}
@@ -201,7 +201,7 @@ function Dialog() {
                         <ul>
                             <li>
                                 Logs can be exported to / imported from .zip and
-                                .zip.zstd archives containing JSON files.
+                                .zip.zst archives containing JSON files.
                             </li>
                             <li>
                                 Found <b>{totals.count}</b> logs totaling{" "}
@@ -601,7 +601,7 @@ function useManagerState() {
             )
             const compressed = await compressZstd({ x: zipBlob, pool: true })
             const fileName =
-                fileNameBase + `p${String(batchIdx).padStart(3, "0")}.zip.zstd`
+                fileNameBase + `p${String(batchIdx).padStart(3, "0")}.zip.zst`
             const downloadEl = Object.assign(document.createElement("a"), {
                 download: fileName,
                 href: URL.createObjectURL(new Blob([compressed])),
@@ -634,7 +634,7 @@ function useManagerState() {
                 blame: string[]
             } | null = null
 
-            if (name.endsWith("zip.zstd")) {
+            if (name.endsWith("zip.zst")) {
                 try {
                     L.info(`Decompressing ${file.name}`)
                     const bytes = await file.bytes()

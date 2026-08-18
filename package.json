@@ -33,7 +33,7 @@
         "@radix-ui/react-tooltip": "^1.1.8",
         "@tailwindcss/vite": "^4.0.15",
         "@uiw/react-json-view": "^2.0.0-alpha.30",
-        "@vitejs/plugin-react": "^4.3.4",
+        "@vitejs/plugin-react-swc": "^4.3.3",
         "@zip.js/zip.js": "^2.8.37",
         "class-variance-authority": "^0.7.1",
         "date-fns": "^4.4.0",

@@ -215,7 +215,7 @@ function Dialog() {
                                         )
                                     }
                                     type="file"
-                                    accept=".zip.zstd,.zip,.json,.jsonl.gz,.jsonl"
+                                    accept=".zip.zst,.zip,.json,.jsonl.gz,.jsonl"
                                     multiple
                                     className="inline"
                                     disabled={status.action !== null}
@@ -636,7 +636,7 @@ function useImportState() {
                     }
                     cancelStatus()
                 } else if (
-                    name.endsWith("zip.zstd") ||
+                    name.endsWith("zip.zst") ||
                     name.endsWith("zip") ||
                     name.endsWith("json")
                 ) {
@@ -653,7 +653,7 @@ function useImportState() {
                         blame: string[]
                     } | null = null
 
-                    if (name.endsWith("zip.zstd")) {
+                    if (name.endsWith("zip.zst")) {
                         try {
                             const bytes = await file.bytes()
                             zipData = {
@@ -841,7 +841,7 @@ function useImportState() {
             const compressed = await compressZstd({ x: zipBlob, pool: true })
 
             const fileName =
-                fileNameBase + `_p${String(batchIdx).padStart(3, "0")}.zip.zstd`
+                fileNameBase + `_p${String(batchIdx).padStart(3, "0")}.zip.zst`
             const downloadEl = Object.assign(document.createElement("a"), {
                 download: fileName,
                 href: URL.createObjectURL(new Blob([compressed])),
