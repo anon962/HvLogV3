@@ -34,6 +34,8 @@ class LogSourceRemote implements N.Protocol {
     private globalMonsterSummary: Promise<any> | null = null
     private monlab: Promise<Record<number, N.MonlabMonster>> | null = null
 
+    ainit = Promise.resolve()
+
     async fetchLogIds(): Promise<string[]> {
         throw new Error("not implemented")
     }
@@ -215,6 +217,7 @@ const newLocalCache = <T>(
         },
     })
 class LogSourceLocal implements N.Protocol {
+    ainit: Promise<void>
     db: Record<DbN.HvWorld, Promise<LogDb<true>>>
     pool: ReturnType<LogSourceLocal["initWorkerPool"]>
     prices: Promise<UserscriptConfig["prices"]>
@@ -224,7 +227,6 @@ class LogSourceLocal implements N.Protocol {
         persistent: new Set<DbN.LogId>(),
         isekai: new Set<DbN.LogId>(),
     }
-    ainit: Promise<void>
 
     constructor(prices: Promise<UserscriptConfig["prices"]>) {
         this.db = {

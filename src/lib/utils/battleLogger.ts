@@ -257,10 +257,12 @@ export class BattleLogger {
             )
         }
 
+        const raw = turns.flatMap(({ lines }) => lines).join("\n")
         await txn.objectStore("logsRaw").put({
             id: log.id,
             compressed: 0,
-            raw: turns.flatMap(({ lines }) => lines).join("\n"),
+            raw: raw,
+            raw_size: raw.length,
             raw_c: null,
         })
         await txn.objectStore("logsMeta").put({
@@ -270,6 +272,7 @@ export class BattleLogger {
             world,
             user_id: null,
             user_name: null,
+            importedAt: null,
             errors: {
                 missingTurns,
             },

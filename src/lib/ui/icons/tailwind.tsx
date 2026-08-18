@@ -67,7 +67,7 @@ export function CheckIcon({ className }: IconProps) {
             viewBox="0 0 24 24"
             strokeWidth="1.5"
             stroke="currentColor"
-            className={cn("size-6", className)}
+            className={cn("size-[1.5em]", className)}
         >
             <path
                 strokeLinecap="round"

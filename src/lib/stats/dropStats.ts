@@ -106,7 +106,7 @@ export function summarizeFinances(
     if (summary.battleType?.category === "Grindfest") {
         staminaUsage += 1
     }
-    const staminaExpense = (staminaUsage * prices["Energy Drink"]) / 10
+    const staminaExpense = (staminaUsage * (prices?.["Energy Drink"] ?? 0)) / 10
 
     const income = sum(
         Object.values(drops).map(

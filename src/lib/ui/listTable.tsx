@@ -101,12 +101,15 @@ export function ListTable<T>(
 ) {
     const [showFilter, setShowFilter] = useState(false)
 
+    const { className, style, ...rest } = props
+
     return (
         <div
             className={cn(
                 "list-table-container w-full pb-0! flex flex-col",
-                props.className,
+                className,
             )}
+            style={style}
         >
             <Paginator
                 {...props}
@@ -123,11 +126,11 @@ export function ListTable<T>(
 
             <hr className="border my-2!" />
 
-            <TableInner {...props} {...props.tableProps} />
+            <TableInner {...rest} {...props.tableProps} />
 
             <hr className="border my-2!" />
 
-            <Paginator {...props} />
+            <Paginator {...rest} />
         </div>
     )
 }

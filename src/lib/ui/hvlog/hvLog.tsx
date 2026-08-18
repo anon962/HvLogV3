@@ -30,7 +30,6 @@ import { runUserscriptTasks } from "@/lib/db/userscriptTasks"
 // @fixme: useAppCache
 // @fixme: local log cols (duration)
 // @fixme: clear cache command
-// @fixme: invalidate secondary caches
 
 // @todo: per round / avgs (config?)
 // @todo: effect blame
@@ -213,8 +212,8 @@ function LogDetailsRoute(props: { id: string }) {
         )
     }
 
-    const { history } = ROUTER.useContext()
-    let backHref = "/logs/"
+    const { history, prefix } = ROUTER.useContext()
+    let backHref = [...prefix, "logs"].join("/")
     if (history.length >= 2) {
         const u = history[history.length - 2].url
         backHref = u.pathname + u.search + u.hash

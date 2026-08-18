@@ -9,6 +9,8 @@ import { DbN, LogEntry } from "./dbN"
 
 export namespace LogSourceN {
     export interface Protocol {
+        ainit: Promise<void>
+
         fetchLogIds(): Promise<string[]>
         fetchMeta: (id: string) => Promise<DbN.LogMeta>
         fetchLog: (id: string) => Promise<string>

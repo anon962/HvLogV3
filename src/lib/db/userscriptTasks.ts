@@ -57,6 +57,8 @@ async function pollPrices(opts: PollOpts) {
         return
     }
 
+    await opts.logSource.ainit
+
     while (!opts.cancel) {
         if (!isIdle()) {
             await sleep(5 * 60 * 1000)
@@ -140,7 +142,7 @@ async function pollPrices(opts: PollOpts) {
 // #endregion
 
 // #region compressLogs
-const COMPRESS_LOCK = new AsyncLock()
+export const COMPRESS_LOCK = new AsyncLock()
 async function compressLogs(opts: PollOpts) {
     const DELAY = 60 * 60 * 1000
     const COMPRESSION_LEVEL = 10
@@ -230,7 +232,7 @@ async function compressLogs(opts: PollOpts) {
             const sizeRaw = stats.sizeRaw / 1024 / 1024
             const sizeComp = stats.sizeComp / 1024 / 1024
             L.info(
-                `Compressed ${stats.logCount} logs (${sizeRaw.toFixed(1)} MiB -> ${sizeComp.toFixed(1)} MiB)`,
+                `Compressed ${stats.logCount} logs (${sizeRaw.toFixed(2)} MiB -> ${sizeComp.toFixed(2)} MiB)`,
             )
         }
 
@@ -283,7 +285,10 @@ async function tallyEquips(opts: PollOpts) {
             equips = {
                 id: [],
                 name: [],
-                battleType: [],
+                battleTypeId: [],
+                battleTypeCategory: [],
+                battleTypeCategoryValue: [],
+                roundMax: [],
                 date: [],
                 isBonus: [],
                 world: [],
@@ -335,9 +340,16 @@ async function tallyEquips(opts: PollOpts) {
 
                         equips.id.push(`${id}_${idx}`)
                         equips.name.push(x.name)
-                        equips.battleType.push(
+                        equips.battleTypeId.push(
                             details.meta.battleType?.id ?? null,
                         )
+                        equips.battleTypeCategory.push(
+                            details.meta.battleType?.category ?? null,
+                        )
+                        equips.battleTypeCategoryValue.push(
+                            details.meta.battleType?.categoryValue ?? null,
+                        )
+                        equips.roundMax.push(details.meta.round?.max ?? null)
                         equips.date.push(meta.startedAt)
                         equips.isBonus.push(x.isBonus)
                         equips.world.push(meta.world)
@@ -356,7 +368,7 @@ async function tallyEquips(opts: PollOpts) {
                 await dbP.put("kv", equipTally, "equipTally")
 
                 L.info(
-                    `Saved equip tally (total: ${equips.id.length} equips / ${equipTally.done.size} logs / ${(equipTally.equips.byteLength / 1024 / 1024).toFixed(1)} MiB compressed)`,
+                    `Saved equip tally (total: ${equips.id.length} equips / ${equipTally.done.size} logs / ${(equipTally.equips.byteLength / 1024 / 1024).toFixed(2)} MiB compressed)`,
                 )
             }
         }

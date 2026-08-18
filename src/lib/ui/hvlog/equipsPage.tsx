@@ -18,6 +18,7 @@ import { ListTable, ListTableN } from "../listTable"
 import { LogListN } from "./logList/logListN"
 import { UrlParamN } from "./router"
 import { EQUIP_TIERS } from "@/lib/constants"
+import { humanizeBattleType, MetaSummary } from "@/lib/stats/metaStats"
 
 export function EquipPage(props: {}) {
     return (
@@ -31,6 +32,7 @@ function EquipPageInner(props: {}) {
     const ctx = EQUIP_PAGE.useContext()
     return (
         <ListTable
+            className="text-[length:0.75em]"
             data={ctx.page}
             cols={[
                 EquipPageN.COLS_.name,
@@ -154,7 +156,7 @@ const EQUIP_PAGE = newContext(() => {
         }
         if (params.bt.v) {
             const bts = new Set(params.bt.v)
-            idxs = idxs.filter((idx) => bts.has(data[idx].battleType ?? ""))
+            idxs = idxs.filter((idx) => bts.has(data[idx].battleTypeId ?? ""))
         }
         if (params.d0.v) {
             const d0 = params.d0.v.toISOString()
@@ -196,7 +198,8 @@ const EQUIP_PAGE = newContext(() => {
             case "type":
                 idxs = alphabeticalBy(
                     idxs,
-                    (idx) => data[idx].battleType ?? (sortDesc ? "aaa" : "zzz"),
+                    (idx) =>
+                        data[idx].battleTypeId ?? (sortDesc ? "aaa" : "zzz"),
                     sortDesc,
                 )
                 break
@@ -232,10 +235,14 @@ const EQUIP_PAGE = newContext(() => {
 
 // #region namespace
 export namespace EquipPageN {
+    type Bt = Exclude<MetaSummary["battleType"], null>
     export interface Row {
         id: string
         name: string
-        battleType: string | null
+        battleTypeId: Bt["id"] | null
+        battleTypeCategory: Bt["category"] | null
+        battleTypeCategoryValue: Bt["categoryValue"] | null
+        roundMax: number | null
         date: ISODate
         isBonus: boolean
         world: DbN.HvWorld
@@ -260,7 +267,17 @@ export namespace EquipPageN {
                 content: "Battle Type",
             },
             cell: (r) => ({
-                content: r.battleType,
+                content:
+                    r.battleTypeId && r.battleTypeCategory && r.roundMax
+                        ? humanizeBattleType(
+                              {
+                                  id: r.battleTypeId,
+                                  category: r.battleTypeCategory,
+                                  categoryValue: r.battleTypeCategoryValue!,
+                              },
+                              r.roundMax,
+                          )
+                        : "???",
             }),
         },
         date: {
@@ -300,6 +317,7 @@ export namespace EquipPageN {
         p: {
             type: "number",
             deser: (x) => (x !== null && x >= 1 ? x - 1 : 0),
+            init: () => 0,
         },
         n: {
             type: "number",

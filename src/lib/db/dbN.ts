@@ -32,6 +32,7 @@ export namespace DbN {
         errors: {
             missingTurns: boolean
         }
+        importedAt: ISODate | null
         reversed?: {
             at: ISODate
             version: "v2"
@@ -109,12 +110,14 @@ export namespace DbN {
                   id: LogId
                   compressed: 0
                   raw: string
+                  raw_size: number
                   raw_c: null
               }
             | {
                   id: LogId
                   compressed: number
                   raw: null
+                  raw_size: number
                   raw_c: Uint8Array<ArrayBuffer>
               }
         >

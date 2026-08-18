@@ -37,17 +37,10 @@ import {
 } from "react"
 
 // #region command
-export function registerLogExport() {
+export function registerLegacyLogs() {
     window.GM_registerMenuCommand(
         "Migrate Old Logs",
-        () =>
-            mountReact(
-                Dialog,
-                {},
-                {
-                    isDialog: true,
-                },
-            ),
+        () => mountReact(Dialog, {}),
         {
             id: "migrate_logs",
         },
@@ -128,17 +121,10 @@ function Dialog() {
                         <ul>
                             <li>
                                 Import old logs from previous HvLog versions
-                                (2.x and earlier). This is not automatic due to
-                                possible data loss. (Previous versions did not
-                                store the original log.)
-                            </li>
-                            <li>
-                                After import, you should{" "}
-                                <b>
-                                    check for weirdness or download the old logs
-                                    before deleting.
-                                </b>{" "}
-                                Issues can be reported in the forum thread.
+                                (2.x and earlier). This is only recommended if
+                                you care about drop data. Combat data will be
+                                janky. (Previous versions did not store the
+                                original log so re-parsing is imperfect.)
                             </li>
                             <li>
                                 Found <b>{totalOld}</b> old logs in database.{" "}
@@ -726,7 +712,15 @@ function useImportState() {
                     }
                     for (const x of jsonData) {
                         try {
-                            logs.push(JSON.parse(x.data))
+                            const d: DownloadFormat = JSON.parse(x.data)
+                            if (d.kind !== "v2_log") {
+                                L.error(
+                                    `JSON file does not contain a log: ${x.blame.join("->")}: ${truncateString(x.data, 50, "...")}`,
+                                )
+                                continue
+                            }
+
+                            logs.push(d)
                         } catch (e) {
                             L.error(e)
                             L.error(
@@ -775,7 +769,10 @@ function useImportState() {
     }
     // #endregion
     // #region downloadOldFiles
-    type DownloadFormat = MigrateV2.Log & { world: "persistent" | "isekai" }
+    type DownloadFormat = MigrateV2.Log & {
+        world: "persistent" | "isekai"
+        kind: "v2_log"
+    }
     async function downloadOldFiles(opts: {
         dbs: typeof dbs & { ready: true }
         stats: typeof legacyStats
@@ -796,6 +793,7 @@ function useImportState() {
 
         const d = new Date()
         const fileNameBase = [
+            "hvlog_old_",
             d.getFullYear() + "-",
             String(d.getMonth() + 1).padStart(2, "0"),
             "-" + String(d.getDate()).padStart(2, "0"),
@@ -824,7 +822,11 @@ function useImportState() {
                                     ),
                                 ),
                         )
-                    ).map((x) => ({ ...x, world })),
+                    ).map((x) => ({
+                        ...x,
+                        world,
+                        kind: "v2_log" as const,
+                    })),
                 )
             }
 
@@ -876,31 +878,37 @@ function useImportState() {
             opts.cb?.(stats, idx)
 
             const logs = await Promise.all(
-                batch.map(async (l) => ({
-                    meta: {
-                        id: l.id,
-                        start: l.meta.start,
-                        lastUpdate: l.meta.lastUpdate,
-                        importedAt,
-                        version: 0,
-                        world: l.world,
-                        user_id: null,
-                        user_name: null,
-                    },
-                    raw: {
-                        id: l.id,
-                        compressed: 10,
-                        raw: null,
-                        raw_c: await compressZstd({
-                            x: l.lines.join("\n"),
-                            level: 10,
-                            pool: true,
-                        }),
-                        // compressed: 0,
-                        // raw: l.lines.join("\n"),
-                        // raw_c: null,
-                    },
-                })),
+                batch.map(async (l) => {
+                    const rawBytes = new TextEncoder().encode(
+                        l.lines.join("\n"),
+                    )
+                    return {
+                        meta: {
+                            id: l.id,
+                            start: l.meta.start,
+                            lastUpdate: l.meta.lastUpdate,
+                            importedAt,
+                            version: 0,
+                            world: l.world,
+                            user_id: null,
+                            user_name: null,
+                        },
+                        raw: {
+                            id: l.id,
+                            compressed: 10,
+                            raw: null,
+                            raw_size: rawBytes.byteLength,
+                            raw_c: await compressZstd({
+                                x: rawBytes,
+                                level: 10,
+                                pool: true,
+                            }),
+                            // compressed: 0,
+                            // raw: l.lines.join("\n"),
+                            // raw_c: null,
+                        },
+                    }
+                }),
             )
 
             for (const l of logs) {
@@ -924,6 +932,7 @@ function useImportState() {
                             errors: {
                                 missingTurns: false,
                             },
+                            importedAt: new Date().toISOString(),
                             reversed: {
                                 at: new Date().toISOString(),
                                 version: "v2",
@@ -978,7 +987,7 @@ function useImportState() {
             for (const id of ids) {
                 await txn.objectStore("complete").delete(id)
             }
-            txn.abort()
+            txn.commit()
         }
     }
     // #endregion

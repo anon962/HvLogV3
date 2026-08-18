@@ -270,3 +270,8 @@ export async function sleepWithRegistration(t: number): Promise<void> {
         ACTIVE_TIMERS.add(id)
     })
 }
+
+export function formatMiB(sizeBytes: number, n = 1) {
+    const sizeMiB = sizeBytes / 1024 / 1024
+    return sizeMiB.toFixed(n)
+}

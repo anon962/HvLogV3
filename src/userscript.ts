@@ -1,5 +1,5 @@
 import { WorkerPoolN, isEqual, patchUrlChange, readUrl } from "myutils"
-import { registerLogExport } from "./commands/registerLegacyImport.tsx"
+import { registerLegacyLogs } from "./commands/registerLegacyLogs.tsx"
 import { registerViewLogs } from "./commands/registerViewLogs.ts"
 import { DbN } from "./lib/db/dbN.ts"
 import { HvLog } from "./lib/ui/hvlog/hvLog.tsx"
@@ -9,6 +9,7 @@ import {
     DEFAULT_USERSCRIPT_CONFIG,
     loadUserscriptConfig,
 } from "./lib/db/userscriptConfig.ts"
+import { registerLogManager } from "./commands/registerLogManager.tsx"
 
 async function main() {
     patchUrlChange("hvlog:urlchange")
@@ -34,7 +35,8 @@ async function main() {
 
     // Userscript extension UI
     registerViewLogs(init)
-    registerLogExport()
+    registerLogManager()
+    registerLegacyLogs()
 
     async function init(w: Window) {
         w.HV_LOG.workerPool ??= new WorkerPoolN.Pool()
