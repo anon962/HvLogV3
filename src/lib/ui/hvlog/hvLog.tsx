@@ -97,7 +97,11 @@ export const HvLog = (props: { prefix?: string[] }) => {
     const providers = useMemo(
         () =>
             IS_REMOTE
-                ? ([ROUTER.Provider, LOG_SOURCE.Provider] as const)
+                ? ([
+                      USERSCRIPT_CONFIG.Provider,
+                      ROUTER.Provider,
+                      LOG_SOURCE.Provider,
+                  ] as const)
                 : ([
                       USERSCRIPT_CONFIG.Provider,
                       ROUTER.Provider,

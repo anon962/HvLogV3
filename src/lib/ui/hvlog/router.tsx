@@ -455,9 +455,8 @@ export namespace UrlParamN {
             for (const [key, s] of Object.entries(opts.schema)) {
                 let v = url.searchParams.get(key)
                 let v2: any
+                raw[key] = v
                 if (v !== null) {
-                    raw[key] = v
-
                     switch (s.type) {
                         case "string":
                             v2 = parseString(v, s)

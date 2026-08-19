@@ -4,8 +4,10 @@ import {
     clamp,
     dedupe,
     enumerate,
+    isEqual,
     newContext,
     NgramSearch,
+    objectEntries,
     range,
     sortBy,
     sum,
@@ -500,6 +502,23 @@ export namespace MonsterPageN {
             return sorted.slice(st, st + pageSize).map((idx) => allRows[idx])
         }, [sorted, pageSize, pageIndex])
 
+        const paginationParams = useMemo(
+            () => new Set(["p", "n", "s", "d"]),
+            [],
+        )
+        const hasFilters = useMemo(() => {
+            for (const [k, p] of objectEntries(params)) {
+                if (paginationParams.has(k)) {
+                    continue
+                }
+
+                if (!isEqual(p.v, p.init)) {
+                    return true
+                }
+            }
+            return false
+        }, [params])
+
         const options = useMemo(() => {
             return {
                 namePool,
@@ -534,6 +553,7 @@ export namespace MonsterPageN {
                 options,
                 mode,
                 setMode,
+                hasFilters,
             },
             setValue: () => {},
         }

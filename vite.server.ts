@@ -7,6 +7,7 @@ import { defineConfig } from "vite"
 export default defineConfig((config) => {
     return {
         plugins: [
+            ignoreWorkerFns(),
             tailwindcss(),
             react({
                 babel: {
@@ -17,6 +18,7 @@ export default defineConfig((config) => {
             prepend(`
                 var HV_LOG = {};
                 HV_LOG.isRemote = true;
+
                 var process = {
                     env: {
                         NODE_ENV: ${JSON.stringify(
@@ -26,6 +28,8 @@ export default defineConfig((config) => {
                         )},
                     },
                 };
+
+                var virtual_zstd_inline = {};
             `),
         ],
         test: {
@@ -47,6 +51,9 @@ export default defineConfig((config) => {
                 name: "server",
                 fileName: () => "server.js",
                 cssFileName: "server",
+            },
+            rolldownOptions: {
+                external: ["virtual:zstd-inline"],
             },
         },
         optimizeDeps: {
@@ -87,6 +94,25 @@ function prepend(x: string) {
                     file.code = x.trim() + "\n" + file.code
                 }
             }
+        },
+    }
+}
+
+function ignoreWorkerFns() {
+    return {
+        name: "ignore-worker-fns",
+        enforce: "pre",
+        transform(code: any, id: any) {
+            if (!code.includes("?workerfn=")) {
+                return null
+            }
+
+            const stripped = code.replace(
+                /^import\b.+?\bfrom\b.+?\?workerfn=.+$/m,
+                "",
+            )
+            if (stripped === code) return null
+            return { code: stripped, map: null }
         },
     }
 }

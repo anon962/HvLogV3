@@ -68,6 +68,7 @@ function Table() {
         setParams,
         sortCol,
         mode,
+        hasFilters,
     } = MonsterPageN.ctx.useContext()
 
     const cols = [
@@ -106,7 +107,7 @@ function Table() {
                     sortCol.v
                         ? {
                               cid: sortCol.v.id,
-                              order: params.d ? "desc" : "asc",
+                              order: params.d.v ? "desc" : "asc",
                           }
                         : null
                 }
@@ -122,11 +123,7 @@ function Table() {
                 filter={{
                     trigger: <SlidersHorizontal className="size-full" />,
                     content: <Filter />,
-                    active: Object.entries(params).some(
-                        ([k, v]) =>
-                            !"pnsdm".includes(k) &&
-                            (Array.isArray(v) ? v.length > 0 : v !== null),
-                    ),
+                    active: hasFilters,
                 }}
             />
         </div>
