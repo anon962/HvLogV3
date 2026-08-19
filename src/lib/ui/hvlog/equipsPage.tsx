@@ -5,9 +5,11 @@ import {
     alphabeticalBy,
     cn,
     css,
+    isEqual,
     ISODate,
     mapEntries,
     newContext,
+    objectEntries,
     objectValues,
     range,
     sleep,
@@ -30,6 +32,8 @@ import { UrlParamN } from "./router"
 import { EQUIP_TIERS } from "@/lib/constants"
 import { humanizeBattleType, MetaSummary } from "@/lib/stats/metaStats"
 import { Input } from "../shadcn/input"
+import { CheckboxGroup } from "../checkboxGroup"
+import { SlidersHorizontal } from "lucide-react"
 
 export function EquipPage(props: {}) {
     return (
@@ -114,6 +118,11 @@ function EquipPageInner(props: {}) {
                 pageIndex={ctx.pageIndex}
                 setPageIndex={(idx) => ctx.setParams({ p: idx })}
                 isLoading={ctx.isLoading}
+                filter={{
+                    content: <Filter />,
+                    trigger: <SlidersHorizontal className="size-full" />,
+                    active: ctx.hasFilters,
+                }}
             />
         </div>
     )
@@ -124,7 +133,25 @@ function Filter() {
     const ctx = EQUIP_PAGE.useContext()
 
     return (
-        <form className="rounded-md border p-4 text-xs flex flex-col gap-2"></form>
+        <form className="rounded-md border p-4 text-xs flex flex-col gap-2">
+            <CheckboxGroup
+                header="Battle Type"
+                options={LogListN.BATTLE_TYPES.map(({ label }) => ({
+                    label,
+                }))}
+                checked={LogListN.BATTLE_TYPES.map(({ ids }) =>
+                    ctx.params.bt.v.some((id) => ids.has(id)),
+                )}
+                onCheckedChange={({ checked }) => {
+                    ctx.setParams({
+                        bt: checked.map((x) => +x as 0 | 1),
+                    })
+                }}
+                listProps={{
+                    className: "block! columns-2",
+                }}
+            />
+        </form>
     )
 }
 // #endregion
@@ -251,7 +278,7 @@ const EQUIP_PAGE = newContext(() => {
                 ),
             )
         }
-        if (params.bt.v) {
+        if (params.bt.v.length > 0) {
             const bts = new Set(params.bt.v)
             idxs = idxs.filter((idx) => bts.has(data[idx].battleTypeId ?? ""))
         }
@@ -313,6 +340,23 @@ const EQUIP_PAGE = newContext(() => {
         ...objectValues(mapEntries(params, (k, v) => ({ [k]: v.raw }))),
     ])
 
+    const paginationParams = useMemo(
+        () => new Set(["p", "n", "s", "d", "nm"]),
+        [],
+    )
+    const hasFilters = useMemo(() => {
+        for (const [k, p] of objectEntries(params)) {
+            if (paginationParams.has(k)) {
+                continue
+            }
+
+            if (!isEqual(p.v, p.init)) {
+                return true
+            }
+        }
+        return false
+    }, [params])
+
     return {
         value: {
             page,
@@ -324,6 +368,7 @@ const EQUIP_PAGE = newContext(() => {
             setParams,
             sortCol: params.s,
             isLoading,
+            hasFilters,
         },
         setValue: () => {},
     }
@@ -443,10 +488,6 @@ export namespace EquipPageN {
                     .map((idx) => LogListN.BATTLE_TYPES[idx])
                     .filter((x) => !!x)
 
-                if (battleTypes.length === 0) {
-                    return null
-                }
-
                 return battleTypes.flatMap((bt) => [...bt.ids])
             },
         },
@@ -463,7 +504,7 @@ export namespace EquipPageN {
             type: "bitmask",
             deser: (idxs) =>
                 idxs.map((idx) => EQUIP_TIERS[idx]).filter((x) => !!x),
-            init: () => [1, 2],
+            init: () => ["Peerless", "Legendary"],
         },
     } as const satisfies UrlParamN.Schema
 }
@@ -472,8 +513,6 @@ export namespace EquipPageN {
 // #region css
 const CSS = css`
     .equip-page {
-        font-size: 0.85em;
-
         h2 {
             font-size: 1em;
             font-weight: 500;

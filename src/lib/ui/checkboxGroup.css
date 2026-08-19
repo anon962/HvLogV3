@@ -24,15 +24,16 @@
         }
     }
 
-    .all button {
-        /* background-color: var(--color-yellow-100); */
-        /* color: var(--color-pink-600); */
-        border-color: var(--color-gray-400);
+    .input-label-container.all {
+        /* border-color: var(--color-gray-400); */
+        --bg-false: var(--color-gray-800);
+        --bg-true: var(--color-gray-300);
+        color: var(--background);
     }
-    .all button[data-state="checked"] {
+    /* .all button[data-state="checked"] {
         background-color: var(--color-gray-600);
         color: var(--color-gray-300);
-    }
+    } */
 }
 
 .input-label-container {
@@ -47,11 +48,13 @@
     text-align: left;
 
     --bg-false: color-mix(in oklch, var(--input) 30%, transparent);
-    --bg-true: var(--primary);
+    --bg-true: color-mix(in oklch, var(--primary) 50%, transparent);
     --bg-false-hover: color-mix(in oklch, var(--bg-false), var(--bg-true) 20%);
-    --bg-true-hover: color-mix(in oklab, var(--bg-true) 90%, transparent);
+    --bg-true-hover: color-mix(in oklab, var(--bg-true) 75%, transparent);
     --bg-alpha: 100%;
-    --color-hover: var(--color-yellow-100);
+    --color-hover: var(--color-yellow-300);
+    --border-false: color-mix(in oklch, var(--bg-false), var(--bg-true) 10%);
+    --border-true: color-mix(in oklch, var(--bg-false), var(--bg-true) 75%);
 }
 .input-label-container button {
     grid-area: input;
@@ -61,13 +64,16 @@
 }
 .input-label-container {
     button {
+        color: inherit;
+
+        border-color: var(--border-false);
         background-color: color-mix(
             in oklab,
             var(--bg-false) var(--bg-alpha),
             transparent
         );
-
         &[data-state="checked"] {
+            border-color: var(--border-true);
             background-color: color-mix(
                 in oklab,
                 var(--bg-true) var(--bg-alpha),

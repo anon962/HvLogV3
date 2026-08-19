@@ -345,37 +345,37 @@ export function RouteLink({
 
 // #region UrlParamN
 export namespace UrlParamN {
-    type SchemaEntry<TypeId extends string, Type, Type2> = {
+    type SchemaEntry<TypeId extends string, T, Result = any> = {
         type: TypeId
-        init?: () => Type | Type2
-        deser?: (x: Type | Type2) => any
+        init?: () => Result
+        deser?: (x: T) => Result
     }
     export type Schema = Record<
         string,
         (
-            | (SchemaEntry<"string", string, null> & {
+            | (SchemaEntry<"string", string> & {
                   skipTrim?: boolean
                   allowEmpty?: boolean
               })
-            | (SchemaEntry<"string[]", string[], never> & {
+            | (SchemaEntry<"string[]", string[]> & {
                   skipTrim?: boolean
                   allowEmpty?: boolean
               })
-            | (SchemaEntry<"number", number, null> & {
+            | (SchemaEntry<"number", number> & {
                   asFloat?: boolean
               })
-            | (SchemaEntry<"number[]", number[], never> & {
+            | (SchemaEntry<"number[]", number[]> & {
                   asFloat?: boolean
               })
-            | SchemaEntry<"boolean", boolean, null>
-            | (SchemaEntry<"boolean[]", boolean[], never> & {
+            | SchemaEntry<"boolean", boolean>
+            | (SchemaEntry<"boolean[]", boolean[]> & {
                   asFloat?: boolean
               })
-            | (SchemaEntry<"date", Date, null> & {
+            | (SchemaEntry<"date", Date> & {
                   type: "date"
                   ser?: (x: Date) => string
               })
-            | SchemaEntry<"bitmask", number[], never>
+            | SchemaEntry<"bitmask", number[]>
         ) & {}
     >
 
@@ -436,7 +436,13 @@ export namespace UrlParamN {
                 v: Resolve<S>[K]
                 init: S[K] extends { init: infer I extends AnyFunction }
                     ? ReturnType<I>
-                    : null
+                    : Resolve<
+                          S & {
+                              [K in keyof S]: {
+                                  ser: null
+                              }
+                          }
+                      >[K]
             }
         },
         (update: Partial<UpdateObject<S>>, opts?: UpdateOpts) => void,
@@ -489,16 +495,15 @@ export namespace UrlParamN {
                     }
 
                     parsed[key] = v2
-                } else if (s.init) {
-                    parsed[key] = s.init()
                 }
             }
 
             return [parsed, raw]
         }, [url.href])
 
-        const params = useMemo(() => {
-            const x = { ...parsedParams }
+        const [params, initParams] = useMemo(() => {
+            const params = { ...parsedParams }
+            const initParams = {} as any
 
             for (const [key, s] of Object.entries(opts.schema)) {
                 switch (s.type) {
@@ -506,10 +511,12 @@ export namespace UrlParamN {
                     case "number":
                     case "boolean":
                     case "date": {
-                        if (key in x && s.deser) {
-                            x[key] = s.deser(x[key])
-                        } else if (!(key in x)) {
-                            x[key] = null
+                        initParams[key] = s.init?.() ?? null
+
+                        if (key in params && s.deser) {
+                            params[key] = (s.deser as any)(params[key])
+                        } else if (!(key in params)) {
+                            params[key] = initParams[key]
                         }
                         break
                     }
@@ -517,18 +524,19 @@ export namespace UrlParamN {
                     case "number[]":
                     case "boolean[]":
                     case "bitmask": {
-                        if (!(key in x)) {
-                            x[key] = []
-                        }
-                        if (s.deser) {
-                            x[key] = s.deser(x[key])
+                        initParams[key] = s.init?.() ?? []
+
+                        if (key in params && s.deser) {
+                            params[key] = s.deser(params[key] ?? [])
+                        } else if (!(key in params)) {
+                            params[key] = initParams[key]
                         }
                         break
                     }
                 }
             }
 
-            return x
+            return [params, initParams]
         }, [url.href])
 
         let lastUpdate = useRef(0)
@@ -639,7 +647,7 @@ export namespace UrlParamN {
                 {
                     raw: rawParams[k],
                     v: params[k],
-                    init: opts.schema[k].init ? opts.schema[k].init() : null,
+                    init: initParams[k],
                 },
             ]),
         )

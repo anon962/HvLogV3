@@ -217,7 +217,7 @@ function Dialog() {
                 <button
                     onClick={() => tryClose()}
                     disabled={isBusy}
-                    className="absolute rounded-full bg-transparent hover:bg-foreground/10 top-[0.5em] right-[0.5em] h-[2.5em] w-[2.5em] p-[0.25em] disabled:text-muted"
+                    className="absolute rounded-full bg-transparent hover:bg-foreground/10 top-[0.5em] right-[0.5em] h-[2.5em] w-[2.5em] p-[0.25em] disabled:text-muted! disabled:pointer-events-none:"
                 >
                     <XIcon className="size-full" />
                 </button>
@@ -307,9 +307,13 @@ function ActionButton(
 ) {
     return (
         <Button
-            className={cn("relative", props.className)}
+            className={cn(
+                "relative bg-gray-600 hover:bg-gray-700",
+                props.className,
+            )}
             disabled={props.disabled || props.loading}
             onClick={props.onClick}
+            variant="secondary"
         >
             <span className={cn(props.loading ? "invisible" : "")}>
                 {props.label}
@@ -573,7 +577,7 @@ function useManagerState() {
         let idx = 0
         const [statusLog, cancelStatusLog] = throttle({
             interval: 3000,
-            fn: () => L.info(`Exporting logs (${idx} / ${allLogs.length} ...`),
+            fn: () => L.info(`Exporting logs (${idx} / ${allLogs.length}) ...`),
         })
 
         const allLogs = alphabeticalBy(
@@ -749,12 +753,12 @@ function useManagerState() {
 
                 try {
                     const d: V3Export = await new Response(x.data).json()
-                    // if (d.type !== "v3_export") {
-                    //     L.error(
-                    //         `JSON file does not contain a log: ${x.blame.join("->")}: ${truncateString(x.data, 50, "...")}`,
-                    //     )
-                    //     continue
-                    // }
+                    if (d.type !== "v3_export") {
+                        L.error(
+                            `JSON file does not contain a log: ${x.blame.join("->")}`,
+                        )
+                        continue
+                    }
 
                     const rawBytes = new TextEncoder().encode(d.raw.raw)
                     const compressed = await compressZstd({
@@ -907,6 +911,11 @@ const CSS = css`
                 width: 100%;
                 min-width: 6em;
                 height: 2.5em;
+
+                background-color: var(--color-gray-500);
+                &:hover {
+                    background-color: var(--color-gray-600);
+                }
             }
 
             input {

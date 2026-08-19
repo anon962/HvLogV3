@@ -109,10 +109,10 @@ export function Table() {
                     params.e.v.length > 0 ||
                     params.i.v === "yes" ||
                     params.i.v === "no" ||
-                    !!params.ds ||
-                    !!params.de ||
-                    !!params.rmn ||
-                    !!params.rmx ||
+                    !!params.ds.v ||
+                    !!params.de.v ||
+                    !!params.rmn.v ||
+                    !!params.rmx.v ||
                     false,
             }}
         />

@@ -1049,6 +1049,11 @@ const CSS = css`
                 width: 100%;
                 min-width: 6em;
                 height: 2.5em;
+
+                background-color: var(--color-gray-500);
+                &:hover {
+                    background-color: var(--color-gray-600);
+                }
             }
         }
 

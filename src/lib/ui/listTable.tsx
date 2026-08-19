@@ -99,7 +99,7 @@ export function ListTable<T>(
         tableProps?: CommonProps
     } & CommonProps,
 ) {
-    const [showFilter, setShowFilter] = useState(false)
+    const [showFilter, setShowFilter] = useState(true)
 
     const { className, style, ...rest } = props
 
@@ -489,7 +489,7 @@ const Paginator = React.memo(
                         <button
                             className={cn(
                                 "p-[0.5em] stroke-[2px] text-pink-400 hover:bg-foreground/10 cursor-pointer rounded-md border-[1.5px] relative",
-                                props.showFilter ? "bg-pink-500/20" : null,
+                                props.showFilter ? "bg-pink-500/30" : null,
                             )}
                             onClick={() => props.setShowFilter?.()}
                         >
