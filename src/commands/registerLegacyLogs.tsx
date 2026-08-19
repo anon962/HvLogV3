@@ -55,19 +55,6 @@ function Dialog() {
         dialogRef.current?.showModal()
     }, [dialogRef?.current])
 
-    const tryClose = useCallback(() => {
-        if (status.action !== null) {
-            return false
-        }
-        if (!dialogRef.current) {
-            return
-        }
-        dialogRef.current.dispatchEvent(
-            new Event("hvlog:unmount", { bubbles: true }),
-        )
-        return true
-    }, [dialogRef.current])
-
     const {
         status,
         log,
@@ -82,6 +69,19 @@ function Dialog() {
     const totalDupes =
         legacyStats.currIdsP.intersection(legacyStats.idsP).size +
         legacyStats.currIdsI.intersection(legacyStats.idsI).size
+
+    const tryClose = useCallback(() => {
+        if (status.action !== null) {
+            return false
+        }
+        if (!dialogRef.current) {
+            return
+        }
+        dialogRef.current.dispatchEvent(
+            new Event("hvlog:unmount", { bubbles: true }),
+        )
+        return true
+    }, [status, dialogRef.current])
 
     const [count, setCount] = useState(200)
     const [importFiles, setImportFiles] = useState([] as File[])
@@ -641,7 +641,7 @@ function useImportState() {
                     name.endsWith("json")
                 ) {
                     let jsonData: Array<{
-                        data: string
+                        data: Blob
                         blame: string[]
                     }> = []
                     let textData: Array<{
@@ -683,7 +683,7 @@ function useImportState() {
                     if (zipData) {
                         for await (const { filename, data } of readZip({
                             data: zipData.data,
-                            type: "string",
+                            type: "blob",
                             onFail: (e, x) => {
                                 L.error(e)
                                 L.error(
@@ -700,7 +700,7 @@ function useImportState() {
                     for (const x of textData) {
                         try {
                             jsonData.push({
-                                data: await new Blob([x.data]).text(),
+                                data: new Blob([x.data]),
                                 blame: x.blame,
                             })
                         } catch (e) {
@@ -712,10 +712,12 @@ function useImportState() {
                     }
                     for (const x of jsonData) {
                         try {
-                            const d: DownloadFormat = JSON.parse(x.data)
+                            const d: DownloadFormat = await new Response(
+                                x.data,
+                            ).json()
                             if (d.kind !== "v2_log") {
                                 L.error(
-                                    `JSON file does not contain a log: ${x.blame.join("->")}: ${truncateString(x.data, 50, "...")}`,
+                                    `JSON file does not contain a log: ${x.blame.join("->")}: ${truncateString(JSON.stringify(d), 50, "...")}`,
                                 )
                                 continue
                             }
@@ -724,7 +726,7 @@ function useImportState() {
                         } catch (e) {
                             L.error(e)
                             L.error(
-                                `Unable to parse JSON data from file ${x.blame.join("->")}: ${truncateString(x.data, 50, "...")}`,
+                                `Unable to parse JSON data from file ${x.blame.join("->")}`,
                             )
                         }
                     }

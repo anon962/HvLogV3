@@ -3,6 +3,8 @@ import { DbN } from "@/lib/db/dbN"
 import { decompressZstd } from "@/lib/utils/miscUtils"
 import {
     alphabeticalBy,
+    cn,
+    css,
     ISODate,
     mapEntries,
     newContext,
@@ -12,7 +14,7 @@ import {
     sort,
     useAsync2,
 } from "myutils"
-import { useMemo, useRef, useState } from "react"
+import { Fragment, useMemo, useRef, useState } from "react"
 import { CheckIcon } from "../icons/tailwind"
 import { ListTable, ListTableN } from "../listTable"
 import { LogListN } from "./logList/logListN"
@@ -23,6 +25,7 @@ import { humanizeBattleType, MetaSummary } from "@/lib/stats/metaStats"
 export function EquipPage(props: {}) {
     return (
         <EQUIP_PAGE.Provider>
+            <style>{CSS}</style>
             <EquipPageInner />
         </EQUIP_PAGE.Provider>
     )
@@ -32,7 +35,7 @@ function EquipPageInner(props: {}) {
     const ctx = EQUIP_PAGE.useContext()
     return (
         <ListTable
-            className="text-[length:0.75em]"
+            className="text-[length:0.75em] equip-page"
             data={ctx.page}
             cols={[
                 EquipPageN.COLS_.name,
@@ -62,6 +65,7 @@ function EquipPageInner(props: {}) {
                 }
             }}
             getId={(r) => r.id + r.idx}
+            rowUrl={(r) => `/logs/${r.id}`}
             sortCols={
                 new Set([
                     EquipPageN.COLS_.name.id,
@@ -82,6 +86,67 @@ function EquipPageInner(props: {}) {
         />
     )
 }
+
+// #region filter
+function Filter() {
+    const ctx = EQUIP_PAGE.useContext()
+
+    return (
+        <form className="rounded-md border p-4 text-xs flex flex-col gap-2"></form>
+    )
+}
+// #endregion
+
+// #region EquipName
+const PEERLESS = [
+    { color: "#f00", glow: "#ff4d4d" },
+    { color: "#f90", glow: "#ffb84d" },
+    { color: "#fc0", glow: "#ffe066" },
+    { color: "#0c0", glow: "#4dff4d" },
+    { color: "#09f", glow: "#4db8ff" },
+    //{color: "#00c", glow: ""},
+    { color: "#003dcc", glow: "#47afc9" },
+    { color: "#c0f", glow: "#e066ff" },
+    { color: "#f00", glow: "#ff4d4d" },
+]
+const RARES = new Set([
+    "Charged",
+    "Radiant",
+    "Mystic",
+    "Savage",
+    "Slaughter",
+    "Shadowdancer",
+])
+function EquipName(props: { value: string }) {
+    const words = props.value
+        .split(" ")
+        .map((word, idx) => {
+            if (word === "Peerless") {
+                return (
+                    <div key={idx} className="inline peerless">
+                        {[...word].map((char, idx) => (
+                            <span key={idx}>{char}</span>
+                        ))}
+                    </div>
+                )
+            } else {
+                return (
+                    <span
+                        key={idx}
+                        className={cn({
+                            rare: RARES.has(word),
+                        })}
+                    >
+                        {word}
+                    </span>
+                )
+            }
+        })
+        .flatMap((x, idx) => [x, <Fragment key={idx + "_space"}> </Fragment>])
+
+    return <div className="name">{...words}</div>
+}
+// #endregion
 
 // #region EQUIP_PAGE
 const EQUIP_PAGE = newContext(() => {
@@ -259,7 +324,7 @@ export namespace EquipPageN {
                 content: "Name",
             },
             cell: (r) => ({
-                content: r.name,
+                content: <EquipName value={r.name} />,
             }),
         },
         battleType: {
@@ -370,4 +435,118 @@ export namespace EquipPageN {
         },
     } as const satisfies UrlParamN.Schema
 }
+// #endregion
+
+// #region css
+const CSS = css`
+    .equip-page {
+        font-size: 0.85em;
+
+        h2 {
+            font-size: 1em;
+            font-weight: 500;
+        }
+
+        td > * {
+            padding-top: calc(0.25em * 1);
+            padding-bottom: calc(0.25em * 1);
+        }
+
+        tbody tr {
+            border: 0;
+        }
+        thead tr {
+            border-bottom: 0.1em solid rgba(50, 50, 50, 1);
+        }
+
+        tr:nth-child(2n + 1) {
+            background-color: color-mix(
+                in oklab,
+                var(--color-muted) 25%,
+                transparent
+            ) !important;
+        }
+        tr:nth-child(2n + 2) {
+            background-color: color-mix(
+                in oklab,
+                var(--color-muted) 50%,
+                transparent
+            ) !important;
+        }
+        tr:hover:not(.selected) {
+            background-color: color-mix(
+                in oklab,
+                var(--color-muted) 100%,
+                transparent
+            ) !important;
+        }
+
+        .input-container {
+            display: flex;
+            flex-flow: column;
+            gap: 0.5em;
+
+            label {
+                font-weight: 600;
+            }
+
+            input[type="number"] {
+                height: max-content;
+                padding: 0.4em 0.5em;
+                line-height: 0;
+            }
+        }
+
+        .peerless {
+            :nth-child(1) {
+                color: ${PEERLESS[0].color};
+                --glow: ${PEERLESS[0].glow};
+            }
+            :nth-child(2) {
+                color: ${PEERLESS[1].color};
+                --glow: ${PEERLESS[1].glow};
+            }
+            :nth-child(3) {
+                color: ${PEERLESS[2].color};
+                --glow: ${PEERLESS[2].glow};
+            }
+            :nth-child(4) {
+                color: ${PEERLESS[3].color};
+                --glow: ${PEERLESS[3].glow};
+            }
+            :nth-child(5) {
+                color: ${PEERLESS[4].color};
+                --glow: ${PEERLESS[4].glow};
+            }
+            :nth-child(6) {
+                color: ${PEERLESS[5].color};
+                --glow: ${PEERLESS[5].glow};
+            }
+            :nth-child(7) {
+                color: ${PEERLESS[6].color};
+                --glow: ${PEERLESS[6].glow};
+            }
+            :nth-child(8) {
+                color: ${PEERLESS[7].color};
+                --glow: ${PEERLESS[7].glow};
+            }
+
+            * {
+                /* --glow: color-mix(in oklch, #333, transparent 25%); */
+                --glow-faded: color-mix(in oklch, var(--glow), transparent 50%);
+                text-shadow:
+                    0 0 1px var(--glow-faded),
+                    0 0 2px var(--glow-faded),
+                    0 0 4px var(--glow-faded),
+                    0 0 8px var(--glow-faded);
+            }
+        }
+        .rare {
+            color: color-mix(in oklch, var(--primary), var(--foreground) 25%);
+        }
+        tr:hover .rare {
+            color: color-mix(in oklch, var(--primary), var(--foreground) 5%);
+        }
+    }
+`
 // #endregion

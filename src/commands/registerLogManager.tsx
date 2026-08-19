@@ -655,7 +655,7 @@ function useManagerState() {
             L.info(`Reading ${file.name} ...`)
 
             let jsonData: Array<{
-                data: string
+                data: Blob
                 blame: string[]
             }> = []
             let textData: Array<{
@@ -698,7 +698,7 @@ function useManagerState() {
                 L.info(`Unzipping`, file.name)
                 for await (const { filename, data } of readZip({
                     data: zipData.data,
-                    type: "string",
+                    type: "blob",
                     onFail: (e, x) => {
                         L.error(e)
                         L.error(
@@ -715,7 +715,7 @@ function useManagerState() {
             for (const x of textData) {
                 try {
                     jsonData.push({
-                        data: await new Blob([x.data]).text(),
+                        data: new Blob([x.data]),
                         blame: x.blame,
                     })
                 } catch (e) {
@@ -748,14 +748,13 @@ function useManagerState() {
                 statusLog()
 
                 try {
-                    const d: V3Export = JSON.parse(x.data)
-
-                    if (d.type !== "v3_export") {
-                        L.error(
-                            `JSON file does not contain a log: ${x.blame.join("->")}: ${truncateString(x.data, 50, "...")}`,
-                        )
-                        continue
-                    }
+                    const d: V3Export = await new Response(x.data).json()
+                    // if (d.type !== "v3_export") {
+                    //     L.error(
+                    //         `JSON file does not contain a log: ${x.blame.join("->")}: ${truncateString(x.data, 50, "...")}`,
+                    //     )
+                    //     continue
+                    // }
 
                     const rawBytes = new TextEncoder().encode(d.raw.raw)
                     const compressed = await compressZstd({
@@ -792,7 +791,7 @@ function useManagerState() {
                 } catch (e) {
                     L.error(e)
                     L.error(
-                        `Unable to parse JSON data from file ${x.blame.join("->")}: ${truncateString(x.data, 50, "...")}`,
+                        `Unable to parse JSON data from file ${x.blame.join("->")}`,
                     )
                 }
             }

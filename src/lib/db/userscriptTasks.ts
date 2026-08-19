@@ -63,7 +63,6 @@ export function runUserscriptTasks(opts: TaskOpts) {
                         cancel.then(() => "cancel" as const),
                         lock.whenBlocking.then(() => "blocking" as const),
                     ])
-                    console.log("nextIdx", nextIdx)
                     if (nextIdx === "cancel") {
                         return
                     } else if (nextIdx === "blocking") {
@@ -393,9 +392,9 @@ async function* tallyEquips(opts: TaskOpts): TaskGen {
                     equips.date.push(meta.startedAt)
                     equips.isBonus.push(x.isBonus)
                     equips.world.push(meta.world)
-
-                    equipTally.done.add(id)
                 }
+
+                equipTally.done.add(id)
             }
 
             equipTally.equips = await compressZstd({

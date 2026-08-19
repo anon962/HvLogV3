@@ -57,7 +57,7 @@ function Inner() {
     )
 }
 
-// region: table
+// #region table
 function Table() {
     const {
         data,
@@ -132,8 +132,9 @@ function Table() {
         </div>
     )
 }
+// #endregion
 
-// region: filter
+// #region filter
 function Filter() {
     const { options, mode } = MonsterPageN.ctx.useContext()
 
@@ -211,8 +212,9 @@ function Filter() {
         </form>
     )
 }
+// #endregion
 
-// region: utils
+// #region utils
 function MultiSelect(
     props: {
         param: "nm" | "tr" | "rc"
@@ -312,3 +314,4 @@ function NumberInput(props: {
         </div>
     )
 }
+// #endregion

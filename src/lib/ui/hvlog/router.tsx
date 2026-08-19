@@ -126,7 +126,10 @@ function useScrollRestoration() {
 
     useEffect(() => {
         const trackScrollPos = (ev: Event) => {
-            const tgt = ev.target
+            let tgt = ev.target
+            if (tgt === document) {
+                tgt = document.body
+            }
             if (!(tgt instanceof HTMLElement)) {
                 return
             }
@@ -204,9 +207,9 @@ function useScrollRestoration() {
                     },
                     minStableFrames: 2,
                     timeout: 1000,
-                }).then((x) =>
-                    x.state?.el.scrollTo({ top: scrollTop, left: scrollLeft }),
-                )
+                }).then((x) => {
+                    x.state?.el.scrollTo({ top: scrollTop, left: scrollLeft })
+                })
             }
         }
 

@@ -154,8 +154,12 @@ export async function writeZip(
 
     return writer.close()
 }
-type ReadZipTypeId = "string"
-type ReadZipType<Id> = Id extends "string" ? string : never
+type ReadZipTypeId = "string" | "blob"
+type ReadZipType<Id> = Id extends "string"
+    ? string
+    : Id extends "blob"
+      ? Blob
+      : never
 export async function* readZip<T extends ReadZipTypeId>(opts: {
     data: Blob | Uint8Array<ArrayBuffer>
     type: T
@@ -179,8 +183,13 @@ export async function* readZip<T extends ReadZipTypeId>(opts: {
 
         let data: any = null
         try {
-            if (opts.type === "string") {
-                data = await x.getData(new TextWriter())
+            switch (opts.type) {
+                case "string":
+                    data = await x.getData(new TextWriter())
+                    break
+                case "blob":
+                    data = await x.getData(new BlobWriter())
+                    break
             }
         } catch (e) {
             opts.onFail?.(e, x)
