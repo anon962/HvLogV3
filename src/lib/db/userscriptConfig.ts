@@ -56,7 +56,11 @@ export const USERSCRIPT_CONFIG = IS_LOCAL
               },
           }
       })
-    : newContext(() => ({ value: {} as any, setValue: () => {} }))
+    : newContext(() => ({
+          value: {} as any,
+          setValue: () => {},
+          fns: {} as any,
+      }))
 
 export const DEFAULT_USERSCRIPT_CONFIG = () => ({
     prices: {
