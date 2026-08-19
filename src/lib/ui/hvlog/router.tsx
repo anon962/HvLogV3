@@ -424,7 +424,7 @@ export namespace UrlParamN {
             never
     }
     export interface UpdateOpts {
-        history: "push" | "replace"
+        history: "throttle" | "push" | "replace"
     }
 
     export function useUrlParams<S extends Schema>(opts: {
@@ -531,6 +531,8 @@ export namespace UrlParamN {
             return x
         }, [url.href])
 
+        let lastUpdate = useRef(0)
+
         const setParams = (
             update: Partial<UpdateObject<S>>,
             opts2?: UpdateOpts,
@@ -544,6 +546,13 @@ export namespace UrlParamN {
                 }
 
                 const s = opts.schema[k]
+                const setTruthy = (k: string, v: string, cond: boolean) => {
+                    if (cond) {
+                        u.searchParams.set(k, v)
+                    } else {
+                        u.searchParams.delete(k)
+                    }
+                }
 
                 switch (s.type) {
                     case "string": {
@@ -560,7 +569,7 @@ export namespace UrlParamN {
                             .map((x) => (s.skipTrim ? x : x.trim()))
                             .filter((x) => x.length > 0 || s.allowEmpty)
                             .join(",")
-                        u.searchParams.set(k, v3)
+                        setTruthy(k, v3, v3.length > 0)
                         break
                     }
                     case "number": {
@@ -570,10 +579,8 @@ export namespace UrlParamN {
                     }
                     case "number[]": {
                         const v2 = v as number[]
-                        u.searchParams.set(
-                            k,
-                            v2.map((x) => String(x)).join(","),
-                        )
+                        const v3 = v2.map((x) => String(x)).join(",")
+                        setTruthy(k, v3, v3.length > 0)
                         break
                     }
                     case "boolean": {
@@ -583,10 +590,8 @@ export namespace UrlParamN {
                     }
                     case "boolean[]": {
                         const v2 = v as boolean[]
-                        u.searchParams.set(
-                            k,
-                            v2.map((x) => String(+v2)).join(","),
-                        )
+                        const v3 = v2.map((x) => String(+v2)).join(",")
+                        setTruthy(k, v3, v3.length > 0)
                         break
                     }
                     case "date": {
@@ -594,26 +599,37 @@ export namespace UrlParamN {
                         const v3 = s.ser
                             ? s.ser(v2)
                             : v2.toISOString().slice(0, 10)
-                        u.searchParams.set(k, v3)
+                        setTruthy(k, v3, v3.length > 0)
                         break
                     }
                     case "bitmask": {
                         const v2 = v as Array<0 | 1>
                         const v3 = bitmaskToBigint(v2)
-                        if (v3 > 0) {
-                            u.searchParams.set(k, String(v3))
-                        } else {
-                            u.searchParams.delete(k)
-                        }
+                        setTruthy(k, String(v3), v3 > 0)
                         break
                     }
                 }
             }
 
-            if (opts2?.history === "replace") {
-                window.history.replaceState(null, "", u.href)
-            } else {
-                window.history.pushState(null, "", u.href)
+            let history = opts2?.history ?? "throttle"
+
+            const now = Date.now()
+            if (history === "throttle") {
+                if (now - lastUpdate.current >= 3_000) {
+                    history = "push"
+                } else {
+                    history = "replace"
+                }
+            }
+            lastUpdate.current = now
+
+            switch (history) {
+                case "push":
+                    window.history.pushState(null, "", u.href)
+                    break
+                case "replace":
+                    window.history.replaceState(null, "", u.href)
+                    break
             }
         }
 

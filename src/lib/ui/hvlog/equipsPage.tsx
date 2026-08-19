@@ -13,14 +13,23 @@ import {
     sleep,
     sort,
     useAsync2,
+    useDebouncedWrite,
 } from "myutils"
-import { Fragment, useMemo, useRef, useState } from "react"
+import {
+    Fragment,
+    useDeferredValue,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+} from "react"
 import { CheckIcon } from "../icons/tailwind"
 import { ListTable, ListTableN } from "../listTable"
 import { LogListN } from "./logList/logListN"
 import { UrlParamN } from "./router"
 import { EQUIP_TIERS } from "@/lib/constants"
 import { humanizeBattleType, MetaSummary } from "@/lib/stats/metaStats"
+import { Input } from "../shadcn/input"
 
 export function EquipPage(props: {}) {
     return (
@@ -33,57 +42,80 @@ export function EquipPage(props: {}) {
 
 function EquipPageInner(props: {}) {
     const ctx = EQUIP_PAGE.useContext()
+
+    const [nm, setNm] = useDebouncedWrite({
+        value: ctx.params.nm.raw ?? "",
+        onUpdate: (nm) => {
+            ctx.setParams({
+                nm: nm?.split(","),
+            })
+        },
+    })
+
     return (
-        <ListTable
-            className="text-[length:0.75em] equip-page"
-            data={ctx.page}
-            cols={[
-                EquipPageN.COLS_.name,
-                EquipPageN.COLS_.date,
-                EquipPageN.COLS_.battleType,
-                EquipPageN.COLS_.bonus,
-            ]}
-            sortCriteria={
-                ctx.params.s.v
-                    ? {
-                          cid: ctx.params.s.v.id,
-                          order: ctx.params.d.v ? "desc" : "asc",
-                      }
-                    : null
-            }
-            setSortCriteria={(s) => {
-                if (s) {
-                    ctx.setParams({
-                        s: s.cid,
-                        d: s.order === "desc",
-                    })
-                } else {
-                    ctx.setParams({
-                        s: null,
-                        d: null,
-                    })
+        <div className="equip-page flex flex-col items-center">
+            <div className="p-4 pb-0 max-w-[40em] w-full">
+                <Input
+                    value={nm}
+                    onInput={(ev) => {
+                        setNm(ev.target.value)
+                    }}
+                    type="text"
+                    className=""
+                    placeholder="peerl oak des, leg sav slau"
+                />
+            </div>
+            <ListTable
+                className="text-[length:0.75em]"
+                data={ctx.page}
+                cols={[
+                    EquipPageN.COLS_.name,
+                    EquipPageN.COLS_.date,
+                    EquipPageN.COLS_.battleType,
+                    EquipPageN.COLS_.bonus,
+                ]}
+                sortCriteria={
+                    ctx.params.s.v
+                        ? {
+                              cid: ctx.params.s.v.id,
+                              order: ctx.params.d.v ? "desc" : "asc",
+                          }
+                        : null
                 }
-            }}
-            getId={(r) => r.id + r.idx}
-            rowUrl={(r) => `/logs/${r.id}`}
-            sortCols={
-                new Set([
-                    EquipPageN.COLS_.name.id,
-                    EquipPageN.COLS_.date.id,
-                    EquipPageN.COLS_.battleType.id,
-                    EquipPageN.COLS_.bonus.id,
-                ])
-            }
-            count={ctx.count}
-            pageSize={ctx.pageSize}
-            setPageSize={{
-                options: [25, 100, 1000, 12345, 999999],
-                handler: (sz) => ctx.setParams({ n: sz }),
-            }}
-            pageIndex={ctx.pageIndex}
-            setPageIndex={(idx) => ctx.setParams({ p: idx })}
-            isLoading={ctx.isLoading}
-        />
+                setSortCriteria={(s) => {
+                    if (s) {
+                        ctx.setParams({
+                            s: s.cid,
+                            d: s.order === "desc",
+                        })
+                    } else {
+                        ctx.setParams({
+                            s: null,
+                            d: null,
+                        })
+                    }
+                }}
+                getId={(r) => r.id + r.idx}
+                rowUrl={(r) => `/logs/${r.id}`}
+                sortCols={
+                    new Set([
+                        EquipPageN.COLS_.name.id,
+                        EquipPageN.COLS_.date.id,
+                        EquipPageN.COLS_.battleType.id,
+                        EquipPageN.COLS_.bonus.id,
+                    ])
+                }
+                count={ctx.count}
+                pageSize={ctx.pageSize}
+                setPageSize={{
+                    options: [25, 100, 1000, 12345, 999999],
+                    handler: (sz) => ctx.setParams({ n: sz }),
+                }}
+                pageIndex={ctx.pageIndex}
+                setPageIndex={(idx) => ctx.setParams({ p: idx })}
+                isLoading={ctx.isLoading}
+            />
+        </div>
     )
 }
 
@@ -236,17 +268,17 @@ const EQUIP_PAGE = newContext(() => {
             idxs = idxs.filter((idx) => data[idx].isBonus === bs)
         }
         if (params.nm.v.length > 0) {
-            const clauses: string[][] = params.nm.v.map((text) =>
+            const clauses: RegExp[][] = params.nm.v.map((text) =>
                 text
                     .split(" ")
                     .map((word) => word.trim())
                     .filter((word) => word.length > 0)
-                    .map((word) => word.toLocaleLowerCase()),
+                    .map((word) => new RegExp(word, "i")),
             )
 
             idxs = idxs.filter((idx) =>
                 clauses.some((cl) =>
-                    cl.every((word) => data[idx].name.includes(word)),
+                    cl.every((word) => word.exec(data[idx].name)),
                 ),
             )
         }

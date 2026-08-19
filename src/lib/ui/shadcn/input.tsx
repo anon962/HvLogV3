@@ -9,7 +9,7 @@ type InputProps = Omit<
     onInput?: (event: InputEvent & { target: HTMLInputElement }) => void
 }
 
-function Input({ className, type, ...props }: InputProps) {
+function Input({ className, type, onChange, onInput, ...props }: InputProps) {
     const ref = React.useRef<HTMLInputElement>(null)
 
     React.useEffect(() => {
@@ -17,16 +17,13 @@ function Input({ className, type, ...props }: InputProps) {
             return
         }
 
-        // @ts-ignore
-        ref.current.onchange = props.onChange ?? (() => {})
-        ref.current.oninput = props.onInput ?? (() => {})
-    }, [ref.current, props.onChange, props.onInput])
-
-    const actualProps = {
-        ...props,
-        onChange: undefined,
-        onInput: undefined,
-    }
+        ref.current.onchange = (ev) => {
+            onChange?.(ev as any)
+        }
+        ref.current.oninput = (ev) => {
+            onInput?.(ev as any)
+        }
+    }, [onChange, onInput])
 
     return (
         <input
@@ -39,9 +36,7 @@ function Input({ className, type, ...props }: InputProps) {
                 "aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
                 className,
             )}
-            {...actualProps}
-            onChange={() => {}}
-            onInput={() => {}}
+            {...props}
         />
     )
 }
