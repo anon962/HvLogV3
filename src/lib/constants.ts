@@ -1,6 +1,7 @@
 import { DbN } from "./db/dbN"
 
 export const IS_BROWSER = typeof window !== "undefined"
+export const IS_NODE = !IS_BROWSER
 export const IS_REMOTE = IS_BROWSER ? !!window.HV_LOG.isRemote : true
 export const IS_LOCAL = !IS_REMOTE
 

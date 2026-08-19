@@ -4,63 +4,64 @@ import { LogDb } from "./db"
 import { DbN } from "./dbN"
 import { IS_LOCAL } from "../constants"
 
+const USERSCRIPT_CONFIG_ = newContext(() => {
+    const [value, setValue] = useState({
+        config: DEFAULT_USERSCRIPT_CONFIG(),
+        ready: false,
+    })
+
+    window.HV_LOG.userscriptConfig = value.config
+
+    useEffect(() => {
+        ;(async () => {
+            const config = await loadUserscriptConfig()
+            setValue({
+                config,
+                ready: true,
+            })
+        })()
+    }, [])
+
+    useEffect(() => {
+        return DbN.listenIdbEvent((ev, { isSameTab }) => {
+            if (ev.type !== "hvlog_config_change") {
+                return
+            }
+            if (isSameTab) {
+                return
+            }
+
+            setValue({ config: ev.config, ready: true })
+            saveUserscriptConfig(ev.config)
+        })
+    })
+
+    return {
+        value,
+        setValue: (update) => {
+            setValue((curr) => {
+                let next
+                if (typeof update === "function") {
+                    next = update(curr)
+                } else {
+                    next = curr
+                }
+                saveUserscriptConfig(next.config)
+                return next
+            })
+        },
+        fns: {
+            setConfigRaw: setValue,
+        },
+    }
+})
 export const USERSCRIPT_CONFIG = IS_LOCAL
-    ? newContext(() => {
-          const [value, setValue] = useState({
-              config: DEFAULT_USERSCRIPT_CONFIG(),
-              ready: false,
-          })
-
-          window.HV_LOG.userscriptConfig = value.config
-
-          useEffect(() => {
-              ;(async () => {
-                  const config = await loadUserscriptConfig()
-                  setValue({
-                      config,
-                      ready: true,
-                  })
-              })()
-          }, [])
-
-          useEffect(() => {
-              return DbN.listenIdbEvent((ev, { isSameTab }) => {
-                  if (ev.type !== "hvlog_config_change") {
-                      return
-                  }
-                  if (isSameTab) {
-                      return
-                  }
-
-                  setValue({ config: ev.config, ready: true })
-                  saveUserscriptConfig(ev.config)
-              })
-          })
-
-          return {
-              value,
-              setValue: (update) => {
-                  setValue((curr) => {
-                      let next
-                      if (typeof update === "function") {
-                          next = update(curr)
-                      } else {
-                          next = curr
-                      }
-                      saveUserscriptConfig(next.config)
-                      return next
-                  })
-              },
-              fns: {
-                  setConfigRaw: setValue,
-              },
-          }
-      })
-    : newContext(() => ({
-          value: {} as any,
+    ? USERSCRIPT_CONFIG_
+    : (newContext(() => ({
+          value: {},
           setValue: () => {},
           fns: {} as any,
-      }))
+      })) as any as typeof USERSCRIPT_CONFIG_)
 
 export const DEFAULT_USERSCRIPT_CONFIG = () => ({
     prices: {

@@ -1,5 +1,5 @@
 import { createWriteStream } from "fs"
-import { L } from "myutils"
+import { L, truncateString } from "myutils"
 import path from "path"
 import { fileURLToPath } from "url"
 import {
@@ -8,16 +8,16 @@ import {
     SearchSummary,
     summarizeSearchStats,
 } from "./lib/stats/summary"
+import * as zstdWasm from "@bokuweb/zstd-wasm"
 import { parseLog } from "./lib/utils/parseLog"
 import { v91 } from "./lib/v91/v91"
-import {
-    init as zstdWasmInit,
-    compress as zstdWasmCompress,
-} from "@bokuweb/zstd-wasm"
 
 export {}
 
-const write = (x: string) => process.stdout.write(x + "\n")
+globalThis.HV_LOG = {} as any
+
+// const write = (x: string) => process.stdout.write(x + "\n")
+const write = (x: string) => L.info(CLI_KEY, x)
 
 const __file__ = fileURLToPath(import.meta.url)
 const ROOT_DIR = path.dirname(path.dirname(path.dirname(__file__)))
@@ -25,35 +25,40 @@ const logDir = path.join(ROOT_DIR, "data", "logs")
 const logFile = path.join(logDir, "web_cli.log")
 const logStream = createWriteStream(logFile, { flags: "a", flush: true })
 
-L.patchConsole()
+const CLI_KEY = Symbol("CLI_KEY")
+L.sinks["default"].call = (level, msg, ...rest) => {
+    if (msg === CLI_KEY) {
+        L.originalConsoleFns[level](...rest)
+    }
+}
 L.sinks["cli"] = {
     disabled: false,
-    call: (level, msg, ...rest) => {
+    call: (level, ...args) => {
+        if (args[0] === CLI_KEY) {
+            args = [
+                `stdout: ${truncateString(print(args.slice(1)), 500, "...")}`,
+            ]
+        }
+
         const now = new Date().toISOString()
         logStream.write(
             `[${level.toUpperCase().padEnd(5)}] [${now}] - ` +
-                [msg, ...rest]
-                    .map((x) => {
-                        try {
-                            return JSON.stringify(x)
-                        } catch (e) {
-                            return String(x)
-                        }
-                    })
-                    .join(" ") +
+                print(args) +
                 "\n",
         )
     },
 }
-L.log(
-    path.join(
-        // process.cwd(),
-        ROOT_DIR,
-        "data",
-        "logs",
-        "web_cli.log",
-    ),
-)
+L.patchConsole()
+
+// L.log(
+//     path.join(
+//         // process.cwd(),
+//         ROOT_DIR,
+//         "data",
+//         "logs",
+//         "web_cli.log",
+//     ),
+// )
 
 async function main() {
     let cmd = {} as any
@@ -65,6 +70,7 @@ async function main() {
             }
 
             cmd = JSON.parse(stdin)
+            L.debug("start", cmd.type)
             switch (cmd.type) {
                 case "parse": {
                     handleParse(cmd)
@@ -78,6 +84,7 @@ async function main() {
                     L.error(process.argv)
                     throw new Error(`Unknown command ${cmd.type}`)
             }
+            L.debug("done", cmd.type)
         }
     } catch (e) {
         L.error(e)
@@ -129,10 +136,10 @@ function handleParse(cmd: any) {
     write(JSON.stringify(result))
 }
 
-await zstdWasmInit()
+await zstdWasm.init()
 async function handleCompress(cmd: { data: string }) {
     const dataBytes = new TextEncoder().encode(cmd.data)
-    const result = window.zstdWasm.compress(dataBytes, 19)
+    const result = zstdWasm.compress(dataBytes, 19)
     // const result = await compressGzip(cmd.data)
 
     const result64 = Buffer.from(result).toString("base64")
@@ -167,6 +174,18 @@ async function readLine(): Promise<string> {
         process.stdin.on("end", onEnd)
         process.stdin.resume()
     })
+}
+
+function print(args: any[]): string {
+    return args
+        .map((x) => {
+            try {
+                return JSON.stringify(x)
+            } catch (e) {
+                return String(x)
+            }
+        })
+        .join(" ")
 }
 
 await main()

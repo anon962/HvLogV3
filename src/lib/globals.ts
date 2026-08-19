@@ -5,14 +5,13 @@ import { init, compress, decompress } from "@bokuweb/zstd-wasm"
 export {}
 
 declare global {
+    var HV_LOG: {
+        isRemote?: boolean
+        zstdInit?: Promise<void>
+        workerPool: WorkerPoolN.Pool
+        userscriptConfig: UserscriptConfig
+    }
     interface Window {
-        HV_LOG: {
-            isRemote?: boolean
-            zstdInit?: Promise<void>
-            workerPool: WorkerPoolN.Pool
-            userscriptConfig: UserscriptConfig
-        }
-
         unsafeWindow: Window
 
         GM_registerMenuCommand: (

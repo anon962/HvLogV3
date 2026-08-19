@@ -50,6 +50,7 @@
         "styled-components": "^6.5.1",
         "tailwindcss": "^4.0.15",
         "terser": "^5.49.2",
-        "tw-animate-css": "^1.2.4"
+        "tw-animate-css": "^1.2.4",
+        "vite-node": "^6.0.0"
     }
 }

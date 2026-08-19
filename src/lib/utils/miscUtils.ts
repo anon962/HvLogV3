@@ -58,12 +58,12 @@ export function concatArrays(xs: Uint8Array[]) {
 }
 
 export function initZstdWasm() {
-    if (!("zstdInit" in window.HV_LOG)) {
+    if (!("zstdInit" in globalThis.HV_LOG)) {
         globalThis.eval(__zstdInline__)
         // @ts-ignore
-        window.HV_LOG.zstdInit = zstdWasm.init(__zstdWasmUrl__)
+        globalThis.HV_LOG.zstdInit = zstdWasm.init(__zstdWasmUrl__)
     }
-    return window.HV_LOG.zstdInit
+    return globalThis.HV_LOG.zstdInit
 }
 
 export async function compressZstd(opts: {

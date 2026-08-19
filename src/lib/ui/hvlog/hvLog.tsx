@@ -1,4 +1,4 @@
-import { USERSCRIPT_CONFIG } from "@/lib/db/userscriptConfig"
+import { USERSCRIPT_CONFIG, UserscriptConfig } from "@/lib/db/userscriptConfig"
 import { humanizeFightingType } from "@/lib/stats/combatStats"
 import { IndexMap } from "@/lib/stats/indexMap"
 import { humanizeBattleType } from "@/lib/stats/metaStats"
