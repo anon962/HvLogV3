@@ -119,7 +119,9 @@ export function ListTable<T>(
             />
 
             {showFilter && props.filter?.content ? (
-                <div className="mx-auto p-4 pt-0">{props.filter.content}</div>
+                <div className="mx-auto p-4 pt-0 filter-body">
+                    {props.filter.content}
+                </div>
             ) : (
                 <div className="h-0"></div>
             )}
@@ -484,13 +486,12 @@ const Paginator = React.memo(
 
         return (
             <div className="flex mx-auto items-center p-4">
-                <div className="w-10 flex justify-center">
+                <div className="w-10 flex justify-center filter-container">
                     {props.allowFilter && props.filter?.trigger ? (
                         <button
-                            className={cn(
-                                "p-[0.5em] stroke-[2px] text-pink-400 hover:bg-foreground/10 cursor-pointer rounded-md border-[1.5px] relative",
-                                props.showFilter ? "bg-pink-500/30" : null,
-                            )}
+                            className={cn("filter", {
+                                active: props.showFilter,
+                            })}
                             onClick={() => props.setShowFilter?.()}
                         >
                             {props.filter.trigger}

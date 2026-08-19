@@ -1,4 +1,4 @@
-import { mountReactWrapper, sum } from "myutils"
+import { mountReactWrapper, range, sum } from "myutils"
 import React from "react"
 // @ts-ignore
 import __zstdInline__ from "virtual:zstd-inline"
@@ -279,7 +279,36 @@ export async function sleepWithRegistration(t: number): Promise<void> {
     })
 }
 
-export function formatMiB(sizeBytes: number, n = 1) {
+export function formatMiB(sizeBytes: number, n = 0) {
     const sizeMiB = sizeBytes / 1024 / 1024
     return sizeMiB.toFixed(n)
+}
+
+export function transposeForCss<T>(
+    xs: T[],
+    colCount: number,
+    offset: boolean = true,
+): T[] {
+    const n = xs.length + +offset
+    const rowCount = Math.ceil(n / colCount)
+    const grid: (T | null)[][] = range(colCount).map(() =>
+        range(rowCount).map(() => null),
+    )
+
+    let rowIdx = 0
+    let colIdx = +offset
+
+    for (const x of xs) {
+        grid[colIdx][rowIdx] = x
+
+        console.log(x, colIdx, rowIdx)
+        colIdx += 1
+        if (colIdx === colCount) {
+            colIdx = 0
+            rowIdx += 1
+        }
+    }
+
+    console.log(grid.flatMap((xs) => xs).filter((x): x is T => !!x))
+    return grid.flatMap((xs) => xs).filter((x) => x !== null)
 }

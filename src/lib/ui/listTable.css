@@ -1,136 +1,186 @@
-.list-table {
-    /* Cell padding */
-    td,
-    th {
-        padding: 0;
-    }
-    th > * {
-        padding-left: calc(0.25em * 2);
-        padding-right: calc(0.25em * 2);
-        padding-top: calc(0.25em * 2);
-        padding-bottom: calc(0.25em * 2);
-    }
-    td > * {
-        padding-left: calc(0.25em * 4);
-        padding-right: calc(0.25em * 4);
-        padding-top: calc(0.25em * 2);
-        padding-bottom: calc(0.25em * 2);
-    }
-    a,
-    a:hover {
-        display: block;
-        color: inherit;
-        text-decoration: none;
-    }
-    th {
-        /* padding-left: calc(0.25em * 4); */
-    }
+.list-table-container {
+    .list-table {
+        /* Cell padding */
+        td,
+        th {
+            padding: 0;
+        }
+        th > * {
+            padding-left: calc(0.25em * 2);
+            padding-right: calc(0.25em * 2);
+            padding-top: calc(0.25em * 2);
+            padding-bottom: calc(0.25em * 2);
+        }
+        td > * {
+            padding-left: calc(0.25em * 4);
+            padding-right: calc(0.25em * 4);
+            padding-top: calc(0.25em * 2);
+            padding-bottom: calc(0.25em * 2);
+        }
+        a,
+        a:hover {
+            display: block;
+            color: inherit;
+            text-decoration: none;
+        }
+        th {
+            /* padding-left: calc(0.25em * 4); */
+        }
 
-    /* Big headers */
-    th {
-        font-size: 1.25em;
-    }
+        /* Big headers */
+        th {
+            font-size: 1.25em;
+        }
 
-    /* Highlight active row */
-    tbody tr.selected {
-        color: var(--color-yellow-400);
-        border-color: var(--color-yellow-400);
-        border-style: var(--tw-border-style);
-        border-width: 0px 1px 1px 1px;
-        border-top-width: 0px;
-    }
-    tbody tr:hover:not(.selected) {
-        color: color-mix(
-            in oklab,
-            var(--color-yellow-400) 50%,
-            var(--foreground)
-        );
-    }
-    tbody tr.selected {
-        @media (hover: hover) {
-            background-color: color-mix(
+        /* Highlight active row */
+        tbody tr.selected {
+            color: var(--color-yellow-400);
+            border-color: var(--color-yellow-400);
+            border-style: var(--tw-border-style);
+            border-width: 0px 1px 1px 1px;
+            border-top-width: 0px;
+        }
+        tbody tr:hover:not(.selected) {
+            color: color-mix(
+                in oklab,
+                var(--color-yellow-400) 50%,
+                var(--foreground)
+            );
+        }
+        tbody tr.selected {
+            @media (hover: hover) {
+                background-color: color-mix(
+                    in oklab,
+                    var(--foreground) 25%,
+                    transparent
+                );
+            }
+        }
+        tr.selected-next {
+            border-color: var(--color-yellow-400);
+        }
+        tr {
+            border-color: color-mix(
                 in oklab,
                 var(--foreground) 25%,
                 transparent
             );
         }
-    }
-    tr.selected-next {
-        border-color: var(--color-yellow-400);
-    }
-    tr {
-        border-color: color-mix(in oklab, var(--foreground) 25%, transparent);
-    }
 
-    /* Splash color on unselected rows */
-    tbody tr:not(.selected) {
-        .type {
-            &.rob {
-                color: var(--color-pink-200);
+        /* Splash color on unselected rows */
+        tbody tr:not(.selected) {
+            .type {
+                &.rob {
+                    color: var(--color-pink-200);
+                }
+                &.gf {
+                    color: var(--color-lime-100);
+                }
+                &.re {
+                    color: var(--color-purple-200);
+                }
+                &.iw {
+                    color: var(--color-blue-200);
+                }
             }
-            &.gf {
-                color: var(--color-lime-100);
+
+            .status {
+                .finish {
+                    /* color: var(--color-green-700); */
+                }
+                .die {
+                    color: var(--color-red-300);
+                }
+                .flee {
+                    color: var(--color-slate-300);
+                }
             }
-            &.re {
-                color: var(--color-purple-200);
+
+            .mm {
+                color: var(--color-muted-foreground);
             }
-            &.iw {
-                color: var(--color-blue-200);
+
+            .profit {
+                &.positive {
+                    color: var(--color-green-200);
+                }
+                &.negative {
+                    color: var(--color-red-200);
+                }
             }
         }
 
-        .status {
-            .finish {
-                /* color: var(--color-green-700); */
-            }
-            .die {
-                color: var(--color-red-300);
-            }
-            .flee {
-                color: var(--color-slate-300);
-            }
+        .sort-icon {
+            opacity: 0.25;
         }
-
-        .mm {
-            color: var(--color-muted-foreground);
+        .sort-icon:hover:not(.active) {
+            opacity: 0.66;
         }
-
-        .profit {
-            &.positive {
-                color: var(--color-green-200);
-            }
-            &.negative {
-                color: var(--color-red-200);
-            }
+        .sort-icon.active {
+            opacity: 0.9;
+            stroke-width: 2.5px;
         }
     }
 
-    .sort-icon {
-        opacity: 0.25;
-    }
-    .sort-icon:hover:not(.active) {
-        opacity: 0.66;
-    }
-    .sort-icon.active {
-        opacity: 0.9;
-        stroke-width: 2.5px;
-    }
-}
+    nav {
+        a.active {
+            color: var(--color-yellow-400);
+        }
+        a:hover {
+            color: var(--color-yellow-200);
+        }
 
-.list-table-container nav {
-    a.active {
-        color: var(--color-yellow-400);
-    }
-    a:hover {
-        color: var(--color-yellow-200);
+        .first svg,
+        .previous svg,
+        .next svg,
+        .last svg {
+            transform: scale(1.25);
+            stroke-width: 0.2em;
+        }
     }
 
-    .first svg,
-    .previous svg,
-    .next svg,
-    .last svg {
-        transform: scale(1.25);
-        stroke-width: 0.2em;
+    button.filter {
+        padding: 0.5em;
+        stroke: 2px;
+        color: var(--color-pink-400);
+        cursor: pointer;
+        border-radius: 0.375rem;
+        border-width: 1.5px;
+        border-width: solid;
+        position: relative;
+        transition: all 0.1s ease-out;
+
+        &:hover {
+            background-color: color-mix(
+                in oklch,
+                var(--foreground) 10%,
+                transparent
+            );
+        }
+        &.active {
+            background-color: color-mix(
+                in oklch,
+                var(--color-pink-500) 30%,
+                transparent
+            );
+        }
+        &.active:hover {
+            background-color: color-mix(
+                in oklch,
+                var(--color-pink-800) 30%,
+                transparent
+            );
+        }
+    }
+
+    .filter-body {
+        h2 {
+            color: color-mix(
+                in oklch,
+                var(--color-blue-200),
+                var(--foreground) 0%
+            );
+        }
     }
 }
 

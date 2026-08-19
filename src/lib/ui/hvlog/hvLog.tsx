@@ -76,8 +76,8 @@ export const HvLog = (props: { prefix?: string[] }) => {
                 icon: <ScrollText />,
                 path: "/logs/",
                 isActive: (parts) => parts[0] === "logs",
-                isDisabled: (parts) =>
-                    parts[0] === "logs" && parts.length === 1,
+                // isDisabled: (parts) =>
+                //     parts[0] === "logs" && parts.length === 1,
             },
             IS_REMOTE
                 ? {

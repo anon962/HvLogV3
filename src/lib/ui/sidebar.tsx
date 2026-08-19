@@ -71,9 +71,8 @@ function SidebarLink({
     const isActive =
         item.isActive?.(partsPath, url) ??
         compareArrays(partsPath, normalizeUrlParts(item.path.split("/")))
-    const isDisabled =
-        item.isDisabled?.(partsPath, isActive, url) ??
-        compareArrays(partsPath, normalizeUrlParts(item.path.split("/")))
+    const isDisabled = item.isDisabled?.(partsPath, isActive, url) ?? false
+    // compareArrays(partsPath, normalizeUrlParts(item.path.split("/")))
 
     return (
         <MyTooltip

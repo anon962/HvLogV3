@@ -1,6 +1,9 @@
+import { EQUIP_TIERS } from "@/lib/constants"
 import { LogDb } from "@/lib/db/db"
 import { DbN } from "@/lib/db/dbN"
-import { decompressZstd } from "@/lib/utils/miscUtils"
+import { humanizeBattleType, MetaSummary } from "@/lib/stats/metaStats"
+import { decompressZstd, transposeForCss } from "@/lib/utils/miscUtils"
+import { SlidersHorizontal } from "lucide-react"
 import {
     alphabeticalBy,
     cn,
@@ -17,23 +20,13 @@ import {
     useAsync2,
     useDebouncedWrite,
 } from "myutils"
-import {
-    Fragment,
-    useDeferredValue,
-    useEffect,
-    useMemo,
-    useRef,
-    useState,
-} from "react"
+import { Fragment, useMemo, useRef, useState } from "react"
+import { CheckboxGroup } from "../checkboxGroup"
 import { CheckIcon } from "../icons/tailwind"
 import { ListTable, ListTableN } from "../listTable"
+import { Input } from "../shadcn/input"
 import { LogListN } from "./logList/logListN"
 import { UrlParamN } from "./router"
-import { EQUIP_TIERS } from "@/lib/constants"
-import { humanizeBattleType, MetaSummary } from "@/lib/stats/metaStats"
-import { Input } from "../shadcn/input"
-import { CheckboxGroup } from "../checkboxGroup"
-import { SlidersHorizontal } from "lucide-react"
 
 export function EquipPage(props: {}) {
     return (
@@ -112,11 +105,11 @@ function EquipPageInner(props: {}) {
                 count={ctx.count}
                 pageSize={ctx.pageSize}
                 setPageSize={{
-                    options: [25, 100, 1000, 12345, 999999],
+                    options: [25, 200, 500, 1000, 12345, 999999],
                     handler: (sz) => ctx.setParams({ n: sz }),
                 }}
                 pageIndex={ctx.pageIndex}
-                setPageIndex={(idx) => ctx.setParams({ p: idx })}
+                setPageIndex={(idx) => ctx.setParams({ p: idx + 1 })}
                 isLoading={ctx.isLoading}
                 filter={{
                     content: <Filter />,
@@ -136,10 +129,10 @@ function Filter() {
         <form className="rounded-md border p-4 text-xs flex flex-col gap-2">
             <CheckboxGroup
                 header="Battle Type"
-                options={LogListN.BATTLE_TYPES.map(({ label }) => ({
+                options={EquipPageN.BTS.map(({ label }) => ({
                     label,
                 }))}
-                checked={LogListN.BATTLE_TYPES.map(({ ids }) =>
+                checked={EquipPageN.BTS.map(({ ids }) =>
                     ctx.params.bt.v.some((id) => ids.has(id)),
                 )}
                 onCheckedChange={({ checked }) => {
@@ -148,9 +141,72 @@ function Filter() {
                     })
                 }}
                 listProps={{
-                    className: "block! columns-2",
+                    className: "block! columns-4",
                 }}
             />
+
+            <div className="flex gap-8">
+                <CheckboxGroup
+                    header="Equip Tier"
+                    options={EquipPageN.TIER_OPTIONS.map((label) => ({
+                        label,
+                    }))}
+                    checked={EquipPageN.TIER_OPTIONS.map(
+                        (label) =>
+                            !!ctx.params.et.raw &&
+                            ctx.params.et.v.some((x) => label === x),
+                    )}
+                    onCheckedChange={({ checked }) => {
+                        ctx.setParams({
+                            et: checked.map((x) => +x as 0 | 1),
+                        })
+                    }}
+                    listProps={{
+                        className: "block! columns-3",
+                    }}
+                />
+                <CheckboxGroup
+                    header="Clear Bonus?"
+                    direction="v"
+                    hideAll={true}
+                    options={["Yes", "No"].map((label) => ({ label }))}
+                    checked={[
+                        ctx.params.bs.v === "yes" || ctx.params.bs.v === "both",
+                        ctx.params.bs.v === "no" || ctx.params.bs.v === "both",
+                    ]}
+                    onCheckedChange={({ checked }) => {
+                        ctx.setParams({
+                            bs: checked.map((x) => +x as 0 | 1),
+                        })
+                    }}
+                    className="max-w-[20em]"
+                />
+            </div>
+
+            <div className="flex gap-4">
+                <div>
+                    <h2 className="pb-1">From</h2>
+                    <Input
+                        className="text-[length:inherit]! p-[0.5em] h-min"
+                        type="date"
+                        value={ctx.params.d0.v?.toISOString().split("T")[0]}
+                        onInput={(ev) => {
+                            ctx.setParams({ d0: ev.target.valueAsDate })
+                        }}
+                    />
+                </div>
+                <div>
+                    <h2 className="pb-1">To</h2>
+                    <Input
+                        className="text-[length:inherit]! p-[0.5em] h-min"
+                        type="date"
+                        value={ctx.params.d1.v?.toISOString().split("T")[0]}
+                        onInput={(ev) => {
+                            ctx.setParams({ d1: ev.target.valueAsDate })
+                        }}
+                    />
+                </div>
+            </div>
         </form>
     )
 }
@@ -235,7 +291,7 @@ const EQUIP_PAGE = newContext(() => {
 
             if (data.length === equips.id.length) {
                 if (equipTally.pending) {
-                    if (data.length < 50) {
+                    if (data.length < 25) {
                         await sleep(10_000)
                     } else {
                         await sleep(30_000)
@@ -288,10 +344,10 @@ const EQUIP_PAGE = newContext(() => {
         }
         if (params.d1.v) {
             const d1 = params.d1.v.toISOString()
-            idxs = idxs.filter((idx) => data[idx].date >= d1)
+            idxs = idxs.filter((idx) => data[idx].date <= d1)
         }
-        if (params.bs.v !== null) {
-            const bs = !!params.bs.v
+        if (params.bs.v === "yes" || params.bs.v === "no") {
+            const bs = params.bs.v === "yes"
             idxs = idxs.filter((idx) => data[idx].isBonus === bs)
         }
         if (params.nm.v.length > 0) {
@@ -394,6 +450,9 @@ export namespace EquipPageN {
         [K in keyof Row]: Array<Row[K]>
     }
 
+    export const TIER_OPTIONS = transposeForCss(EQUIP_TIERS.slice(1), 3)
+    export const BTS = transposeForCss(LogListN.BATTLE_TYPES, 4)
+
     export const COLS_ = {
         name: {
             id: "name",
@@ -464,7 +523,7 @@ export namespace EquipPageN {
         },
         n: {
             type: "number",
-            init: () => 1000,
+            init: () => 25,
         },
         s: {
             type: "string",
@@ -484,9 +543,7 @@ export namespace EquipPageN {
         bt: {
             type: "bitmask",
             deser: (xs) => {
-                let battleTypes = xs
-                    .map((idx) => LogListN.BATTLE_TYPES[idx])
-                    .filter((x) => !!x)
+                let battleTypes = xs.map((idx) => BTS[idx]).filter((x) => !!x)
 
                 return battleTypes.flatMap((bt) => [...bt.ids])
             },
@@ -498,12 +555,25 @@ export namespace EquipPageN {
             type: "date",
         },
         bs: {
-            type: "boolean",
+            type: "bitmask",
+            deser: (xs) => {
+                const hasYes = xs.includes(0)
+                const hasNo = xs.includes(1)
+                if (hasYes && hasNo) {
+                    return "both" as const
+                } else if (!hasYes && !hasNo) {
+                    return "neither" as const
+                } else if (hasYes) {
+                    return "yes" as const
+                } else {
+                    return "no" as const
+                }
+            },
         },
         et: {
             type: "bitmask",
             deser: (idxs) =>
-                idxs.map((idx) => EQUIP_TIERS[idx]).filter((x) => !!x),
+                idxs.map((idx) => TIER_OPTIONS[idx]).filter((x) => !!x),
             init: () => ["Peerless", "Legendary"],
         },
     } as const satisfies UrlParamN.Schema
@@ -617,6 +687,9 @@ const CSS = css`
         }
         tr:hover .rare {
             color: color-mix(in oklch, var(--primary), var(--foreground) 5%);
+        }
+
+        .filter-container {
         }
     }
 `
