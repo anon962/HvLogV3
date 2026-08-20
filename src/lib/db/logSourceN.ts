@@ -24,7 +24,7 @@ export namespace LogSourceN {
         prefetchDetails: (id: string) => Promise<void>
         prefetchSearch: (req: SearchRequest) => Promise<void>
 
-        fetchPrices: () => Promise<Record<string, number>>
+        fetchPrices: (world: DbN.HvWorld) => Promise<Record<string, number>>
         fetchGlobalMonsterSummary: () => Promise<GlobalMonsterSummary>
         fetchMonlab: () => Promise<Record<number, MonlabMonster>>
     }

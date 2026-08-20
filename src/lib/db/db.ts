@@ -1,9 +1,6 @@
 import * as idb from "idb"
-import { L, readUrl } from "myutils"
+import { L } from "myutils"
 import { DbN } from "./dbN"
-
-const STORAGE_KEY_PERSISTENT = "HvLog"
-const STORAGE_KEY_ISEKAI = "HvLog_isekai"
 
 type IdbSchemaRaw = {
     [K in keyof DbN.IdbSchema]: DbN.IdbSchema[K] extends Record<
@@ -15,24 +12,12 @@ type IdbSchemaRaw = {
 }
 export type LogDbConn = idb.IDBPDatabase<IdbSchemaRaw>
 export class LogDb<Ready extends boolean = false> {
-    world: DbN.HvWorld
     conn: Ready extends true ? Promise<LogDbConn> : Promise<LogDbConn> | null =
         null as any
     static schemaVersion = 5
     static parserVersion = 3
 
-    constructor(
-        public opts: {
-            world?: DbN.HvWorld
-        },
-    ) {
-        if (opts.world) {
-            this.world = opts.world
-        } else {
-            const { parts } = readUrl()
-            this.world = parts[0] === "isekai" ? "isekai" : "persistent"
-        }
-    }
+    constructor() {}
 
     async connect(): Promise<LogDb<true>> {
         if (this.conn) {
@@ -40,12 +25,7 @@ export class LogDb<Ready extends boolean = false> {
             return this as any
         }
 
-        const dbName =
-            this.world === "isekai"
-                ? STORAGE_KEY_ISEKAI
-                : STORAGE_KEY_PERSISTENT
-
-        this.conn = idb.openDB<IdbSchemaRaw>(dbName, LogDb.schemaVersion, {
+        this.conn = idb.openDB<IdbSchemaRaw>("HvLog", LogDb.schemaVersion, {
             upgrade: (conn, oldVersion, newVersion, txn, event) => {
                 L.info("Upgrading HvLog db ...")
                 this.applySchemaMigrations(conn, oldVersion)

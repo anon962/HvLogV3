@@ -212,51 +212,37 @@ class LogSourceRemote implements N.Protocol {
 // #endregion
 
 // #region local
-type LocalKey = { world: DbN.HvWorld; id: DbN.LogId }
 const newLocalCache = <T>(
     self: LogSourceLocal,
     opts: {
-        fetch: (
-            db: LogDb<true>,
-            conn: LogDbConn,
-            id: DbN.LogId,
-            k: LocalKey,
-        ) => Promise<T>
+        fetch: (db: LogDb<true>, conn: LogDbConn, id: DbN.LogId) => Promise<T>
         size?: number
         ttl?: number | null
     },
 ) =>
-    new N.AsyncCache<LocalKey, T>({
+    new N.AsyncCache<DbN.LogId, T>({
         ttl: opts.ttl ?? null,
         size: opts.size,
         fromRaw: (raw) => JSON.parse(raw),
         toRaw: (k) => JSON.stringify(k),
         fetch: async (k) => {
-            const db = await self.db[k.world]
+            const db = await self.db
             const conn = await db.conn
-            return opts.fetch(db, conn, k.id, k)
+            return opts.fetch(db, conn, k)
         },
     })
 class LogSourceLocal implements N.Protocol {
     ainit: Promise<void>
-    db: Record<DbN.HvWorld, Promise<LogDb<true>>>
+    db: Promise<LogDb<true>>
     pool: ReturnType<LogSourceLocal["initWorkerPool"]>
     prices: Promise<UserscriptConfig["prices"]>
-    world: DbN.HvWorld
+    private logIds: Set<DbN.LogId>
     private bcSub: Unsub
-    private logIds = {
-        persistent: new Set<DbN.LogId>(),
-        isekai: new Set<DbN.LogId>(),
-    }
 
     constructor(prices: Promise<UserscriptConfig["prices"]>) {
-        this.db = {
-            persistent: new LogDb({ world: "persistent" }).connect(),
-            isekai: new LogDb({ world: "isekai" }).connect(),
-        }
+        this.db = new LogDb().connect()
         this.pool = this.initWorkerPool()
-        this.world = "persistent"
-
+        this.logIds = new Set<DbN.LogId>()
         this.prices = prices
 
         const self: LogSourceLocal = this
@@ -264,7 +250,7 @@ class LogSourceLocal implements N.Protocol {
             switch (ev.type) {
                 case DbN.IDB_LOG_INSERT_EVENT:
                     for (const id of ev.ids) {
-                        self.logIds[ev.world].add(id)
+                        self.logIds.add(id)
                     }
                     break
                 case "hvlog_config_change":
@@ -274,38 +260,33 @@ class LogSourceLocal implements N.Protocol {
         })
 
         this.ainit = (async () => {
-            for (const world of ["persistent", "isekai"] as const) {
-                const ids = this.logIds[world]
-                const conn = await this.dbConn
-                for (const id of await conn.getAllKeys("logsMeta")) {
-                    ids.add(id)
-                }
+            const conn = await (await this!.db).conn
+            for (const id of await conn.getAllKeys("logsMeta")) {
+                this!.logIds.add(id)
             }
         })()
     }
 
     async fetchLogIds(): Promise<string[]> {
-        return [...this.logIds[this.world]]
+        return [...this.logIds]
     }
     async fetchMeta(id: string) {
-        return await this.metaCache.fetch({ id, world: this.world })
+        return await this.metaCache.fetch(id)
     }
     async fetchLog(id: string) {
-        return await this.rawCache.fetch({ id, world: this.world })
+        return await this.rawCache.fetch(id)
     }
     async fetchDetails(id: string) {
-        return (await this.entriesDetailsCache.fetch({ id, world: this.world }))
-            .details
+        return (await this.entriesDetailsCache.fetch(id)).details
     }
     async fetchSearch(req: N.SearchRequest): Promise<N.SearchResponse> {
         return await this.searchResponseCache.fetch(req)
     }
     async fetchEntries(id: string) {
-        return (await this.entriesDetailsCache.fetch({ id, world: this.world }))
-            .entries
+        return (await this.entriesDetailsCache.fetch(id)).entries
     }
-    async fetchPrices() {
-        return (await this.prices)[this.world]
+    async fetchPrices(world: DbN.HvWorld) {
+        return (await this.prices)[world]
     }
     async fetchMonlab(): Promise<any> {
         throw new Error("not implemented")
@@ -345,16 +326,16 @@ class LogSourceLocal implements N.Protocol {
 
     // #region local prefetch
     async prefetchMeta(id: DbN.LogId) {
-        this.metaCache.fetch({ world: this.world, id }, true)
+        this.metaCache.fetch(id, true)
     }
     async prefetchLog(id: DbN.LogId) {
-        this.rawCache.fetch({ world: this.world, id }, true)
+        this.rawCache.fetch(id, true)
     }
     async prefetchEntries(id: DbN.LogId) {
-        this.entriesDetailsCache.fetch({ world: this.world, id }, true)
+        this.entriesDetailsCache.fetch(id, true)
     }
     async prefetchDetails(id: DbN.LogId) {
-        this.entriesDetailsCache.fetch({ world: this.world, id }, true)
+        this.entriesDetailsCache.fetch(id, true)
     }
     async prefetchSearch(req: N.SearchRequest) {
         this.searchResponseCache.fetch(req, true)
@@ -363,7 +344,7 @@ class LogSourceLocal implements N.Protocol {
 
     // #region local caches
     private metaCache = newLocalCache<DbN.LogMeta>(this, {
-        fetch: async (db, conn, id, k) => {
+        fetch: async (db, conn, id) => {
             const r = (await conn.get("logsMeta", id))!
             return {
                 startedAt: r.startedAt,
@@ -392,8 +373,8 @@ class LogSourceLocal implements N.Protocol {
     })
     private entriesDetailsCache = newLocalCache(this, {
         size: 10,
-        fetch: async (db, conn, id, k) => {
-            const raw = await this.rawCache.fetch(k)
+        fetch: async (db, conn, id) => {
+            const raw = await this.rawCache.fetch(id)
             return await this.pool.parseLogWithDetails({
                 log: raw,
                 createdAt: null,
@@ -414,14 +395,16 @@ class LogSourceLocal implements N.Protocol {
         search: SearchSummary
         meta: MetaSummary
     }>(this, {
-        fetch: async (db, conn, id, k) => {
+        fetch: async (db, conn, id) => {
+            const logMeta: DbN.LogMeta = await this.metaCache.fetch(id)
+
             let meta: MetaSummary
-            const metaFromDb = await conn.get("summariesForMeta", k.id)
+            const metaFromDb = await conn.get("summariesForMeta", id)
             if (!metaFromDb || metaFromDb.version !== LogDb.parserVersion) {
-                const details = (await this.entriesDetailsCache.fetch(k))
+                const details = (await this.entriesDetailsCache.fetch(id))
                     .details
                 await conn.put("summariesForMeta", {
-                    id: k.id,
+                    id,
                     version: LogDb.parserVersion,
                     data: details.meta,
                 })
@@ -431,13 +414,16 @@ class LogSourceLocal implements N.Protocol {
             }
 
             let search: SearchSummary
-            const searchFromDb = await conn.get("summariesForSearch", k.id)
+            const searchFromDb = await conn.get("summariesForSearch", id)
             if (!searchFromDb || searchFromDb.version !== LogDb.parserVersion) {
-                const details = (await this.entriesDetailsCache.fetch(k))
+                const details = (await this.entriesDetailsCache.fetch(id))
                     .details
-                search = summarizeSearchStats(details, await this.fetchPrices())
+                search = summarizeSearchStats(
+                    details,
+                    await this.fetchPrices(logMeta.world),
+                )
                 await conn.put("summariesForSearch", {
-                    id: k.id,
+                    id,
                     version: LogDb.parserVersion,
                     data: search,
                 })
@@ -460,39 +446,32 @@ class LogSourceLocal implements N.Protocol {
         fetch: async (req) => {
             await this.ainit
 
-            const allIds = this.logIds[this.world]
             const ids: Array<DbN.LogId> = []
 
             let toFetch = Promise.resolve<any>(null)
-            const pushToFetch = (k: LocalKey) => {
+            const pushToFetch = (id: DbN.LogId) => {
                 toFetch = toFetch.then(async () => {
                     if (!LOG_PROCESSING_LOCK.locked) {
-                        await this.metaSearchCache.fetch(k)
+                        await this.metaSearchCache.fetch(id)
                         await sleep(1)
                     }
                 })
             }
 
             const xs: Array<{ meta: MetaSummary; search: SearchSummary }> = []
-            for (const id of allIds) {
-                const k = {
-                    world: this.world,
-                    id,
-                }
-                const fromCache = this.metaSearchCache.cache.get(k)?.data
+            for (const id of this.logIds) {
+                const fromCache = this.metaSearchCache.cache.get(id)?.data
                 if (fromCache) {
                     xs.push(fromCache)
                     ids.push(id)
                 } else {
-                    pushToFetch(k)
+                    pushToFetch(id)
                 }
             }
-            const hasPending = xs.length !== allIds.size
+            const hasPending = xs.length !== this.logIds.size
 
             const metas = await Promise.all(
-                ids.map((id) =>
-                    this.metaCache.fetch({ world: this.world, id }),
-                ),
+                ids.map((id) => this.metaCache.fetch(id)),
             )
 
             const matches = zip(metas, xs, ids).filter(([m, x]) => {
@@ -554,10 +533,6 @@ class LogSourceLocal implements N.Protocol {
         },
     })
     // #endregion
-
-    get dbConn() {
-        return this.db[this.world].then((db) => db.conn)
-    }
 
     private initWorkerPool() {
         return window.HV_LOG.workerPool.registerModule(

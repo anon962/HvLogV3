@@ -132,7 +132,11 @@ export namespace LogListN {
         ListTableN.Column<LogSourceN.SearchResult, any>
     >
 
-    export const SORT_IDS = new Set([COLS.turns.id, COLS.date.id] as const)
+    export const SORT_IDS = new Set([
+        COLS.turns.id,
+        COLS.date.id,
+        COLS.profit.id,
+    ] as const)
 
     const btA = (st: number, end?: number) =>
         end

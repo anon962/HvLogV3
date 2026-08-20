@@ -1,8 +1,8 @@
+import { HV_WORLDS } from "@/lib/constants"
 import { LogDb, LogDbConn } from "@/lib/db/db"
 import { DbN } from "@/lib/db/dbN"
 import { MigrateV2 } from "@/lib/db/migrateV2"
 import { LabeledCheckbox } from "@/lib/ui/checkboxGroup"
-import { XIcon } from "lucide-react"
 import { Loader } from "@/lib/ui/loader"
 import { Button } from "@/lib/ui/shadcn/button"
 import { Input } from "@/lib/ui/shadcn/input"
@@ -10,11 +10,12 @@ import {
     CommonProps,
     compressZstd,
     decompressZstd,
+    mountReact,
     readZip,
     writeZip,
 } from "@/lib/utils/miscUtils"
-import { mountReact } from "@/lib/utils/miscUtils"
 import { unwrap } from "idb"
+import { XIcon } from "lucide-react"
 import {
     batched,
     clamp,
@@ -67,8 +68,8 @@ function Dialog() {
     } = useImportState()
     const totalOld = legacyStats.idsP.size + legacyStats.idsI.size
     const totalDupes =
-        legacyStats.currIdsP.intersection(legacyStats.idsP).size +
-        legacyStats.currIdsI.intersection(legacyStats.idsI).size
+        legacyStats.currIds.intersection(legacyStats.idsP).size +
+        legacyStats.currIds.intersection(legacyStats.idsI).size
 
     const tryClose = useCallback(() => {
         if (status.action !== null) {
@@ -178,14 +179,10 @@ function Dialog() {
                             <ActionButton
                                 onClick={() => {
                                     if (includeMissing) {
-                                        let missingCount = 0
-                                        missingCount +=
-                                            legacyStats.idsP.difference(
-                                                legacyStats.currIdsP,
-                                            ).size
-                                        missingCount +=
-                                            legacyStats.idsI.difference(
-                                                legacyStats.currIdsI,
+                                        const missingCount = legacyStats.idsP
+                                            .union(legacyStats.idsI)
+                                            .difference(
+                                                legacyStats.currIds,
                                             ).size
                                         if (missingCount > 0) {
                                             const x = confirm(
@@ -355,16 +352,12 @@ function useImportState() {
 
     const dbFetch = useAsync(async () => {
         return {
-            dbP: await (
-                await new LogDb({
-                    world: "persistent",
-                }).connect()
-            ).conn,
-            dbI: await (
-                await new LogDb({
-                    world: "isekai",
-                }).connect()
-            ).conn,
+            dbP: await (await new LogDb().connect()).conn,
+            dbI: await MigrateV2.hasDb("HvLog_isekai").then((exists) =>
+                exists
+                    ? MigrateV2.initDb("HvLog_isekai")
+                    : Promise.resolve(null),
+            ),
         }
     }, true)
     const dbs = useMemo(
@@ -390,32 +383,31 @@ function useImportState() {
         }
 
         const idsP = new Set(await MigrateV2.selectKeys(unwrap(dbs.dbP)))
-        const idsI = new Set(await MigrateV2.selectKeys(unwrap(dbs.dbI)))
 
-        const currIdsP = new Set(
+        let idsI = new Set<string>()
+        if (dbs.dbI) {
+            idsI = new Set(await MigrateV2.selectKeys(dbs.dbI))
+        }
+
+        const currIds = new Set(
             await dbs.dbP.getAllKeys("logsMeta"),
-        ) as Set<string>
-        const currIdsI = new Set(
-            await dbs.dbI.getAllKeys("logsMeta"),
         ) as Set<string>
 
         L.info(
-            `Found ${idsP.size + idsI.size} old logs with ${idsP.intersection(currIdsP).size + idsI.intersection(currIdsI).size} ready for deletion`,
+            `Found ${idsP.size + idsI.size} old logs with ${idsP.intersection(currIds).size + idsI.intersection(currIds).size} ready for deletion`,
         )
 
         return {
             idsP,
             idsI,
-            currIdsP,
-            currIdsI,
+            currIds: currIds,
         }
     }, legacyStatsFetchKey)
 
     const legacyStats = legacyStatsFetch.data ?? {
         idsP: new Set<string>(),
         idsI: new Set<string>(),
-        currIdsP: new Set<string>(),
-        currIdsI: new Set<string>(),
+        currIds: new Set<string>(),
     }
 
     const [status, setStatus] = useState({
@@ -534,8 +526,8 @@ function useImportState() {
         dbs: typeof dbs & { ready: true }
         stats: typeof legacyStats
     }) {
-        const nonDupesP = opts.stats.idsP.difference(opts.stats.currIdsP)
-        const nonDupesI = opts.stats.idsI.difference(opts.stats.currIdsI)
+        const nonDupesP = opts.stats.idsP.difference(opts.stats.currIds)
+        const nonDupesI = opts.stats.idsI.difference(opts.stats.currIds)
 
         let count = 0
         const idsP = [...nonDupesP, ...opts.stats.idsP]
@@ -548,9 +540,13 @@ function useImportState() {
         })
 
         for (const [db, ids, world] of [
-            [opts.dbs.dbP, idsP, "persistent"],
+            [unwrap(opts.dbs.dbP), idsP, "persistent"],
             [opts.dbs.dbI, idsI, "isekai"],
         ] as const) {
+            if (!db) {
+                continue
+            }
+
             for (const idBatch of batched(ids, 50)) {
                 const toInsert: Array<ImportFormat> = []
                 for (const id of idBatch) {
@@ -560,7 +556,7 @@ function useImportState() {
 
                     try {
                         logImportStatus()
-                        const oldLog = await MigrateV2.selectLog(unwrap(db), id)
+                        const oldLog = await MigrateV2.selectLog(db, id)
                         const newLog = {
                             id,
                             world,
@@ -585,8 +581,7 @@ function useImportState() {
                 }
 
                 await importOldLogs({
-                    dbP: opts.dbs.dbP,
-                    dbI: opts.dbs.dbI,
+                    db: opts.dbs.dbP,
                     logs: toInsert,
                     cb: (_, idx) => logImportStatus(),
                 })
@@ -625,8 +620,7 @@ function useImportState() {
                     let fromFile = await MigrateV2.readJsonlExport(file)
 
                     const { byteCount } = await importOldLogs({
-                        dbP: opts.dbs.dbP,
-                        dbI: opts.dbs.dbI,
+                        db: opts.dbs.dbP,
                         logs: fromFile.map((x) => ({ ...x, reversed: true })),
                         cb: (stats, idx) => status(idx, fromFile.length),
                     })
@@ -732,8 +726,7 @@ function useImportState() {
                     }
 
                     const { byteCount } = await importOldLogs({
-                        dbP: opts.dbs.dbP,
-                        dbI: opts.dbs.dbI,
+                        db: opts.dbs.dbP,
                         logs: logs.map((l) => ({
                             id: l.id,
                             world: l.world,
@@ -762,9 +755,7 @@ function useImportState() {
             }
         }
 
-        const dupes = stats.ids.intersection(
-            opts.stats.currIdsP.union(opts.stats.currIdsI),
-        )
+        const dupes = stats.ids.intersection(opts.stats.currIds)
         L.info(
             `Imported ${stats.ids.size} logs (${(stats.byteCount / 1024 / 1024).toFixed(1)} MiB / ${dupes.size} dupes) from ${opts.files.map((f) => f.name)}`,
         )
@@ -866,8 +857,7 @@ function useImportState() {
         byteCount: number
     }
     async function importOldLogs(opts: {
-        dbP: LogDbConn
-        dbI: LogDbConn
+        db: LogDbConn
         logs: Array<ImportFormat>
         cb?: (stats: ImportStats, idx: number) => void
     }): Promise<ImportStats> {
@@ -877,6 +867,7 @@ function useImportState() {
         let idx = 0
         const importedAt = new Date().toISOString()
         for (const batch of batched(opts.logs, 10)) {
+            idx += 1
             opts.cb?.(stats, idx)
 
             const logs = await Promise.all(
@@ -917,42 +908,40 @@ function useImportState() {
                 stats.byteCount += l.raw.raw_c.byteLength
             }
 
-            for (const [world, db] of [
-                ["persistent", opts.dbP],
-                ["isekai", opts.dbI],
-            ] as const) {
-                const txn = db.transaction(["logsMeta", "logsRaw"], "readwrite")
-                for (const l of logs) {
-                    if (l.meta.world === world) {
-                        await txn.objectStore("logsMeta").put({
-                            id: l.meta.id,
-                            startedAt: l.meta.start,
-                            endedAt: l.meta.lastUpdate,
-                            world,
-                            user_id: null,
-                            user_name: null,
-                            errors: {
-                                missingTurns: false,
-                            },
-                            importedAt: new Date().toISOString(),
-                            reversed: {
-                                at: new Date().toISOString(),
-                                version: "v2",
-                            },
-                        })
-                        await txn.objectStore("logsRaw").put(l.raw)
-                    }
-                }
-                txn.commit()
+            const txn = opts.db.transaction(
+                ["logsMeta", "logsRaw"],
+                "readwrite",
+            )
+            for (const l of logs) {
+                await txn.objectStore("logsMeta").put({
+                    id: l.meta.id,
+                    startedAt: l.meta.start,
+                    endedAt: l.meta.lastUpdate,
+                    world: l.meta.world,
+                    user_id: null,
+                    user_name: null,
+                    errors: {
+                        missingTurns: false,
+                    },
+                    importedAt: new Date().toISOString(),
+                    reversed: {
+                        at: new Date().toISOString(),
+                        version: "v2",
+                    },
+                })
+                await txn.objectStore("logsRaw").put(l.raw)
+            }
+            txn.commit()
 
+            for (const world of HV_WORLDS) {
                 DbN.broadcastIdbEvent({
                     type: DbN.IDB_LOG_INSERT_EVENT,
                     world,
-                    ids: logs.map((l) => l.meta.id),
+                    ids: logs
+                        .filter((l) => l.meta.world === world)
+                        .map((l) => l.meta.id),
                 } satisfies DbN.IdbLogInsertEvent)
             }
-
-            idx += batch.length
         }
 
         return stats
@@ -963,13 +952,13 @@ function useImportState() {
         stats: typeof legacyStats
         includeMissing: boolean
     }) {
-        for (const [idsOld, idsNew, db, world] of [
-            [opts.stats.idsP, opts.stats.currIdsP, opts.dbs.dbP, "persistent"],
-            [opts.stats.idsI, opts.stats.currIdsI, opts.dbs.dbI, "isekai"],
+        for (const [idsOld, world] of [
+            [opts.stats.idsP, "persistent"],
+            [opts.stats.idsI, "isekai"],
         ] as const) {
             let ids = idsOld
             if (!opts.includeMissing) {
-                ids = ids.intersection(idsNew)
+                ids = ids.intersection(opts.stats.currIds)
             }
 
             if (ids.size === 0) {
@@ -985,7 +974,7 @@ function useImportState() {
                 L.info(`Deleting ${ids.size} ${world} logs`)
             }
 
-            const txn = db.transaction(["complete"], "readwrite")
+            const txn = opts.dbs.dbP.transaction(["complete"], "readwrite")
             for (const id of ids) {
                 await txn.objectStore("complete").delete(id)
             }

@@ -84,7 +84,7 @@ export const DEFAULT_USERSCRIPT_CONFIG = () => ({
 export type UserscriptConfig = ReturnType<typeof DEFAULT_USERSCRIPT_CONFIG>
 
 export async function loadUserscriptConfig(): Promise<UserscriptConfig> {
-    const db = new LogDb({ world: "persistent" })
+    const db = new LogDb()
 
     const fromDb = await db.get("kv", "config")
     if (fromDb) {
@@ -104,7 +104,7 @@ export async function loadUserscriptConfig(): Promise<UserscriptConfig> {
     return config
 }
 export async function saveUserscriptConfig(update: UserscriptConfig) {
-    const db = new LogDb({ world: "persistent" })
+    const db = new LogDb()
     await db.put("kv", update, "config")
     DbN.broadcastIdbEvent({
         type: "hvlog_config_change",

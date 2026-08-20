@@ -33,9 +33,7 @@ export class BattleLogger {
             world: DbN.HvWorld
         },
     ) {
-        this.db = new LogDb({
-            world: this.opts.world,
-        })
+        this.db = new LogDb()
     }
 
     private async *watchLog(opts: {

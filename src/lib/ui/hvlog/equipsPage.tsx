@@ -282,7 +282,7 @@ const EQUIP_PAGE = newContext(() => {
     const [dataVersion, setDataVersion] = useState(0)
     const [isLoading, setIsLoading] = useState(true)
     useAsync2(async () => {
-        const dbP = await new LogDb({ world: "persistent" }).connect()
+        const dbP = await new LogDb().connect()
         const dummy: any = {}
 
         let equips: EquipPageN.IdbStorage

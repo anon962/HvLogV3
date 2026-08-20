@@ -333,18 +333,9 @@ function useManagerState() {
 
     useLogMonitor()
     const dbFetch = useMemo(async () => {
-        return {
-            persistent: await (
-                await new LogDb({
-                    world: "persistent",
-                }).connect()
-            ).conn,
-            isekai: await (
-                await new LogDb({
-                    world: "isekai",
-                }).connect()
-            ).conn,
-        }
+        return await (
+            await new LogDb().connect()
+        ).conn
     }, [])
 
     const logs = useRef(
@@ -406,65 +397,50 @@ function useManagerState() {
             setStatus((x) => ({ ...x, action: "scan" }))
             async function run() {
                 const lock = await status.lock.acquire()
-                const dbs = await dbFetch
+                const db = await dbFetch
 
                 let stats = {
-                    persistent: {
-                        count: 0,
-                        size: 0,
-                        uncompCount: 0,
-                    },
-                    isekai: {
-                        count: 0,
-                        size: 0,
-                        uncompCount: 0,
-                    },
+                    count: 0,
+                    size: 0,
+                    uncompCount: 0,
                 }
 
-                for (const world of ["persistent", "isekai"] as const) {
-                    const db = dbs[world]
-                    const ids = await db.getAllKeys("logsMeta")
+                const ids = await db.getAllKeys("logsMeta")
 
-                    const [statusLog, cancelStatusLog] = throttle({
-                        interval: 3000,
-                        fn: () =>
-                            L.info(
-                                `Scanning logs (${stats[world].count} / ${ids.length} / ${formatMiB(stats[world].size)} MiB) ...`,
-                            ),
-                    })
+                const [statusLog, cancelStatusLog] = throttle({
+                    interval: 3000,
+                    fn: () =>
+                        L.info(
+                            `Scanning logs (${stats.count} / ${ids.length} / ${formatMiB(stats.size)} MiB) ...`,
+                        ),
+                })
 
-                    for (const id of ids) {
-                        statusLog()
+                for (const id of ids) {
+                    statusLog()
 
-                        const meta = (await db.get("logsMeta", id))!
-                        const raw = (await db.get("logsRaw", id))!
+                    const meta = (await db.get("logsMeta", id))!
+                    const raw = (await db.get("logsRaw", id))!
 
-                        status.logs[id] = {
-                            id,
-                            world,
-                            startedAt: meta.startedAt,
-                            sizeRaw: raw.raw_size,
-                            sizeComp: raw.raw_c?.byteLength || 0,
-                            isLegacy: !!meta.reversed,
-                        }
-
-                        stats[world].count += 1
-                        stats[world].size +=
-                            raw.raw_c?.byteLength || raw.raw?.length || 0
-                        if (!raw.raw_c) {
-                            stats[world].uncompCount += 1
-                        }
+                    status.logs[id] = {
+                        id,
+                        world: meta.world,
+                        startedAt: meta.startedAt,
+                        sizeRaw: raw.raw_size,
+                        sizeComp: raw.raw_c?.byteLength || 0,
+                        isLegacy: !!meta.reversed,
                     }
 
-                    cancelStatusLog()
+                    stats.count += 1
+                    stats.size += raw.raw_c?.byteLength || raw.raw?.length || 0
+                    if (!raw.raw_c) {
+                        stats.uncompCount += 1
+                    }
                 }
 
-                const totalCount =
-                    stats["persistent"].count + stats["isekai"].count
-                const totalSize =
-                    stats["persistent"].size + stats["isekai"].size
+                cancelStatusLog()
+
                 L.info(
-                    `Found ${totalCount} logs totaling ${formatMiB(totalSize)} MiB`,
+                    `Found ${stats.count} logs totaling ${formatMiB(stats.size)} MiB`,
                 )
 
                 setStatus((x) => ({ ...x, action: null }))
@@ -572,7 +548,7 @@ function useManagerState() {
             `hvlog_${String(Math.random()).slice(3, 6)}_yyyy_MM_dd_`,
         )
 
-        const dbs = await dbFetch
+        const db = await dbFetch
 
         let idx = 0
         const [statusLog, cancelStatusLog] = throttle({
@@ -588,41 +564,34 @@ function useManagerState() {
         for (const [batchIdx, batch] of enumerate(batches)) {
             const toDownload: Array<V3Export> = []
 
-            for (const world of ["persistent", "isekai"] as const) {
-                const db = dbs[world]
-                for (const log of batch) {
-                    if (log.world !== world) {
-                        continue
-                    }
+            for (const log of batch) {
+                idx += 1
+                statusLog()
 
-                    idx += 1
-                    statusLog()
+                const meta = (await db.get("logsMeta", log.id))!
+                const raw = (await db.get("logsRaw", log.id))!
 
-                    const meta = (await db.get("logsMeta", log.id))!
-                    const raw = (await db.get("logsRaw", log.id))!
-
-                    let text
-                    if (raw.raw_c) {
-                        const decompressed = await decompressZstd({
-                            x: raw.raw_c,
-                        })
-                        text = await new Blob([decompressed]).text()
-                    } else {
-                        text = raw.raw
-                    }
-
-                    toDownload.push({
-                        id: meta.id,
-                        type: "v3_export",
-                        meta,
-                        raw: {
-                            ...raw,
-                            compressed: 0,
-                            raw: text,
-                            raw_c: null,
-                        },
+                let text
+                if (raw.raw_c) {
+                    const decompressed = await decompressZstd({
+                        x: raw.raw_c,
                     })
+                    text = await new Blob([decompressed]).text()
+                } else {
+                    text = raw.raw
                 }
+
+                toDownload.push({
+                    id: meta.id,
+                    type: "v3_export",
+                    meta,
+                    raw: {
+                        ...raw,
+                        compressed: 0,
+                        raw: text,
+                        raw_c: null,
+                    },
+                })
             }
 
             const zipBlob = await writeZip(
@@ -733,7 +702,7 @@ function useManagerState() {
                 await LOG_PROCESSING_LOCK.acquire(),
             ]
 
-            const dbs = await dbFetch
+            const db = await dbFetch
             const stats = {
                 count: 0,
                 ids: new Set<string>(),
@@ -767,7 +736,6 @@ function useManagerState() {
                         pool: true,
                     })
 
-                    const db = dbs[d.meta.world]
                     const txn = db.transaction(
                         ["logsMeta", "logsRaw"],
                         "readwrite",
@@ -806,22 +774,16 @@ function useManagerState() {
             cancelStatusLog()
 
             const done =
-                ((await dbs.persistent.get(
-                    "kv",
-                    "compressDone",
-                )) as Set<DbN.LogId>) ?? new Set()
-            await dbs.persistent.put(
-                "kv",
-                done.union(stats.ids),
-                "compressDone",
-            )
+                ((await db.get("kv", "compressDone")) as Set<DbN.LogId>) ??
+                new Set()
+            await db.put("kv", done.union(stats.ids), "compressDone")
             locks.forEach((lock) => lock.release())
         }
     }
     // #endregion
     // #region deleteLogs
     async function deleteLogs_(opts: { ids: Array<DbN.LogId> }) {
-        const dbs = await dbFetch
+        const db = await dbFetch
         for (const world of HV_WORLDS) {
             const idsForWorld = [...opts.ids].filter(
                 (id) => status.logs[id].world === world,
@@ -831,7 +793,7 @@ function useManagerState() {
             }
 
             L.info(`Deleting ${idsForWorld.length} ${world} logs ...`)
-            const txn = dbs[world].transaction(
+            const txn = db.transaction(
                 [
                     "logsRaw",
                     "logsMeta",
