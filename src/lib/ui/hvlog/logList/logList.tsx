@@ -6,6 +6,7 @@ import { ListTable } from "../../listTable"
 import { Input } from "../../shadcn/input"
 import { LogListN } from "./logListN"
 import { MonthYearPicker } from "../../monthYearPicker"
+import { USERSCRIPT_CONFIG } from "@/lib/db/userscriptConfig"
 
 export function LogList() {
     return (
@@ -25,6 +26,8 @@ export function Table() {
         logSource,
     } = LogListN.ctx.useContext()
 
+    const { config } = USERSCRIPT_CONFIG.useContext()
+
     return (
         <ListTable
             data={data?.results ?? []}
@@ -40,9 +43,11 @@ export function Table() {
                       ]
                     : [
                           LogListN.COLS.battleType,
-                          LogListN.COLS.turns,
                           LogListN.COLS.style,
+                          LogListN.COLS.turns,
+                          LogListN.COLS.profit,
                           LogListN.COLS.date,
+                          LogListN.COLS.duration,
                           LogListN.COLS.status,
                       ]
             }
@@ -76,7 +81,7 @@ export function Table() {
             }}
             rowUrl={(d) => `/logs/${d.id}`}
             isLoading={isPending || data?.stale}
-            className="text-sm"
+            className="text-[0.85em]"
             pageUrl={(pageIdx) => ({
                 p: String(pageIdx + 1),
                 n: String(request.pageSize),
@@ -89,10 +94,10 @@ export function Table() {
                     : {}),
             })}
             onHover={{
-                delay: 300,
-                fn: (id) => {
+                delay: config.prefetchDelay || 100,
+                fn: (r) => {
                     logSource.fetchPrices()
-                    logSource.fetchDetails(id)
+                    logSource.fetchDetails(r.id)
                 },
             }}
             filter={{

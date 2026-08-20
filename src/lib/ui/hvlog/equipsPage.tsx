@@ -27,6 +27,8 @@ import { ListTable, ListTableN } from "../listTable"
 import { Input } from "../shadcn/input"
 import { LogListN } from "./logList/logListN"
 import { UrlParamN } from "./router"
+import { LOG_SOURCE } from "@/lib/db/logSource"
+import { USERSCRIPT_CONFIG } from "@/lib/db/userscriptConfig"
 
 export function EquipPage(props: {}) {
     return (
@@ -48,6 +50,9 @@ function EquipPageInner(props: {}) {
             })
         },
     })
+
+    const { config } = USERSCRIPT_CONFIG.useContext()
+    const logSource = LOG_SOURCE.useContext()
 
     return (
         <div className="equip-page flex flex-col items-center">
@@ -115,6 +120,10 @@ function EquipPageInner(props: {}) {
                     content: <Filter />,
                     trigger: <SlidersHorizontal className="size-full" />,
                     active: ctx.hasFilters,
+                }}
+                onHover={{
+                    delay: config.prefetchDelay || 100,
+                    fn: (r) => logSource.fetchDetails(r.id),
                 }}
             />
         </div>
@@ -492,6 +501,7 @@ export namespace EquipPageN {
                 const p = (x: any, n = 2) => String(x).padStart(n, "0")
                 return {
                     content: `${p(d.getDate())}-${p(d.getMonth() + 1)}-${d.getFullYear()}`,
+                    title: d.toISOString(),
                 }
             },
         },

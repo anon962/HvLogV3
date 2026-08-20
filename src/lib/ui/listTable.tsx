@@ -7,8 +7,14 @@ import {
     TableRow,
 } from "@/lib/ui/shadcn/table"
 import { CommonProps } from "@/lib/utils/miscUtils"
-import { clamp, cn, range, ReactMemo, sort } from "myutils"
-import React, { ReactNode, useCallback, useRef, useState } from "react"
+import { clamp, cn, L, range, ReactMemo, sort } from "myutils"
+import React, {
+    ReactNode,
+    RefObject,
+    useCallback,
+    useRef,
+    useState,
+} from "react"
 import { RouteLink } from "./hvlog/router"
 import { ArrowLongDownIcon, ArrowLongUpIcon } from "./icons/tailwind"
 import { Loader } from "./loader"
@@ -79,7 +85,7 @@ export function ListTable<T>(
         count: number
         onHover?: {
             delay: number
-            fn: (id: string) => void
+            fn: (d: T) => void
         }
         pageSize: number
         setPageSize: {
@@ -150,7 +156,7 @@ const TableInner = <T,>(
         sortCols?: Set<string>
         onHover?: {
             delay: number
-            fn: (id: string) => void
+            fn: (d: T) => void
         }
     } & CommonProps,
 ) => {
@@ -252,6 +258,8 @@ const TableInner = <T,>(
         />
     ))
 
+    const prefetchTimer = useRef(0)
+
     const bodyRows = props.data.map((d, idx) => {
         const id = props.getId(d)
         const nextId =
@@ -278,6 +286,7 @@ const TableInner = <T,>(
                 getId={props.getId}
                 rowUrl={props.rowUrl}
                 onHover={props.onHover}
+                prefetchTimer={prefetchTimer}
             />
         )
     })
@@ -312,10 +321,11 @@ const Row = ReactMemo(
         cols: Array<ListTableN.Column<T, any>>
         isSelected: boolean
         isNextSelected: boolean
+        prefetchTimer: RefObject<number>
         onClick?: (d: T) => void
         onHover?: {
             delay: number
-            fn: (id: string) => void
+            fn: (d: T) => void
         }
         getId: (d: T) => string
         rowUrl?: (d: T) => string
@@ -343,8 +353,6 @@ const Row = ReactMemo(
             )
         })
 
-        const hoverTimer = useRef(null as number | null)
-
         return (
             <TableRow
                 key={id}
@@ -352,22 +360,21 @@ const Row = ReactMemo(
                 data-id={id}
                 onClick={() => props.onClick?.(props.d)}
                 onMouseEnter={() => {
-                    if (props.onHover) {
-                        if (hoverTimer.current !== null) {
-                            clearTimeout(hoverTimer.current)
-                        }
+                    if (props.onHover && props.onHover.delay > 0) {
+                        clearTimeout(props.prefetchTimer.current)
 
                         const fn = props.onHover.fn
                         const newTimer = setTimeout(() => {
-                            fn(id)
-                            hoverTimer.current = null
+                            L.debug("Prefetching", id, props.d)
+                            fn(props.d)
+                            props.prefetchTimer.current = 0
                         }, props.onHover.delay)
-                        hoverTimer.current = newTimer as any as number
+                        props.prefetchTimer.current = newTimer as any as number
                     }
                 }}
                 onMouseLeave={() => {
-                    if (hoverTimer.current !== null) {
-                        clearTimeout(hoverTimer.current)
+                    if (props.prefetchTimer.current !== null) {
+                        clearTimeout(props.prefetchTimer.current)
                     }
                 }}
             >

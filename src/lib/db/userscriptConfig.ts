@@ -58,7 +58,7 @@ const USERSCRIPT_CONFIG_ = newContext(() => {
 export const USERSCRIPT_CONFIG = IS_LOCAL
     ? USERSCRIPT_CONFIG_
     : (newContext(() => ({
-          value: {},
+          value: DEFAULT_USERSCRIPT_CONFIG(),
           setValue: () => {},
           fns: {} as any,
       })) as any as typeof USERSCRIPT_CONFIG_)
@@ -71,9 +71,14 @@ export const DEFAULT_USERSCRIPT_CONFIG = () => ({
     },
     hvdataUploadMode: "default" as "default" | "disabled" | "manual" | "auto",
     priceSource: "default" as "default" | "hvdata" | "none", // | fapspreader"
-    detailsEquipFilter: "default" as "magnificent" | "legendary" | "peerless",
+    detailsEquipFilter: "default" as
+        | "default"
+        | "magnificent"
+        | "legendary"
+        | "peerless",
     samePageLoad: "default" as "default" | "always" | "never",
     defaultLogWorld: "default" as "default" | "persistent" | "isekai",
+    prefetchDelay: 0,
 })
 
 export type UserscriptConfig = ReturnType<typeof DEFAULT_USERSCRIPT_CONFIG>

@@ -1,3 +1,5 @@
+/// <reference types="node" />
+
 import { createWriteStream } from "fs"
 import { L, truncateString } from "myutils"
 import path from "path"

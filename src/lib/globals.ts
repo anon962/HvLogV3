@@ -12,6 +12,7 @@ declare global {
         userscriptConfig: UserscriptConfig
     }
     interface Window {
+        HV_LOG: typeof HV_LOG
         unsafeWindow: Window
 
         GM_registerMenuCommand: (

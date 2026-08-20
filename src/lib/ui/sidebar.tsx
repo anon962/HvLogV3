@@ -17,7 +17,7 @@ export function Sidebar(props: {
     children: ReactNode
 }) {
     return (
-        <div className="sidebar-container flex flex-row min-h-screen">
+        <div className="sidebar-container flex flex-row min-h-screen sticky top-0 h-screen">
             <div className="sidebar flex flex-col border-r-2">
                 {...props.items.map((it) => (
                     <>

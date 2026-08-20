@@ -1,12 +1,14 @@
 import { DetailsSummary } from "@/lib/stats/summary"
 import { formatNumber } from "@/lib/utils/miscUtils"
-import { range, sort, sum, sortBy } from "myutils"
+import { range, sort, sum, sortBy, L } from "myutils"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { TallyTable, TallyTableProps } from "../../tallyTable"
 import { IncomeChart } from "./incomeChart"
 import { DROP_CATEGORIES, summarizeFinances } from "@/lib/stats/dropStats"
 import { ITEM_USAGE_CATEGORIES } from "@/lib/stats/itemUsageStats"
 import { IndexMap } from "@/lib/stats/indexMap"
+import { USERSCRIPT_CONFIG } from "@/lib/db/userscriptConfig"
+import { EQUIP_TIERS } from "@/lib/constants"
 
 export function DropInfo({
     prices,
@@ -85,7 +87,7 @@ function CalculationPreview({
 
     return (
         <pre
-            className="w-max px-2 grid gap-x-4 text-right"
+            className="calc-preview w-max px-2 grid gap-x-4 text-right"
             style={{
                 gridTemplateColumns: "max-content max-content",
                 gridTemplateRows: "repeat(4, max-content)",
@@ -352,9 +354,24 @@ function DropChart({
 }
 
 function EquipSummary({ stats: { drops } }: { stats: DetailsSummary }) {
-    const patts = ["(?:magnificent|legendary|peerless)"].map(
-        (patt) => new RegExp(patt, "i"),
-    )
+    const { config } = USERSCRIPT_CONFIG.useContext()
+
+    const patts = useMemo(() => {
+        let target = config.detailsEquipFilter
+        if (target === "default") {
+            target = "legendary"
+        }
+
+        let idx = EQUIP_TIERS.findIndex((x) => x.toLowerCase() === target)
+        if (idx === -1) {
+            L.error(`couldnt find configured equip tier ${target}`, config)
+            idx = 2
+        }
+
+        const tiers = EQUIP_TIERS.slice(0, idx + 1)
+        const patts = tiers.map((patt) => new RegExp(patt, "i"))
+        return patts
+    }, [config])
 
     const equips = sort(
         Object.values(drops)

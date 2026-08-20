@@ -18,6 +18,12 @@
         max-width: 60rem !important;
         padding-right: 1rem;
     }
+
+    .calc-preview {
+        & > span {
+            height: min-content;
+        }
+    }
 }
 
 .income-expense {

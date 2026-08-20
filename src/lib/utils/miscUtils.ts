@@ -301,7 +301,6 @@ export function transposeForCss<T>(
     for (const x of xs) {
         grid[colIdx][rowIdx] = x
 
-        console.log(x, colIdx, rowIdx)
         colIdx += 1
         if (colIdx === colCount) {
             colIdx = 0
@@ -309,6 +308,5 @@ export function transposeForCss<T>(
         }
     }
 
-    console.log(grid.flatMap((xs) => xs).filter((x): x is T => !!x))
     return grid.flatMap((xs) => xs).filter((x) => x !== null)
 }
