@@ -110,6 +110,23 @@ class LogSourceRemote implements N.Protocol {
 
         return this.monlab
     }
+    // #region remote prefetch
+    async prefetchMeta(id: DbN.LogId) {
+        this.fetchMeta(id)
+    }
+    async prefetchLog(id: DbN.LogId) {
+        this.fetchLog()
+    }
+    async prefetchEntries(id: DbN.LogId) {
+        this.fetchEntries(id)
+    }
+    async prefetchDetails(id: DbN.LogId) {
+        this.fetchDetails(id)
+    }
+    async prefetchSearch(req: N.SearchRequest) {
+        this.fetchSearch(req)
+    }
+    // #endregion
 
     // #region remote caches
     private metaEntriesCache = new N.AsyncCache<
@@ -326,6 +343,24 @@ class LogSourceLocal implements N.Protocol {
         ) => boolean
     }>
 
+    // #region local prefetch
+    async prefetchMeta(id: DbN.LogId) {
+        this.metaCache.fetch({ world: this.world, id }, true)
+    }
+    async prefetchLog(id: DbN.LogId) {
+        this.rawCache.fetch({ world: this.world, id }, true)
+    }
+    async prefetchEntries(id: DbN.LogId) {
+        this.entriesDetailsCache.fetch({ world: this.world, id }, true)
+    }
+    async prefetchDetails(id: DbN.LogId) {
+        this.entriesDetailsCache.fetch({ world: this.world, id }, true)
+    }
+    async prefetchSearch(req: N.SearchRequest) {
+        this.searchResponseCache.fetch(req, true)
+    }
+    // #endregion
+
     // #region local caches
     private metaCache = newLocalCache<DbN.LogMeta>(this, {
         fetch: async (db, conn, id, k) => {
@@ -344,7 +379,7 @@ class LogSourceLocal implements N.Protocol {
         },
     })
     private rawCache = newLocalCache<string>(this, {
-        size: 10,
+        size: 3,
         fetch: async (db, conn, id) => {
             const r = (await conn.get("logsRaw", id))!
             if (r.raw !== null) {

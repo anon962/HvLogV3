@@ -97,7 +97,7 @@ export function Table() {
                 delay: config.prefetchDelay || 100,
                 fn: (r) => {
                     logSource.fetchPrices()
-                    logSource.fetchDetails(r.id)
+                    logSource.prefetchDetails(r.id)
                 },
             }}
             filter={{

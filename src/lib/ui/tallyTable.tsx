@@ -343,7 +343,7 @@ function SubTable({ subValues, subColumns, span }: SubRowProps) {
         const cls = `subheader ${alignClass[idx]} ${subCol.tooltip ? "tooltip" : ""}`
 
         return (
-            <div key={idx} className={cls}>
+            <div key={"header" + idx} className={cls}>
                 {subCol.tooltip ? (
                     <TooltipProvider>
                         <Tooltip>
@@ -360,7 +360,7 @@ function SubTable({ subValues, subColumns, span }: SubRowProps) {
         )
     })
 
-    const cells = subValues.flatMap((subValue) =>
+    const cells = subValues.flatMap((subValue, rowIdx) =>
         subColumns.map((subCol, idx) => {
             const value = subCol.get(subValue)
 
@@ -384,7 +384,7 @@ function SubTable({ subValues, subColumns, span }: SubRowProps) {
             const cls = `subcell ${alignClass[idx]}`
 
             return (
-                <div key={`${subCol.label}_${idx}`} className={cls}>
+                <div key={`${subCol.label}_${rowIdx}`} className={cls}>
                     {valueStr}
                 </div>
             )

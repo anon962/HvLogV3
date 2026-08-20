@@ -123,7 +123,7 @@ function EquipPageInner(props: {}) {
                 }}
                 onHover={{
                     delay: config.prefetchDelay || 100,
-                    fn: (r) => logSource.fetchDetails(r.id),
+                    fn: (r) => logSource.prefetchDetails(r.id),
                 }}
             />
         </div>

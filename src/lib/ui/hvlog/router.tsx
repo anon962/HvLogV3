@@ -1,18 +1,14 @@
 import {
-    alphabetical,
     AnyFunction,
     bitmaskToBigint,
     CustomMap,
-    waitUntilStable,
     L,
     newContext,
     normalizeUrlParts,
-    patchUrlChange,
     range,
     readUrl,
     UrlChangeEvent,
-    last,
-    mapEntries,
+    waitUntilStable,
 } from "myutils"
 import {
     ComponentPropsWithoutRef,
@@ -205,7 +201,7 @@ function useScrollRestoration() {
                             prev.left === curr.left
                         )
                     },
-                    minStableFrames: 2,
+                    minStableFrames: 8,
                     timeout: 1000,
                 }).then((x) => {
                     x.state?.el.scrollTo({ top: scrollTop, left: scrollLeft })

@@ -3,7 +3,7 @@ import {
     GlobalMonsterSummary,
     SearchSummary,
 } from "@/lib/stats/summary"
-import { CustomMap, ISODate } from "myutils"
+import { CustomMap, ISODate, L } from "myutils"
 import { MetaSummary } from "../stats/metaStats"
 import { DbN, LogEntry } from "./dbN"
 
@@ -11,12 +11,18 @@ export namespace LogSourceN {
     export interface Protocol {
         ainit: Promise<void>
 
-        fetchLogIds(): Promise<string[]>
+        fetchLogIds: () => Promise<string[]>
         fetchMeta: (id: string) => Promise<DbN.LogMeta>
         fetchLog: (id: string) => Promise<string>
         fetchEntries: (id: string) => Promise<Array<LogEntry>>
         fetchDetails: (id: string) => Promise<DetailsSummary>
         fetchSearch: (req: SearchRequest) => Promise<SearchResponse>
+
+        prefetchMeta: (id: string) => Promise<void>
+        prefetchLog: (id: string) => Promise<void>
+        prefetchEntries: (id: string) => Promise<void>
+        prefetchDetails: (id: string) => Promise<void>
+        prefetchSearch: (req: SearchRequest) => Promise<void>
 
         fetchPrices: () => Promise<Record<string, number>>
         fetchGlobalMonsterSummary: () => Promise<GlobalMonsterSummary>
@@ -98,10 +104,18 @@ export namespace LogSourceN {
         return elapsed > thresholdMs
     }
 
+    type AsyncCacheJob<T> = {
+        start: () => Promise<T>
+        resolve: (resp: T) => void
+    }
     export class AsyncCache<TReq, TResp, TMapKey extends string = string> {
         cache: CustomMap<TReq, Dated<TResp>, TMapKey>
         pending: CustomMap<TReq, Promise<TResp>, TMapKey>
         history: Array<TReq>
+
+        activeCount: number
+        fetchQueue: Array<AsyncCacheJob<TResp>>
+        prefetchQueue: Array<AsyncCacheJob<TResp>>
 
         constructor(
             public opts: {
@@ -110,6 +124,8 @@ export namespace LogSourceN {
                 fromRaw: (raw: TMapKey) => TReq
                 fetch: (req: TReq) => Promise<TResp>
                 size?: number
+                concurrency?: number
+                prefetchSize?: number
             },
         ) {
             this.cache = new CustomMap({
@@ -121,9 +137,13 @@ export namespace LogSourceN {
                 fromRaw: this.opts.fromRaw,
             })
             this.history = []
+
+            this.activeCount = 0
+            this.fetchQueue = []
+            this.prefetchQueue = []
         }
 
-        async fetch(req: TReq): Promise<TResp> {
+        async fetch(req: TReq, isPrefetch = false): Promise<TResp> {
             if (this.cache.has(req)) {
                 // return from cache
                 const fromCache = this.cache.get(req)!
@@ -141,20 +161,58 @@ export namespace LogSourceN {
             if (this.pending.has(req)) {
                 return this.pending.get(req)!
             }
-            const respPromise = this.opts.fetch(req)
-            this.pending.set(req, respPromise)
+            const { promise: resp, resolve: resolveResp } =
+                Promise.withResolvers<TResp>()
+            this.pending.set(req, resp)
+
+            const job: AsyncCacheJob<TResp> = {
+                start: () => this.opts.fetch(req),
+                resolve: (resp) => resolveResp(resp),
+            }
+            const queue = isPrefetch ? this.prefetchQueue : this.fetchQueue
+            queue.push(job)
+            this.checkQueue()
 
             // save response
-            const data = await respPromise
+            const data = await resp
             this.cache.set(req, {
                 data,
                 createdAt: new Date(),
             })
             this.pending.delete(req)
 
-            this.checkOverflow(req)
-
             return data
+        }
+
+        private checkQueue() {
+            if (this.activeCount >= (this.opts.concurrency ?? 1)) {
+                return
+            }
+
+            const prefetchSize = this.opts.prefetchSize ?? 1
+            if (this.prefetchQueue.length > prefetchSize) {
+                const dropped = this.prefetchQueue.splice(
+                    0,
+                    this.prefetchQueue.length - prefetchSize,
+                )
+            }
+
+            let next: AsyncCacheJob<TResp>
+            if (this.fetchQueue.length > 0) {
+                next = this.fetchQueue.shift()!
+            } else if (this.prefetchQueue.length > 0) {
+                next = this.prefetchQueue.shift()!
+            } else {
+                return
+            }
+
+            this.activeCount += 1
+            next.start().then((resp) => {
+                this.activeCount -= 1
+                next.resolve(resp)
+                this.checkQueue()
+                this.checkOverflow()
+            })
         }
 
         private checkOverflow(req?: TReq) {
