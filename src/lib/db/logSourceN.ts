@@ -107,6 +107,7 @@ export namespace LogSourceN {
     type AsyncCacheJob<T> = {
         start: () => Promise<T>
         resolve: (resp: T) => void
+        reject: (err: string) => void
     }
     export class AsyncCache<TReq, TResp, TMapKey extends string = string> {
         cache: CustomMap<TReq, Dated<TResp>, TMapKey>
@@ -161,27 +162,39 @@ export namespace LogSourceN {
             if (this.pending.has(req)) {
                 return this.pending.get(req)!
             }
-            const { promise: resp, resolve: resolveResp } =
-                Promise.withResolvers<TResp>()
+            const {
+                promise: resp,
+                resolve: resolveResp,
+                reject: rejectResp,
+            } = Promise.withResolvers<TResp>()
             this.pending.set(req, resp)
 
             const job: AsyncCacheJob<TResp> = {
                 start: () => this.opts.fetch(req),
                 resolve: (resp) => resolveResp(resp),
+                reject: (err: string) => rejectResp(err),
             }
             const queue = isPrefetch ? this.prefetchQueue : this.fetchQueue
             queue.push(job)
             this.checkQueue()
 
             // save response
-            const data = await resp
-            this.cache.set(req, {
-                data,
-                createdAt: new Date(),
-            })
-            this.pending.delete(req)
-
-            return data
+            try {
+                const data = await resp
+                this.cache.set(req, {
+                    data,
+                    createdAt: new Date(),
+                })
+                this.pushHistory(req)
+                return data
+            } catch (e) {
+                if (!isPrefetch) {
+                    throw e
+                }
+                return {} as any
+            } finally {
+                this.pending.delete(req)
+            }
         }
 
         private checkQueue() {
@@ -195,6 +208,9 @@ export namespace LogSourceN {
                     0,
                     this.prefetchQueue.length - prefetchSize,
                 )
+                for (const x of dropped) {
+                    x.reject("cancel")
+                }
             }
 
             let next: AsyncCacheJob<TResp>
@@ -207,23 +223,25 @@ export namespace LogSourceN {
             }
 
             this.activeCount += 1
-            next.start().then((resp) => {
-                this.activeCount -= 1
-                next.resolve(resp)
-                this.checkQueue()
-                this.checkOverflow()
-            })
+            next.start()
+                .then(
+                    (resp) => {
+                        next.resolve(resp)
+                    },
+                    (err) => next.reject(String(err)),
+                )
+                .finally(() => {
+                    this.activeCount -= 1
+                    this.checkQueue()
+                })
         }
 
-        private checkOverflow(req?: TReq) {
+        private pushHistory(req: TReq) {
             if (!this.opts.size) {
                 return
             }
 
-            if (req) {
-                this.history.push(req)
-            }
-
+            this.history.push(req)
             if (this.history.length <= this.opts.size) {
                 return
             }

@@ -20,7 +20,7 @@ import {
     useAsync2,
     useDebouncedWrite,
 } from "myutils"
-import { Fragment, useMemo, useRef, useState } from "react"
+import { Fragment, useEffect, useMemo, useRef, useState } from "react"
 import { CheckboxGroup } from "../checkboxGroup"
 import { CheckIcon } from "../icons/tailwind"
 import { ListTable, ListTableN } from "../listTable"
@@ -281,56 +281,64 @@ const EQUIP_PAGE = newContext(() => {
     const data = useRef([] as Array<EquipPageN.Row>).current
     const [dataVersion, setDataVersion] = useState(0)
     const [isLoading, setIsLoading] = useState(true)
-    useAsync2(async () => {
-        const dbP = await new LogDb().connect()
-        const dummy: any = {}
+    useEffect(() => {
+        let done = false
+        async function poll() {
+            const dbP = await new LogDb().connect()
+            const dummy: any = {}
 
-        let equips: EquipPageN.IdbStorage
-        while (true) {
-            const equipTally = await dbP.get("kv", "equipTally")
-            if (!equipTally || equipTally.equips.byteLength === 0) {
-                setIsLoading(true)
-                await sleep(5_000)
-                continue
-            }
+            let equips: EquipPageN.IdbStorage
+            while (!done) {
+                const equipTally = await dbP.get("kv", "equipTally")
+                if (!equipTally || equipTally.equips.byteLength === 0) {
+                    setIsLoading(true)
+                    await sleep(5_000)
+                    continue
+                }
 
-            const decompressed = await decompressZstd({ x: equipTally.equips })
-            const text = await new Blob([decompressed]).text()
-            equips = JSON.parse(text)
+                const decompressed = await decompressZstd({
+                    x: equipTally.equips,
+                })
+                const text = await new Blob([decompressed]).text()
+                equips = JSON.parse(text)
 
-            if (data.length === equips.id.length) {
-                if (equipTally.pending) {
-                    if (data.length < 25) {
-                        await sleep(10_000)
+                if (data.length === equips.id.length) {
+                    if (equipTally.pending) {
+                        if (data.length < 25) {
+                            await sleep(10_000)
+                        } else {
+                            await sleep(30_000)
+                        }
                     } else {
+                        setIsLoading(false)
                         await sleep(30_000)
                     }
-                } else {
-                    setIsLoading(false)
-                    await sleep(30_000)
+                    continue
                 }
-                continue
+
+                for (let idx = data.length; idx < equips.id.length; idx += 1) {
+                    const i = idx
+                    data.push(
+                        new Proxy({} as EquipPageN.Row, {
+                            get(target, key) {
+                                if (key in equips) {
+                                    return (equips as any)[key][i]
+                                } else {
+                                    return dummy[key]
+                                }
+                            },
+                        }),
+                    )
+                }
+
+                setIsLoading(equipTally.pending)
+                setDataVersion((v) => v + 1)
             }
+        }
 
-            for (let idx = data.length; idx < equips.id.length; idx += 1) {
-                const i = idx
-                data.push(
-                    new Proxy({} as EquipPageN.Row, {
-                        get(target, key) {
-                            if (key in equips) {
-                                return (equips as any)[key][i]
-                            } else {
-                                return dummy[key]
-                            }
-                        },
-                    }),
-                )
-            }
-
-            setIsLoading(equipTally.pending)
-            setDataVersion((v) => v + 1)
-
-            return
+        poll()
+        return () => {
+            done = true
         }
     }, [])
 
