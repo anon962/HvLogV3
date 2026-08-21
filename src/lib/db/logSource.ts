@@ -9,6 +9,7 @@ import {
     alphabeticalBy,
     AsyncLock,
     compressGzip,
+    isChrome,
     isTruthy,
     newContext,
     objectEntries,
@@ -372,7 +373,7 @@ class LogSourceLocal implements N.Protocol {
         },
     })
     private entriesDetailsCache = newLocalCache(this, {
-        size: 10,
+        size: isChrome() ? 10 : 3,
         fetch: async (db, conn, id) => {
             const raw = await this.rawCache.fetch(id)
             return await this.pool.parseLogWithDetails({
