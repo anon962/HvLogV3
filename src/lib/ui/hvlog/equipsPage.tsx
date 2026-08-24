@@ -1,6 +1,8 @@
-import { EQUIP_TIERS } from "@/lib/constants"
+import { DEFAULT_PREFETCH_DELAY, EQUIP_TIERS } from "@/lib/constants"
 import { LogDb } from "@/lib/db/db"
 import { DbN } from "@/lib/db/dbN"
+import { LOG_SOURCE } from "@/lib/db/logSource"
+import { USERSCRIPT_CONFIG } from "@/lib/db/userscriptConfig"
 import { humanizeBattleType, MetaSummary } from "@/lib/stats/metaStats"
 import { decompressZstd, transposeForCss } from "@/lib/utils/miscUtils"
 import { SlidersHorizontal } from "lucide-react"
@@ -17,7 +19,6 @@ import {
     range,
     sleep,
     sort,
-    useAsync2,
     useDebouncedWrite,
 } from "myutils"
 import { Fragment, useEffect, useMemo, useRef, useState } from "react"
@@ -27,12 +28,10 @@ import { ListTable, ListTableN } from "../listTable"
 import { Input } from "../shadcn/input"
 import { LogListN } from "./logList/logListN"
 import { UrlParamN } from "./router"
-import { LOG_SOURCE } from "@/lib/db/logSource"
-import { USERSCRIPT_CONFIG } from "@/lib/db/userscriptConfig"
 
 export function EquipPage(props: {}) {
     return (
-        <EQUIP_PAGE.Provider>
+        <EQUIP_PAGE.Provider arg={null}>
             <style>{CSS}</style>
             <EquipPageInner />
         </EQUIP_PAGE.Provider>
@@ -122,7 +121,7 @@ function EquipPageInner(props: {}) {
                     active: ctx.hasFilters,
                 }}
                 onHover={{
-                    delay: config.prefetchDelay || 100,
+                    delay: config.prefetchDelay || DEFAULT_PREFETCH_DELAY,
                     fn: (r) => logSource.prefetchDetails(r.id),
                 }}
             />
@@ -431,19 +430,16 @@ const EQUIP_PAGE = newContext(() => {
     }, [params])
 
     return {
-        value: {
-            page,
-            pageSize: params.n.v,
-            pageIndex: params.p.v,
-            pageCount: Math.ceil(count / params.n.v),
-            count,
-            params,
-            setParams,
-            sortCol: params.s,
-            isLoading,
-            hasFilters,
-        },
-        setValue: () => {},
+        page,
+        pageSize: params.n.v,
+        pageIndex: params.p.v,
+        pageCount: Math.ceil(count / params.n.v),
+        count,
+        params,
+        setParams,
+        sortCol: params.s,
+        isLoading,
+        hasFilters,
     }
 })
 // #endregion

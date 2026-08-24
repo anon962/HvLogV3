@@ -1,26 +1,25 @@
-import { USERSCRIPT_CONFIG, UserscriptConfig } from "@/lib/db/userscriptConfig"
+import { USERSCRIPT_CONFIG } from "@/lib/db/userscriptConfig"
 import { humanizeFightingType } from "@/lib/stats/combatStats"
 import { IndexMap } from "@/lib/stats/indexMap"
 import { humanizeBattleType } from "@/lib/stats/metaStats"
 // @ts-ignore
 import "@/lib/ui/global.css"
+import { runUserscriptTasks } from "@/lib/db/userscriptTasks"
 import { ScrollText } from "lucide-react"
 import { CustomMap, normalizeUrlParts, sleep, useAsync } from "myutils"
-import { StrictMode, useEffect, useMemo } from "react"
+import { useEffect, useMemo } from "react"
 import { IS_LOCAL, IS_REMOTE } from "../../constants"
 import { LOG_SOURCE } from "../../db/logSource"
 import { Sidebar, SidebarItem } from "../sidebar"
+import { EquipPage } from "./equipsPage"
 import { LogDetailsPane } from "./logDetailsPane"
 import { LogList } from "./logList/logList"
 import { MonsterPage } from "./monsterPage"
 import { RouteDef, RouteLink, ROUTER, Router } from "./router"
-import { EquipPage } from "./equipsPage"
-import { runUserscriptTasks } from "@/lib/db/userscriptTasks"
+import { DbN } from "@/lib/db/dbN"
 
 // @fixme: profit history (bar graph, day month)
 // @fixme: avg drops per battle type (including equips)
-// @fixme: equip search
-// @fixme: log import / export / delete old / delete imports
 // @fixme: event log pagination (filters, default to player actions)
 
 // @fixme: count imported from file
@@ -40,6 +39,7 @@ import { runUserscriptTasks } from "@/lib/db/userscriptTasks"
 // @todo: faster local parse
 // @todo: deletion option
 // @todo: off by one charts
+// @todo: cast chains
 
 export const HvLog = (props: { prefix?: string[] }) => {
     const routes = new CustomMap({
@@ -98,14 +98,14 @@ export const HvLog = (props: { prefix?: string[] }) => {
         () =>
             IS_REMOTE
                 ? ([
-                      USERSCRIPT_CONFIG.Provider,
-                      ROUTER.Provider,
-                      LOG_SOURCE.Provider,
+                      [USERSCRIPT_CONFIG.Provider, null],
+                      [ROUTER.Provider, props.prefix ?? []],
+                      [LOG_SOURCE.Provider, null],
                   ] as const)
                 : ([
-                      USERSCRIPT_CONFIG.Provider,
-                      ROUTER.Provider,
-                      LOG_SOURCE.Provider,
+                      [USERSCRIPT_CONFIG.Provider, null],
+                      [ROUTER.Provider, props.prefix ?? []],
+                      [LOG_SOURCE.Provider, null],
                   ] as const),
         [],
     )
@@ -113,7 +113,6 @@ export const HvLog = (props: { prefix?: string[] }) => {
     const inner = (
         <>
             <Router
-                prefix={props.prefix}
                 routes={routes}
                 defaultSidebar={({ children }) => (
                     <Sidebar items={sidebarItems}>{children}</Sidebar>
@@ -128,8 +127,8 @@ export const HvLog = (props: { prefix?: string[] }) => {
         <>
             {/* <StrictMode> */}
             {providers.reduceRight(
-                (el, Provider) => (
-                    <Provider>{el}</Provider>
+                (el, [Provider, arg]) => (
+                    <Provider arg={arg as any}>{el}</Provider>
                 ),
                 inner,
             )}
@@ -139,42 +138,39 @@ export const HvLog = (props: { prefix?: string[] }) => {
 }
 
 function UserscriptTaskRunner(props: {}) {
-    const {
-        fns: { setConfigRaw },
-    } = USERSCRIPT_CONFIG
-    const configCtx = USERSCRIPT_CONFIG.useContext()
+    const { config, setConfigRaw, ready } = USERSCRIPT_CONFIG.useContext()
 
     const logSource = LOG_SOURCE.useContext()
 
     useEffect(() => {
-        if (!configCtx.ready) {
+        if (!ready) {
             return
         }
 
         return runUserscriptTasks({
             logSource,
-            config: configCtx.config,
+            config: config,
             setConfig: (update) =>
                 setConfigRaw((curr) => ({
                     ...curr,
-                    config: {
-                        ...curr.config,
-                        ...update,
-                    },
+                    ...update,
                 })),
         })
-    }, [configCtx])
+    }, [config, ready, setConfigRaw])
 
     return <></>
 }
 
-function LogDetailsRoute(props: { id: string }) {
+function LogDetailsRoute(props: { id: DbN.LogId }) {
     const logSource = LOG_SOURCE.useContext()
 
-    const { data: prices } = useAsync(
-        async () => await logSource.fetchPrices(),
-        null,
-    )
+    const { data: pricesData } = useAsync(async () => {
+        const [pricesP, pricesI] = await Promise.all([
+            logSource.fetchPrices("persistent"),
+            logSource.fetchPrices("isekai"),
+        ])
+        return { persistent: pricesP, isekai: pricesI }
+    }, null)
     const { data: details } = useAsync(
         async () => await logSource.fetchDetails(props.id),
         null,
@@ -183,7 +179,7 @@ function LogDetailsRoute(props: { id: string }) {
         let st = performance.now()
         while (true) {
             const elapsed = performance.now() - st
-            if (!prices && !details && elapsed < 500) {
+            if (!pricesData && !details && elapsed < 500) {
                 await sleep(100)
                 continue
             } else {
@@ -223,11 +219,14 @@ function LogDetailsRoute(props: { id: string }) {
     }
 
     const { history, prefix } = ROUTER.useContext()
-    let backHref = [...prefix, "logs"].join("/")
-    if (history.length >= 2) {
-        const u = history[history.length - 2].url
-        backHref = u.pathname + u.search + u.hash
-    }
+    const backHref = useMemo(() => {
+        let backHref = [...prefix, "logs"].join("/")
+        if (history.length >= 2) {
+            const u = history[history.length - 2].url
+            backHref = u.pathname + u.search + u.hash
+        }
+        return backHref
+    }, [])
 
     return (
         <div className="w-full h-full flex flex-col overflow-hidden gap-4 p-4 pb-8">
@@ -247,10 +246,11 @@ function LogDetailsRoute(props: { id: string }) {
             </div>
 
             <div className="w-full max-w-[60rem] h-full mx-auto">
-                {prices && (
+                {pricesData && meta && (
                     <LogDetailsPane
+                        id={props.id}
                         entries={entries}
-                        prices={prices}
+                        prices={pricesData[meta.world]}
                         details={details}
                         indexMap={indexMap}
                     />

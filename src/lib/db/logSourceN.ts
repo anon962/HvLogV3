@@ -6,6 +6,7 @@ import {
 import { CustomMap, ISODate, L } from "myutils"
 import { MetaSummary } from "../stats/metaStats"
 import { DbN, LogEntry } from "./dbN"
+import { IndexMap } from "../stats/indexMap"
 
 export namespace LogSourceN {
     export interface Protocol {
@@ -16,6 +17,8 @@ export namespace LogSourceN {
         fetchLog: (id: string) => Promise<string>
         fetchEntries: (id: string) => Promise<Array<LogEntry>>
         fetchDetails: (id: string) => Promise<DetailsSummary>
+        fetchMetaSummary: (id: string) => Promise<MetaSummary>
+        fetchIndexMap: (id: string) => Promise<IndexMap>
         fetchSearch: (req: SearchRequest) => Promise<SearchResponse>
 
         prefetchMeta: (id: string) => Promise<void>

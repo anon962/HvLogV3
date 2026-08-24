@@ -20,7 +20,6 @@ import {
     useRef,
     useState,
 } from "react"
-import { IS_REMOTE } from "../../constants"
 
 type RouteSelection = { component: ReactNode; hideSidebar?: boolean }
 type Sidebar = FC<{ children: ReactNode }>
@@ -36,21 +35,10 @@ export function Router(props: {
         (patt: string[], url: URL) => RouteSelection | { redirect: string[] },
         string
     >
-    prefix?: string[]
     defaultSidebar?: Sidebar
     defaultRoute?: () => RouteSelection
 }) {
-    let { url, partsFull, partsPrefix, partsPath } = ROUTER.useContext()
-    const prefix = useMemo(
-        () => normalizeUrlParts(props.prefix ?? []),
-        [props.prefix],
-    )
-    useEffect(() => {
-        ROUTER.setValue((x) => ({
-            ...x,
-            ...readUrlWithPrefix(prefix),
-        }))
-    }, [prefix])
+    let { url, partsFull, partsPrefix, partsPath, prefix } = ROUTER.useContext()
 
     useScrollRestoration()
 
@@ -216,10 +204,11 @@ function useScrollRestoration() {
 // #endregion
 
 // #region ROUTER
-export const ROUTER = newContext(() => {
+export const ROUTER = newContext((prefix: string[]) => {
+    const prefixNorm = normalizeUrlParts(prefix)
     const [value, setValue] = useState({
-        ...readUrlWithPrefix(IS_REMOTE ? [] : ["hvlog"]),
-        history: [readUrlWithPrefix(IS_REMOTE ? [] : ["hvlog"])],
+        ...readUrlWithPrefix(prefixNorm),
+        history: [readUrlWithPrefix(prefixNorm)],
     })
 
     useEffect(() => {
@@ -255,10 +244,7 @@ export const ROUTER = newContext(() => {
         }
     }, [])
 
-    return {
-        value,
-        setValue,
-    }
+    return value
 })
 // #endregion
 
@@ -520,6 +506,9 @@ export namespace UrlParamN {
                     case "boolean[]":
                     case "bitmask": {
                         initParams[key] = s.init?.() ?? []
+                        if (s.deser) {
+                            initParams[key] = s.deser(initParams[key])
+                        }
 
                         if (key in params && s.deser) {
                             params[key] = s.deser(params[key] ?? [])

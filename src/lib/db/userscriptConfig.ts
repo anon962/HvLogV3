@@ -1,24 +1,20 @@
 import { newContext } from "myutils"
-import { useEffect, useState } from "react"
+import { Dispatch, SetStateAction, useEffect, useState } from "react"
 import { LogDb } from "./db"
 import { DbN } from "./dbN"
 import { IS_LOCAL } from "../constants"
 
 const USERSCRIPT_CONFIG_ = newContext(() => {
-    const [value, setValue] = useState({
-        config: DEFAULT_USERSCRIPT_CONFIG(),
-        ready: false,
-    })
+    const [config, setConfig] = useState(DEFAULT_USERSCRIPT_CONFIG())
+    const [ready, setReady] = useState(false)
 
-    window.HV_LOG.userscriptConfig = value.config
+    window.HV_LOG.userscriptConfig = config
 
     useEffect(() => {
         ;(async () => {
             const config = await loadUserscriptConfig()
-            setValue({
-                config,
-                ready: true,
-            })
+            setConfig(config)
+            setReady(true)
         })()
     }, [])
 
@@ -31,36 +27,34 @@ const USERSCRIPT_CONFIG_ = newContext(() => {
                 return
             }
 
-            setValue({ config: ev.config, ready: true })
+            setConfig(ev.config)
             saveUserscriptConfig(ev.config)
         })
     })
 
     return {
-        value,
-        setValue: (update) => {
-            setValue((curr) => {
+        config,
+        setConfigRaw: setConfig,
+        setConfig: (update: SetStateAction<UserscriptConfig>) => {
+            setConfig((curr) => {
                 let next
                 if (typeof update === "function") {
                     next = update(curr)
                 } else {
-                    next = curr
+                    next = update
                 }
-                saveUserscriptConfig(next.config)
+                saveUserscriptConfig(next)
                 return next
             })
         },
-        fns: {
-            setConfigRaw: setValue,
-        },
+        ready,
     }
 })
 export const USERSCRIPT_CONFIG = IS_LOCAL
     ? USERSCRIPT_CONFIG_
     : (newContext(() => ({
-          value: DEFAULT_USERSCRIPT_CONFIG(),
-          setValue: () => {},
-          fns: {} as any,
+          config: DEFAULT_USERSCRIPT_CONFIG(),
+          ready: true,
       })) as any as typeof USERSCRIPT_CONFIG_)
 
 export const DEFAULT_USERSCRIPT_CONFIG = () => ({

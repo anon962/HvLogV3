@@ -27,6 +27,7 @@ import { LogSourceN as N } from "./logSourceN"
 // @ts-ignore
 import parseLogWithDetailsSrc from "../worker?workerfn=parseLogWithDetails"
 import { USERSCRIPT_CONFIG, UserscriptConfig } from "./userscriptConfig"
+import { IndexMap } from "../stats/indexMap"
 
 export const LOG_PROCESSING_LOCK = new AsyncLock()
 
@@ -51,19 +52,22 @@ class LogSourceRemote implements N.Protocol {
         }
         return result
     }
-    async fetchLog(): Promise<any> {
-        throw new Error("not implemented")
+    async fetchLog(id: DbN.LogId): Promise<any> {
+        return await this.rawCache.fetch(id)
     }
-    async fetchMeta(id: string) {
+    async fetchMeta(id: DbN.LogId) {
         const { meta } = await this.metaEntriesCache.fetch(id)
         return meta
     }
-    async fetchEntries(id: string) {
+    async fetchEntries(id: DbN.LogId) {
         const { entries } = await this.metaEntriesCache.fetch(id)
         return entries
     }
-    async fetchDetails(id: string) {
+    async fetchDetails(id: DbN.LogId) {
         return await this.detailsCache.fetch(id)
+    }
+    async fetchMetaSummary(id: DbN.LogId) {
+        return (await this.detailsCache.fetch(id)).meta
     }
     async fetchPrices() {
         if (!this.prices) {
@@ -111,12 +115,15 @@ class LogSourceRemote implements N.Protocol {
 
         return this.monlab
     }
+    async fetchIndexMap(id: DbN.LogId) {
+        return this.indexMapCache.fetch(id)
+    }
     // #region remote prefetch
     async prefetchMeta(id: DbN.LogId) {
         this.fetchMeta(id)
     }
     async prefetchLog(id: DbN.LogId) {
-        this.fetchLog()
+        this.fetchLog(id)
     }
     async prefetchEntries(id: DbN.LogId) {
         this.fetchEntries(id)
@@ -167,6 +174,16 @@ class LogSourceRemote implements N.Protocol {
             return resp.parsed.details
         },
     })
+    private rawCache = new N.AsyncCache<string, string>({
+        ttl: null,
+        fromRaw: (x) => x,
+        toRaw: (x) => x,
+        fetch: async (id: DbN.LogId) => {
+            const url = this.HVDATA_URL + `/api/battle_logs/${id}` + `?raw=1`
+            const resp = await fetch(url).then(async (resp) => resp.json())
+            return resp.log
+        },
+    })
     private searchLogCache = new Map<string, N.SearchResult>()
     private searchCache = new N.AsyncCache<
         N.SearchRequest,
@@ -206,6 +223,20 @@ class LogSourceRemote implements N.Protocol {
                 ...data,
                 results: data.results.map((x) => ({ id: x.id })),
             }
+        },
+    })
+    private indexMapCache = new N.AsyncCache<DbN.LogId, IndexMap>({
+        toRaw: (req) => JSON.stringify(req),
+        fromRaw: (raw) => JSON.parse(raw),
+        ttl: null,
+        size: 10,
+        fetch: async (id: DbN.LogId) => {
+            const details = await this.fetchDetails(id)
+            return new IndexMap(
+                details.meta.turnIndices,
+                details.meta.roundIndices,
+                details.meta.eventCount,
+            )
         },
     })
     // #endregion
@@ -271,19 +302,22 @@ class LogSourceLocal implements N.Protocol {
     async fetchLogIds(): Promise<string[]> {
         return [...this.logIds]
     }
-    async fetchMeta(id: string) {
+    async fetchMeta(id: DbN.LogId) {
         return await this.metaCache.fetch(id)
     }
-    async fetchLog(id: string) {
+    async fetchLog(id: DbN.LogId) {
         return await this.rawCache.fetch(id)
     }
-    async fetchDetails(id: string) {
+    async fetchDetails(id: DbN.LogId) {
         return (await this.entriesDetailsCache.fetch(id)).details
+    }
+    async fetchMetaSummary(id: DbN.LogId) {
+        return (await this.metaSearchCache.fetch(id)).meta
     }
     async fetchSearch(req: N.SearchRequest): Promise<N.SearchResponse> {
         return await this.searchResponseCache.fetch(req)
     }
-    async fetchEntries(id: string) {
+    async fetchEntries(id: DbN.LogId) {
         return (await this.entriesDetailsCache.fetch(id)).entries
     }
     async fetchPrices(world: DbN.HvWorld) {
@@ -294,6 +328,9 @@ class LogSourceLocal implements N.Protocol {
     }
     async fetchGlobalMonsterSummary(): Promise<any> {
         throw new Error("not implemented")
+    }
+    async fetchIndexMap(id: DbN.LogId) {
+        return this.indexMapCache.fetch(id)
     }
 
     private static FILTER_CONDITIONS = {
@@ -533,6 +570,20 @@ class LogSourceLocal implements N.Protocol {
             }
         },
     })
+    private indexMapCache = new N.AsyncCache<DbN.LogId, IndexMap>({
+        toRaw: (req) => JSON.stringify(req),
+        fromRaw: (raw) => JSON.parse(raw),
+        ttl: null,
+        size: 10,
+        fetch: async (id: DbN.LogId) => {
+            const details = await this.fetchDetails(id)
+            return new IndexMap(
+                details.meta.turnIndices,
+                details.meta.roundIndices,
+                details.meta.eventCount,
+            )
+        },
+    })
     // #endregion
 
     private initWorkerPool() {
@@ -580,8 +631,5 @@ export const LOG_SOURCE = newContext<N.Protocol>(() => {
         }
     }, [config, configReady])
 
-    return {
-        value: IS_REMOTE ? new LogSourceRemote() : new LogSourceLocal(prices),
-        setValue: () => {},
-    }
+    return IS_REMOTE ? new LogSourceRemote() : new LogSourceLocal(prices)
 })

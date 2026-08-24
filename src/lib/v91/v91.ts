@@ -85,6 +85,7 @@ function _summarizeMeta(
     } = getBattleType(completionType)
 
     return {
+        version: "v91",
         completionType,
         battleType,
         round,

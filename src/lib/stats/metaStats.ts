@@ -33,6 +33,7 @@ export function parseBattleType(id: string): MetaSummary["battleType"] | null {
 }
 
 export interface MetaSummary {
+    version: "v91"
     completionType: "finish" | "flee" | "die" | null
     battleType: null | {
         id: string

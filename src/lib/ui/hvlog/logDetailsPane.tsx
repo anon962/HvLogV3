@@ -7,11 +7,11 @@ import { Card, CardContent } from "../shadcn/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../shadcn/tabs"
 import { CombatInfo } from "./combat/combatInfo"
 import { DropInfo } from "./drop/dropInfo"
-import { LogEventList } from "./logEventList"
-import { L } from "myutils"
+import { RawLogViewer } from "./rawLogViewer"
 
 export const LogDetailsPane = React.memo(
     (props: {
+        id: DbN.LogId
         entries: LogEntries | null
         prices: DbN.Prices
         details: DetailsSummary | null
@@ -77,18 +77,7 @@ export const LogDetailsPane = React.memo(
                         value="events"
                         className="h-full min-h-0 overflow-auto"
                     >
-                        <Card className="min-h-0 h-full py-0">
-                            <CardContent className="p-0 min-h-0">
-                                {props.entries && props.indexMap ? (
-                                    <LogEventList
-                                        entries={props.entries}
-                                        indexMap={props.indexMap}
-                                    />
-                                ) : (
-                                    ""
-                                )}
-                            </CardContent>
-                        </Card>
+                        <RawLogViewer id={props.id} />
                     </TabsContent>
                 </Tabs>
             </div>

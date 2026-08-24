@@ -428,15 +428,12 @@ export namespace LogListN {
         }, [fetcher.data, fetcher.request])
 
         return {
-            value: {
-                params,
-                setParams,
-                pageSizeStorage,
-                setPageSizeStorage,
-                fetcher,
-                logSource,
-            },
-            setValue: () => {},
+            params,
+            setParams,
+            pageSizeStorage,
+            setPageSizeStorage,
+            fetcher,
+            logSource,
         }
     })
 }

@@ -1,6 +1,6 @@
 import { FIGHTING_STYLE_NAMES } from "@/lib/stats/combatStats"
 import { SlidersHorizontal } from "lucide-react"
-import { IS_REMOTE } from "../../../constants"
+import { DEFAULT_PREFETCH_DELAY, IS_REMOTE } from "../../../constants"
 import { CheckboxGroup } from "../../checkboxGroup"
 import { ListTable } from "../../listTable"
 import { Input } from "../../shadcn/input"
@@ -10,7 +10,7 @@ import { USERSCRIPT_CONFIG } from "@/lib/db/userscriptConfig"
 
 export function LogList() {
     return (
-        <LogListN.ctx.Provider>
+        <LogListN.ctx.Provider arg={null}>
             <div className="log-list w-full flex flex-col items-center pt-4">
                 <Table />
             </div>
@@ -94,7 +94,7 @@ export function Table() {
                     : {}),
             })}
             onHover={{
-                delay: config.prefetchDelay || 100,
+                delay: config.prefetchDelay || DEFAULT_PREFETCH_DELAY,
                 fn: (r) => {
                     logSource.fetchPrices()
                     logSource.prefetchDetails(r.id)

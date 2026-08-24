@@ -38,7 +38,8 @@ L.sinks["cli"] = {
     call: (level, ...args) => {
         if (args[0] === CLI_KEY) {
             args = [
-                `stdout: ${truncateString(print(args.slice(1)), 500, "...")}`,
+                `stdout (...)`,
+                // `stdout: ${truncateString(print(args.slice(1)), 500, "...")}`,
             ]
         }
 

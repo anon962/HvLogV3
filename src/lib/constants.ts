@@ -12,6 +12,8 @@ export const HV_WORLDS = [
     "isekai",
 ] as const satisfies Array<DbN.HvWorld>
 
+export const DEFAULT_PREFETCH_DELAY = IS_REMOTE ? 50 : 300
+
 /**
 https://tailwindcss.com/docs/colors
 
