@@ -73,12 +73,16 @@ export const USERSCRIPT_CONFIG = IS_LOCAL
       })) as any as typeof USERSCRIPT_CONFIG_)
 
 export const DEFAULT_USERSCRIPT_CONFIG = () => ({
+    priceSource: "default" as "default" | "hvdata" | "none", // | fapspreader"
     prices: {
         updatedAt: "2026-08-14T01:01:01.001Z",
         persistent: PERSISTENT_PRICES() as DbN.Prices,
         isekai: ISEKAI_PRICES() as DbN.Prices,
     },
-    priceSource: "default" as "default" | "hvdata" | "none", // | fapspreader"
+    pricesOverrides: {
+        persistent: {} as Record<string, number | null>,
+        isekai: {} as Record<string, number | null>,
+    },
     detailsEquipFilter: "default" as
         | "default"
         | "magnificent"

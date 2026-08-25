@@ -6,7 +6,15 @@ import {
 } from "@/lib/db/userscriptConfig"
 import { CommonProps } from "@/lib/utils/miscUtils"
 import { Check } from "lucide-react"
-import { cn, Css, css, isEqual, mergeProps, useDebouncedWrite } from "myutils"
+import {
+    alphabetical,
+    cn,
+    Css,
+    css,
+    isEqual,
+    mergeProps,
+    useDebouncedWrite,
+} from "myutils"
 import {
     Dispatch,
     ReactNode,
@@ -16,6 +24,7 @@ import {
     useRef,
     useState,
 } from "react"
+import { Loader } from "../loader"
 import { Button } from "../shadcn/button"
 import { Input } from "../shadcn/input"
 import {
@@ -25,7 +34,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from "../shadcn/select"
-import { Loader } from "../loader"
 
 export function ConfigPage(props: {}) {
     const { config, setConfig } = USERSCRIPT_CONFIG.useContext()
@@ -46,6 +54,11 @@ export function ConfigPage(props: {}) {
             setPending(JSON.parse(JSON.stringify(config)))
         }
     }, [config])
+
+    const hasChanges = useMemo(
+        () => !isEqual(config, pending),
+        [config, pending],
+    )
 
     return (
         <div className="flex justify-center h-[95vh]">
@@ -84,8 +97,8 @@ export function ConfigPage(props: {}) {
                             <div>
                                 Whether to show a delete button for individual
                                 logs.
-                                <br /> For bulk-deletion, open the Manage Logs
-                                dialog <br /> from the userscript extension
+                                <br /> For bulk-deletion, instead use the Manage
+                                Logs dialog <br /> from the userscript extension
                                 menu.
                             </div>
                         }
@@ -262,6 +275,8 @@ export function ConfigPage(props: {}) {
                     </Setting>
 
                     <UploadSection pending={pending} setPending={setPending} />
+
+                    <PriceSection pending={pending} setPending={setPending} />
                 </div>
 
                 <div className="spacer"></div>
@@ -324,7 +339,7 @@ export function ConfigPage(props: {}) {
                             }}
                             loading={loading}
                             variant="secondary"
-                            disabled={isEqual(config, pending)}
+                            disabled={!hasChanges}
                         />
                     </div>
                 </div>
@@ -374,9 +389,9 @@ function UploadSection(props: {
                 description={
                     <div>
                         Whether to upload logs to{" "}
-                        <a href="https://hvdata.gisadan.dev/logs">HvData</a>
-                        . Uploaded logs are assigned a share-able link.
-                        <br />
+                        <a href="https://hvdata.gisadan.dev/logs">HvData</a>.
+                        Uploaded logs are assigned a share-able link.{" "}
+                        <b>Uploads cannot be removed!</b>
                     </div>
                 }
                 labelProps={{ className: "mb-2!" }}
@@ -559,6 +574,135 @@ function UploadSection(props: {
     )
 }
 
+function PriceSection(props: {
+    pending: UserscriptConfig
+    setPending: Dispatch<SetStateAction<UserscriptConfig>>
+}) {
+    const keys = useMemo(() => {
+        const persistent = new Set(Object.keys(props.pending.prices.persistent))
+        const isekai = new Set(Object.keys(props.pending.prices.isekai))
+        const all = alphabetical([...persistent.union(isekai)])
+        return { all, persistent, isekai }
+    }, [props.pending.prices])
+
+    return (
+        <div className="prices col-span-2">
+            <h2 className="self-start pb-2 pt-8!">Price Overrides</h2>
+            <div className="self-end grid gap-x-4 gap-y-2 items-center text-sm">
+                <h3>Persistent</h3>
+                <h3>Isekai</h3>
+                <h3></h3>
+
+                {keys.all.map((k) => {
+                    return (
+                        <PriceInput
+                            key={k}
+                            pending={props.pending}
+                            setPending={props.setPending}
+                            priceKey={k}
+                            persistent={
+                                keys.persistent.has(k)
+                                    ? props.pending.prices.persistent[k]
+                                    : null
+                            }
+                            isekai={
+                                keys.isekai.has(k)
+                                    ? props.pending.prices.isekai[k]
+                                    : null
+                            }
+                        />
+                    )
+                })}
+            </div>
+        </div>
+    )
+}
+
+function PriceInput(props: {
+    pending: UserscriptConfig
+    setPending: Dispatch<SetStateAction<UserscriptConfig>>
+    priceKey: string
+    persistent: number | null
+    isekai: number | null
+}) {
+    const [p, setP] = useDebouncedWrite({
+        value: props.pending.pricesOverrides.persistent[props.priceKey] ?? null,
+        onUpdate: (v) => {
+            const update = {
+                ...props.pending,
+                pricesOverrides: {
+                    ...props.pending.pricesOverrides,
+                    persistent: {
+                        ...props.pending.pricesOverrides["persistent"],
+                        [props.priceKey]: v,
+                    },
+                },
+            }
+            if (v === null) {
+                delete update.pricesOverrides["persistent"][props.priceKey]
+            }
+            props.setPending(update)
+        },
+    })
+    const [i, setI] = useDebouncedWrite({
+        value: props.pending.pricesOverrides.isekai[props.priceKey] ?? null,
+        onUpdate: (v) => {
+            const update = {
+                ...props.pending,
+                pricesOverrides: {
+                    ...props.pending.pricesOverrides,
+                    isekai: {
+                        ...props.pending.pricesOverrides["isekai"],
+                        [props.priceKey]: v,
+                    },
+                },
+            }
+            if (v === null) {
+                delete update.pricesOverrides["isekai"][props.priceKey]
+            }
+            props.setPending(update)
+        },
+    })
+
+    return (
+        <>
+            <Input
+                type="number"
+                value={p ?? undefined}
+                disabled={props.persistent === null}
+                placeholder={
+                    props.persistent !== null ? String(props.persistent) : ""
+                }
+                min={0}
+                onInput={(ev) => {
+                    const update = parseFloat(ev.target.value)
+                    if (isNaN(update)) {
+                        setP(null)
+                    } else {
+                        setP(update)
+                    }
+                }}
+            />
+            <Input
+                type="number"
+                value={i ?? undefined}
+                disabled={props.isekai === null}
+                placeholder={props.isekai !== null ? String(props.isekai) : ""}
+                min={0}
+                onInput={(ev) => {
+                    const update = parseFloat(ev.target.value)
+                    if (isNaN(update)) {
+                        setI(null)
+                    } else {
+                        setI(update)
+                    }
+                }}
+            />
+            <div>{props.priceKey}</div>
+        </>
+    )
+}
+
 function ActionButton(
     props: {
         label: string
@@ -631,8 +775,11 @@ function MyNumberInput(props: {
     value: number
     onInput: (x: number) => void
     scale?: number
+    min?: number
+    max?: number
     step: number
     width: number
+    nanValue?: number
 }) {
     const scale = useMemo(() => props.scale ?? 1, [props.scale])
     const [raw, setRaw] = useState(String(props.value / scale))
@@ -645,13 +792,15 @@ function MyNumberInput(props: {
         <Input
             type="number"
             value={raw}
+            min={props.min}
+            max={props.max}
             step={props.step}
             style={{
                 maxWidth: `${props.width}ch`,
             }}
             onInput={(ev) => {
                 const v = parseFloat(ev.target.value)
-                props.onInput(isNaN(v) ? 0 : v * scale)
+                props.onInput(isNaN(v) ? (props.nanValue ?? 0) : v * scale)
                 setRaw(ev.target.value)
             }}
         />
@@ -769,6 +918,22 @@ const CSS = css`
                 height: 1.5em;
                 width: 1.5em;
                 cursor: pointer;
+            }
+        }
+
+        .prices {
+            h3 {
+                color: var(--muted-foreground);
+            }
+
+            .grid {
+                grid-template-columns: max-content max-content 1fr;
+            }
+
+            input {
+                height: 2em;
+                padding: 1em;
+                width: 16ch;
             }
         }
 
