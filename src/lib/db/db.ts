@@ -199,12 +199,15 @@ export async function deleteLogs(
 export class LogDbCache {
     pool = this.initWorkerPool()
     // logIds = new Set<DbN.LogId>()
+    detailsCacheHistory: Promise<DbN.IdbSchema["kv"]["detailsCacheHistory"]>
+    deetsHistoryChangeCount = 0
 
     db: Promise<LogDb<true>>
     bcSub: Unsub
 
     constructor() {
         this.db = new LogDb().connect()
+        this.detailsCacheHistory = this.fetchDetailsCacheHistory()
 
         this.bcSub = DbN.listenIdbEvent((ev, details) => {
             switch (ev.type) {
@@ -283,12 +286,13 @@ export class LogDbCache {
             return { entries, details }
         },
         cbPost: async (id: DbN.LogId) => {
-            const db = await this.db
-            const history = (await db.get("kv", "detailsCacheHistory")) ?? {}
+            const history = await this.detailsCacheHistory
             history[id] = {
                 lastFetch: new Date().toISOString(),
             }
-            await db.put("kv", history, "detailsCacheHistory")
+            this.deetsHistoryChangeCount += 1
+
+            await this.flushDetailsCacheHistory()
         },
     })
     metaCache = this.newLocalCache<DbN.LogMeta>({
@@ -404,6 +408,24 @@ export class LogDbCache {
                     },
                 },
             }),
+        )
+    }
+
+    private async fetchDetailsCacheHistory() {
+        const db = await this.db
+        return (await db.get("kv", "detailsCacheHistory")) ?? {}
+    }
+    async flushDetailsCacheHistory() {
+        if (this.deetsHistoryChangeCount < 50) {
+            return
+        }
+        this.deetsHistoryChangeCount = 0
+
+        const db = await this.db
+        return await db.put(
+            "kv",
+            await this.detailsCacheHistory,
+            "detailsCacheHistory",
         )
     }
 }

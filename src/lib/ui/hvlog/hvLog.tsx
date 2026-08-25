@@ -20,14 +20,11 @@ import { DbN } from "@/lib/db/dbN"
 
 // @fixme: profit history (bar graph, day month)
 // @fixme: avg drops per battle type (including equips)
-// @fixme: event log pagination (filters, default to player actions)
 
-// @fixme: count imported from file
 // @fixme: isekai
 // @fixme: uploads / deletes
 // @fixme: item world
 // @fixme: useAppCache
-// @fixme: local log cols (duration)
 // @fixme: clear cache command
 
 // @todo: per round / avgs (config?)

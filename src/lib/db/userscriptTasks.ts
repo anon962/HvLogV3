@@ -6,6 +6,7 @@ import {
     L,
     last,
     objectEntries,
+    objectKeys,
     pluralfy,
     sleep,
     sort,
@@ -429,7 +430,8 @@ async function* trimDetailsCache(opts: TaskOpts): TaskGen {
     const idsDetails = new Set(await db.getAllKeys("summariesForDetails"))
     const ids = idsEntries.union(idsDetails)
 
-    const history = (await db.get("kv", "detailsCacheHistory")) ?? {}
+    const cache = LOG_DB_CACHE()
+    const history = await cache.detailsCacheHistory
 
     let mode, overflowCount
 
@@ -471,9 +473,19 @@ async function* trimDetailsCache(opts: TaskOpts): TaskGen {
         if (await txn.objectStore("summariesForDetails").getKey(id)) {
             txn.objectStore("summariesForDetails").delete(id)
         }
+
+        delete history[id]
+        cache.deetsHistoryChangeCount += 1
     }
 
-    await db.put("kv", history, "detailsCacheHistory")
+    for (const id of objectKeys(history)) {
+        if (!ids.has(id)) {
+            delete history[id]
+            cache.deetsHistoryChangeCount += 1
+        }
+    }
+
+    await cache.flushDetailsCacheHistory()
     return () => sleep(DELAY)
 }
 // #endregion
