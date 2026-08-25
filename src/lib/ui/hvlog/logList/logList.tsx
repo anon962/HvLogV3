@@ -7,6 +7,7 @@ import { Input } from "../../shadcn/input"
 import { LogListN } from "./logListN"
 import { MonthYearPicker } from "../../monthYearPicker"
 import { USERSCRIPT_CONFIG } from "@/lib/db/userscriptConfig"
+import { useMemo } from "react"
 
 export function LogList() {
     return (
@@ -28,32 +29,38 @@ export function Table() {
 
     const { config } = USERSCRIPT_CONFIG.useContext()
 
+    const cols = useMemo(
+        () =>
+            IS_REMOTE
+                ? [
+                      LogListN.COLS.battleType,
+                      LogListN.COLS.turns,
+                      LogListN.COLS.style,
+                      LogListN.COLS.user,
+                      LogListN.COLS.date,
+                      LogListN.COLS.status,
+                  ]
+                : [
+                      LogListN.COLS.battleType,
+                      LogListN.COLS.style,
+                      LogListN.COLS.turns,
+                      LogListN.COLS.profit,
+                      LogListN.COLS.date,
+                      LogListN.COLS.duration,
+                      LogListN.COLS.status,
+                  ],
+        [],
+    )
+
+    const sortCols = useMemo(() => new Set(LogListN.SORT_IDS), [])
+
     return (
         <ListTable
             data={data?.results ?? []}
-            cols={
-                IS_REMOTE
-                    ? [
-                          LogListN.COLS.battleType,
-                          LogListN.COLS.turns,
-                          LogListN.COLS.style,
-                          LogListN.COLS.user,
-                          LogListN.COLS.date,
-                          LogListN.COLS.status,
-                      ]
-                    : [
-                          LogListN.COLS.battleType,
-                          LogListN.COLS.style,
-                          LogListN.COLS.turns,
-                          LogListN.COLS.profit,
-                          LogListN.COLS.date,
-                          LogListN.COLS.duration,
-                          LogListN.COLS.status,
-                      ]
-            }
+            cols={cols}
             count={data?.resultCount ?? 1}
             getId={(d) => d.id}
-            sortCols={new Set(LogListN.SORT_IDS)}
+            sortCols={sortCols}
             pageIndex={request.pageIdx}
             setPageSize={{
                 options: [15, 50, 100, 1000],

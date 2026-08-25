@@ -138,7 +138,7 @@ export const HvLog = (props: { prefix?: string[] }) => {
 }
 
 function UserscriptTaskRunner(props: {}) {
-    const { config, setConfigRaw, ready } = USERSCRIPT_CONFIG.useContext()
+    const { config, setConfig, ready } = USERSCRIPT_CONFIG.useContext()
 
     const logSource = LOG_SOURCE.useContext()
 
@@ -151,12 +151,12 @@ function UserscriptTaskRunner(props: {}) {
             logSource,
             config: config,
             setConfig: (update) =>
-                setConfigRaw((curr) => ({
+                setConfig((curr) => ({
                     ...curr,
                     ...update,
                 })),
         })
-    }, [config, ready, setConfigRaw])
+    }, [config, ready, setConfig])
 
     return <></>
 }

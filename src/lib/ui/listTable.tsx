@@ -12,6 +12,9 @@ import React, {
     ReactNode,
     RefObject,
     useCallback,
+    useDeferredValue,
+    useEffect,
+    useMemo,
     useRef,
     useState,
 } from "react"
@@ -107,7 +110,9 @@ export function ListTable<T>(
 ) {
     const [showFilter, setShowFilter] = useState(false)
 
-    const { className, style, ...rest } = props
+    const { data, className, style, ...rest } = props
+
+    const data2 = useDeferredValue(data)
 
     return (
         <div
@@ -134,7 +139,7 @@ export function ListTable<T>(
 
             <hr className="border my-2!" />
 
-            <TableInner {...rest} {...props.tableProps} />
+            <TableInner data={data2} {...rest} {...props.tableProps} />
 
             <hr className="border my-2!" />
 
@@ -160,103 +165,116 @@ const TableInner = <T,>(
         }
     } & CommonProps,
 ) => {
-    const headerRow = props.cols.map((col) => {
-        let icon: ReactNode = null
-        let onClick = () => {}
-        if (props.sortCols?.has(col.id)) {
-            const isActive =
-                col.id === props.sortCriteria?.cid &&
-                props.sortCriteria?.order !== null
+    const headerRow = useMemo(() => {
+        console.log("header")
+        return props.cols.map((col) => {
+            let icon: ReactNode = null
+            let onClick = () => {}
+            if (props.sortCols?.has(col.id)) {
+                const isActive =
+                    col.id === props.sortCriteria?.cid &&
+                    props.sortCriteria?.order !== null
 
-            let component
-            const className = ["sort-icon"]
-            let nextOrder: ListTableN.SortCriteria["order"] | null = "desc"
-            if (isActive) {
-                className.push("active")
+                let component
+                const className = ["sort-icon"]
+                let nextOrder: ListTableN.SortCriteria["order"] | null = "desc"
+                if (isActive) {
+                    className.push("active")
 
-                if (props.sortCriteria?.order === "desc") {
-                    component = ArrowLongDownIcon
-                    nextOrder = "asc"
+                    if (props.sortCriteria?.order === "desc") {
+                        component = ArrowLongDownIcon
+                        nextOrder = "asc"
+                    } else {
+                        component = ArrowLongUpIcon
+                        nextOrder = null
+                    }
                 } else {
-                    component = ArrowLongUpIcon
-                    nextOrder = null
+                    component = ArrowLongDownIcon
+                    nextOrder = "desc"
                 }
-            } else {
-                component = ArrowLongDownIcon
-                nextOrder = "desc"
+
+                icon = React.createElement(component, {
+                    className: className.join(" "),
+                })
+                onClick = () =>
+                    props.setSortCriteria(
+                        nextOrder
+                            ? {
+                                  cid: col.id,
+                                  order: nextOrder,
+                              }
+                            : null,
+                    )
             }
 
-            icon = React.createElement(component, {
-                className: className.join(" "),
-            })
-            onClick = () =>
-                props.setSortCriteria(
-                    nextOrder
-                        ? {
-                              cid: col.id,
-                              order: nextOrder,
-                          }
-                        : null,
-                )
-        }
+            const flexJustify = {
+                "text-center": "justify-center",
+                "text-left": "justify-start",
+                "text-right": "justify-end",
+            }
+            const flexAlign = {
+                "text-center": "items-center",
+                "text-left": "items-start",
+                "text-right": "items-end",
+            }
 
-        const flexJustify = {
-            "text-center": "justify-center",
-            "text-left": "justify-start",
-            "text-right": "justify-end",
-        }
-        const flexAlign = {
-            "text-center": "items-center",
-            "text-left": "items-start",
-            "text-right": "items-end",
-        }
-
-        return (
-            <TableHead className={cn(col.header.className)}>
-                <TooltipProvider>
-                    <Tooltip open={col.header.tooltip ? undefined : false}>
-                        <TooltipTrigger
-                            style={{ textAlign: "inherit" }}
-                            className="w-full"
-                        >
-                            <div
-                                onClick={onClick}
-                                className={cn(
-                                    "flex",
-                                    props.sortCols?.has(col.id)
-                                        ? "cursor-pointer"
-                                        : "",
-                                    flexJustify[col.align ?? "text-center"],
-                                    flexAlign[col.align ?? "text-center"],
-                                    col.header.tooltip
-                                        ? "tooltip pb-[0.2em]"
-                                        : "",
-                                    `col-${col.id}`,
-                                )}
+            return (
+                <TableHead
+                    key={"col" + col.id}
+                    className={cn(col.header.className)}
+                >
+                    <TooltipProvider>
+                        <Tooltip open={col.header.tooltip ? undefined : false}>
+                            <TooltipTrigger
+                                style={{ textAlign: "inherit" }}
+                                className="w-full"
                             >
-                                {col.header.content}
-                                {icon}
-                            </div>
-                        </TooltipTrigger>
-                        <TooltipContent>{col.header.tooltip}</TooltipContent>
-                    </Tooltip>
-                </TooltipProvider>
-            </TableHead>
-        )
-    })
+                                <div
+                                    onClick={onClick}
+                                    className={cn(
+                                        "flex",
+                                        props.sortCols?.has(col.id)
+                                            ? "cursor-pointer"
+                                            : "",
+                                        flexJustify[col.align ?? "text-center"],
+                                        flexAlign[col.align ?? "text-center"],
+                                        col.header.tooltip
+                                            ? "tooltip pb-[0.2em]"
+                                            : "",
+                                        `col-${col.id}`,
+                                    )}
+                                >
+                                    {col.header.content}
+                                    {icon}
+                                </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                {col.header.tooltip}
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
+                </TableHead>
+            )
+        })
+    }, [props.cols, props.sortCols, props.sortCriteria])
 
     const [extras, setExtras] = useState<any[]>(props.cols.map(() => null))
-    const preprocs = props.cols.map((col, idx) => (
-        <Preprocessor
-            key={col.id}
-            col={col}
-            data={props.data}
-            setExtras={(xs) => {
-                extras[idx] = xs
-                setExtras(extras)
-            }}
-        />
-    ))
+    const preprocs = useMemo(() => {
+        return props.cols.map((col, idx) => (
+            <Preprocessor
+                key={col.id}
+                col={col}
+                data={props.data}
+                setExtras={(xs) => {
+                    setExtras((curr) => {
+                        const next = [...curr]
+                        next[idx] = xs
+                        return next
+                    })
+                }}
+            />
+        ))
+    }, [props.cols, props.data])
 
     const prefetchTimer = useRef(0)
 
@@ -270,8 +288,7 @@ const TableInner = <T,>(
         const isSelected = id === props.selectedId
         const isNextSelected = nextId === props.selectedId
         const rowExtras = props.cols.map(
-            // @todo: why is this sometimes null when switching tabs with tables
-            (_, colIdx) => extras[colIdx]?.[idx] ?? null,
+            (_, colIdx) => extras[colIdx][idx] ?? null,
         )
 
         return (
@@ -305,11 +322,11 @@ const TableInner = <T,>(
         >
             <TableHeader>
                 <TableRow className={cn(headerSelected)}>
-                    {...preprocs}
-                    {...headerRow}
+                    {preprocs}
+                    {headerRow}
                 </TableRow>
             </TableHeader>
-            <TableBody>{...bodyRows}</TableBody>
+            <TableBody>{bodyRows}</TableBody>
         </Table>
     )
 }
@@ -359,26 +376,26 @@ const Row = ReactMemo(
                 className={"py-2" + selectedClass}
                 data-id={id}
                 onClick={() => props.onClick?.(props.d)}
-                onMouseEnter={() => {
+                onMouseEnter={useCallback(() => {
                     if (props.onHover && props.onHover.delay > 0) {
                         clearTimeout(props.prefetchTimer.current)
 
                         const fn = props.onHover.fn
                         const newTimer = setTimeout(() => {
-                            L.debug("Prefetching", id, props.d)
+                            // L.debug("Prefetching", id, props.d)
                             fn(props.d)
                             props.prefetchTimer.current = 0
                         }, props.onHover.delay)
                         props.prefetchTimer.current = newTimer as any as number
                     }
-                }}
-                onMouseLeave={() => {
+                }, [props.onHover, props.prefetchTimer, props.d])}
+                onMouseLeave={useCallback(() => {
                     if (props.prefetchTimer.current !== null) {
                         clearTimeout(props.prefetchTimer.current)
                     }
-                }}
+                }, [props.prefetchTimer])}
             >
-                {...cells}
+                {cells}
             </TableRow>
         )
     },

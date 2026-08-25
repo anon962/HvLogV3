@@ -473,7 +473,7 @@ class LogSourceLocal implements N.Protocol {
                 resultCount: matches.length,
                 pageSize: req.pageSize,
                 results,
-                ttl: hasPending ? 0.25 : 10,
+                ttl: (hasPending ? 0.25 : 10) * 1000,
                 stale: hasPending,
             }
         },

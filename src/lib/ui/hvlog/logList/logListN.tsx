@@ -415,14 +415,11 @@ export namespace LogListN {
             }
 
             const currReq = fetcher.request
-            const refetchTimer = setTimeout(
-                () => {
-                    if (isEqual(fetcher.request, currReq)) {
-                        fetcher.setRequest({ ...currReq })
-                    }
-                },
-                fetcher.data.ttl * 2 * 1000,
-            )
+            const refetchTimer = setTimeout(() => {
+                if (isEqual(fetcher.request, currReq)) {
+                    fetcher.setRequest({ ...currReq })
+                }
+            }, fetcher.data.ttl * 2)
 
             return () => clearTimeout(refetchTimer)
         }, [fetcher.data, fetcher.request])
