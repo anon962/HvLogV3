@@ -1,11 +1,8 @@
 import {
-    AsyncLock,
-    AsyncLockReturn,
     batched,
     enumerate,
     L,
     last,
-    objectEntries,
     objectKeys,
     pluralfy,
     sleep,
@@ -109,7 +106,8 @@ export function runUserscriptTasks(opts: TaskOpts) {
     return () => {
         isCancelled = true
 
-        TASK_DATA[TASKS.findIndex((x) => x === pollPrices)].delay = null
+        // Causes (non-infinite) echo
+        // TASK_DATA[TASKS.findIndex((x) => x === pollPrices)].delay = null
 
         resolveCancel(null)
     }

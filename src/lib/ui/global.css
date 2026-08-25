@@ -170,6 +170,17 @@
             );
         }
     }
+
+    .toaster li {
+        background-color: var(--color-pink-600);
+
+        font-size: 1rem;
+
+        div {
+            color: var(--foreground);
+            font-weight: bold !important;
+        }
+    }
 }
 
 @custom-variant dark (&:is(.dark *));

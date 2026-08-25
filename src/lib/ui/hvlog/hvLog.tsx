@@ -17,6 +17,8 @@ import { LogList } from "./logList/logList"
 import { MonsterPage } from "./monsterPage"
 import { RouteDef, RouteLink, ROUTER, Router } from "./router"
 import { DbN } from "@/lib/db/dbN"
+import { ConfigPage } from "./configPage"
+import { Cog6Icon } from "../icons/tailwind"
 
 // @fixme: profit history (bar graph, day month)
 // @fixme: avg drops per battle type (including equips)
@@ -24,7 +26,6 @@ import { DbN } from "@/lib/db/dbN"
 // @fixme: isekai
 // @fixme: uploads / deletes
 // @fixme: item world
-// @fixme: useAppCache
 // @fixme: clear cache command
 
 // @todo: per round / avgs (config?)
@@ -62,6 +63,11 @@ export const HvLog = (props: { prefix?: string[] }) => {
                       component: <EquipPage />,
                   })
                 : null,
+            "/config": IS_LOCAL
+                ? () => ({
+                      component: <ConfigPage />,
+                  })
+                : null,
         } satisfies Record<string, RouteDef | null>).flatMap((kv) =>
             kv[1] ? [[normalizeUrlParts(kv[0].split("/")), kv[1]]] : [],
         ),
@@ -69,23 +75,31 @@ export const HvLog = (props: { prefix?: string[] }) => {
 
     const sidebarItems = (
         [
+            IS_LOCAL
+                ? {
+                      icon: <Cog6Icon />,
+                      path: "/config",
+                      tooltip: "Settings",
+                  }
+                : null,
             {
                 icon: <ScrollText />,
                 path: "/logs/",
                 isActive: (parts) => parts[0] === "logs",
-                // isDisabled: (parts) =>
-                //     parts[0] === "logs" && parts.length === 1,
+                tooltip: "Battle Logs",
             },
             IS_REMOTE
                 ? {
                       icon: "ML",
                       path: "/mobs",
+                      tooltip: "Monster Stats",
                   }
                 : null,
             IS_LOCAL
                 ? {
                       icon: "EQ",
                       path: "/equips",
+                      tooltip: "Equip Log",
                   }
                 : null,
         ] satisfies Array<SidebarItem | null>
@@ -198,10 +212,12 @@ function LogDetailsRoute(props: { id: DbN.LogId }) {
 
         title = [
             humanizeBattleType(m.battleType, m.round?.end ?? null),
-            meta.user_name ?? "(anonymous)",
+            IS_REMOTE ? (meta.user_name ?? "(anonymous)") : "",
             humanizeFightingType(details.combat.style),
-            `${d.getFullYear()}-${zfill(d.getMonth())}-${zfill(d.getDate())} ${zfill(d.getHours())}:${zfill(d.getMinutes())}`,
-        ].join(" - ")
+            `${d.getFullYear()}-${zfill(d.getMonth() + 1)}-${zfill(d.getDate())} ${zfill(d.getHours())}:${zfill(d.getMinutes())}`,
+        ]
+            .filter((x) => x.length > 0)
+            .join(" - ")
     } else {
         title = "-"
     }

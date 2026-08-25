@@ -814,6 +814,11 @@ type V3Export = {
     type: "v3_export"
     meta: DbN.IdbSchema["logsMeta"][DbN.LogId]
     raw: DbN.IdbSchema["logsRaw"][DbN.LogId] & { raw: string }
+    hvdata?: {
+        id: string
+        uid: string
+        ukey: string
+    }
 }
 
 // #region css

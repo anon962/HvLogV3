@@ -8,6 +8,7 @@ import { LogListN } from "./logListN"
 import { MonthYearPicker } from "../../monthYearPicker"
 import { USERSCRIPT_CONFIG } from "@/lib/db/userscriptConfig"
 import { useMemo } from "react"
+import { LogSourceN } from "@/lib/db/logSourceN"
 
 export function LogList() {
     return (
@@ -100,15 +101,22 @@ export function Table() {
                       }
                     : {}),
             })}
-            onHover={{
-                delay: config.prefetchDelay || DEFAULT_PREFETCH_DELAY,
-                fn: (r) => {
-                    if (IS_REMOTE) {
-                        logSource.fetchPrices("persistent")
-                    }
-                    logSource.prefetchDetails(r.id)
-                },
-            }}
+            onHover={useMemo(
+                () => ({
+                    delay: config.prefetchDelay || DEFAULT_PREFETCH_DELAY,
+                    fn: (r: LogSourceN.SearchResult) => {
+                        if (config.prefetchDelay < 0) {
+                            return
+                        }
+
+                        if (IS_REMOTE) {
+                            logSource.fetchPrices("persistent")
+                        }
+                        logSource.prefetchDetails(r.id)
+                    },
+                }),
+                [config],
+            )}
             filter={{
                 trigger: <SlidersHorizontal className="size-full" />,
                 content: <Filter />,

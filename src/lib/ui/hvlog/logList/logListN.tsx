@@ -558,7 +558,7 @@ function formatCompletionType(x: LogSourceN.SearchResult) {
             break
         case "die":
             statusEl = (
-                <span className="die flex justify-center gap-1">
+                <span className="die flex justify-center gap-1 items-center">
                     <span className="w-5">
                         <Skull2Icon />
                     </span>
@@ -570,7 +570,7 @@ function formatCompletionType(x: LogSourceN.SearchResult) {
             break
         case "flee":
             statusEl = (
-                <span className="flee flex justify-center gap-1">
+                <span className="flee flex justify-center gap-1 items-center">
                     <span className="w-6">
                         <RunIcon />
                     </span>
@@ -582,7 +582,7 @@ function formatCompletionType(x: LogSourceN.SearchResult) {
             break
         default:
             statusEl = (
-                <span className="flex justify-center gap-1">
+                <span className="flex justify-center gap-1 items-center">
                     <span className="">???</span>
 
                     {roundEl}

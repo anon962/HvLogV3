@@ -120,10 +120,19 @@ function EquipPageInner(props: {}) {
                     trigger: <SlidersHorizontal className="size-full" />,
                     active: ctx.hasFilters,
                 }}
-                onHover={{
-                    delay: config.prefetchDelay || DEFAULT_PREFETCH_DELAY,
-                    fn: (r) => logSource.prefetchDetails(r.id),
-                }}
+                onHover={useMemo(
+                    () => ({
+                        delay: config.prefetchDelay || DEFAULT_PREFETCH_DELAY,
+                        fn: (r: EquipPageN.Row) => {
+                            if (config.prefetchDelay < 0) {
+                                return
+                            }
+
+                            logSource.prefetchDetails(r.id)
+                        },
+                    }),
+                    [config],
+                )}
             />
         </div>
     )
