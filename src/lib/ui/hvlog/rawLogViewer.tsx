@@ -4,7 +4,7 @@ import { IndexMap } from "@/lib/stats/indexMap"
 import { v91 } from "@/lib/v91/v91"
 import { ChevronDown } from "lucide-react"
 import {
-    alphabetical,
+    alphabeticalBy,
     bufferedReduce,
     cn,
     css,
@@ -17,6 +17,7 @@ import {
 } from "myutils"
 import { Fragment, useDeferredValue, useEffect, useMemo, useState } from "react"
 import { CheckboxGroup } from "../checkboxGroup"
+import { Button } from "../shadcn/button"
 import { useUrlParams } from "./router"
 
 export function RawLogViewer(props: { id: DbN.LogId }) {
@@ -91,10 +92,10 @@ function TurnExpander(props: { region: N.Region }) {
                 const entry = ctx.entries[idx]
                 if (entry.type === "event") {
                     return ctx.eventTypes.findIndex(
-                        (x) => x === entry.event.event_type,
+                        (x) => x.id === entry.event.event_type,
                     )
                 } else {
-                    return -1
+                    return 0
                 }
             }),
         )
@@ -120,7 +121,15 @@ function TurnExpander(props: { region: N.Region }) {
                 <div className="events">
                     {range(props.region.idxs[0], props.region.idxs[1] + 1).map(
                         (logIdx) => (
-                            <p key={logIdx}>{ctx.lines[logIdx]}</p>
+                            <p
+                                key={logIdx}
+                                className={cn({
+                                    "text-red-300":
+                                        ctx.entries[logIdx].type === "error",
+                                })}
+                            >
+                                {ctx.lines[logIdx]}
+                            </p>
                         ),
                     )}
                 </div>
@@ -146,7 +155,7 @@ function RoundExpander(props: { region: N.Region; isStart: boolean }) {
                 const entry = ctx.entries[idx]
                 if (entry.type === "event") {
                     return ctx.eventTypes.findIndex(
-                        (x) => x === entry.event.event_type,
+                        (x) => x.id === entry.event.event_type,
                     )
                 } else {
                     return -1
@@ -182,7 +191,15 @@ function RoundExpander(props: { region: N.Region; isStart: boolean }) {
                 <div className="events">
                     {range(props.region.idxs[0], props.region.idxs[1] + 1).map(
                         (logIdx) => (
-                            <p key={logIdx}>{ctx.lines[logIdx]}</p>
+                            <p
+                                key={logIdx}
+                                className={cn({
+                                    "text-red-300":
+                                        ctx.entries[logIdx].type === "error",
+                                })}
+                            >
+                                {ctx.lines[logIdx]}
+                            </p>
                         ),
                     )}
                 </div>
@@ -202,12 +219,14 @@ function Filter(props: {}) {
             [...ctx2.params.ev.v].map((idx) => ctx2.eventTypes[idx]),
         )
 
-        return ctx2.eventTypes.map((id, idx) => ({
-            label: id,
+        const options = ctx2.eventTypes.map((x, idx) => ({
+            label: x.id,
+            title: x.title,
+            className: ctx2.activeEventTypes.has(x.id) ? "" : "text-muted",
             idx,
-            checked: secondaryMask.has(id),
+            checked: secondaryMask.has(x),
         }))
-        // .filter((x) => !ctx2.eventMaskPrimary.has(x.label))
+        return options
     }, [ctx2.params.ev, ctx2.eventTypes, ctx2.eventMaskPrimary])
 
     return (
@@ -302,7 +321,8 @@ namespace RawLogViewerN {
 
         const dataStuff = useMemo(() => {
             let regions: Array<Region> = []
-            let eventTypes: string[] = []
+            let eventTypes = [{ id: "(error)", title: "" }]
+            let activeEventTypes = new Set<string>()
             let lines: Array<string> = []
             let entries: Array<LogEntry> = []
             let indexMap = new IndexMap([], {}, 0)
@@ -323,9 +343,14 @@ namespace RawLogViewerN {
 
                 switch (meta.version) {
                     case "v91":
-                        eventTypes = v91.ALL_PARSERS.map((x) => x.name)
+                        eventTypes.push(
+                            ...v91.ALL_PARSERS.map((x) => ({
+                                id: x.name,
+                                title: x.patt.source,
+                            })),
+                        )
                 }
-                eventTypes = alphabetical(eventTypes)
+                eventTypes = alphabeticalBy(eventTypes, (x) => x.id)
 
                 eventMaskPrimary = new Set([
                     "P_CAST",
@@ -360,6 +385,12 @@ namespace RawLogViewerN {
                                 primary = true
                             }
 
+                            if (entry.type === "event") {
+                                activeEventTypes.add(entry.event.event_type)
+                            } else {
+                                activeEventTypes.add("(error)")
+                            }
+
                             if (primary && buf.length > 0) {
                                 result.push({ idxs: [buf[0], last(buf)!] })
                                 buf = [idx]
@@ -377,6 +408,7 @@ namespace RawLogViewerN {
 
             return {
                 eventTypes,
+                activeEventTypes,
                 eventMaskPrimary,
                 lines,
                 entries,
@@ -394,7 +426,6 @@ namespace RawLogViewerN {
     })
 }
 import N = RawLogViewerN
-import { Button } from "../shadcn/button"
 // #endregion
 
 // #region css

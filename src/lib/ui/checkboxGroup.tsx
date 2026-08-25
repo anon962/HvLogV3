@@ -30,6 +30,8 @@ export function CheckboxGroup({
     hideAll?: boolean
     options: Array<{
         label: string
+        title?: string
+        className?: string
     }>
     listProps?: CommonProps
     headerProps?: CommonProps
@@ -90,6 +92,7 @@ export function CheckboxGroup({
                 {...options.map((opt, idx) => (
                     <LabeledCheckbox
                         label={opt.label}
+                        title={opt.title}
                         checked={checked[idx]}
                         onCheckedChange={(update, hasShift) => {
                             let changeIdx = new Set<number>([idx])
@@ -111,7 +114,9 @@ export function CheckboxGroup({
                             })
                             setLastActiveIdx(idx)
                         }}
-                        labelProps={labelProps ?? {}}
+                        labelProps={mergeProps(labelProps ?? {}, {
+                            className: opt?.className ?? "",
+                        })}
                         inputProps={inputProps ?? {}}
                         {...containerProps}
                     />
