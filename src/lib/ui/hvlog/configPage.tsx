@@ -86,7 +86,7 @@ export function ConfigPage(props: {}) {
                             onInput={(v) =>
                                 setPending({ ...pending, prefetchDelay: v })
                             }
-                            width={10}
+                            width={12}
                             scale={1000}
                         />
                     </Setting>
@@ -276,7 +276,11 @@ export function ConfigPage(props: {}) {
 
                     <UploadSection pending={pending} setPending={setPending} />
 
-                    <PriceSection pending={pending} setPending={setPending} />
+                    <PriceSection
+                        pending={pending}
+                        setPending={setPending}
+                        version={version}
+                    />
                 </div>
 
                 <div className="spacer"></div>
@@ -290,7 +294,21 @@ export function ConfigPage(props: {}) {
                         <ActionButton
                             label="Default"
                             onClick={() => {
-                                setPending(DEFAULT_USERSCRIPT_CONFIG())
+                                let clearUser = false
+                                if (pending.hvdataUser?.id) {
+                                    clearUser = confirm(
+                                        `All settings set to default. Delete the HvData user too? (id=${pending.hvdataUser.id}, key=${pending.hvdataUser.key}, name=${pending.hvdataUser.name})`,
+                                    )
+                                }
+
+                                const update = DEFAULT_USERSCRIPT_CONFIG()
+                                if (!clearUser) {
+                                    update.hvdataUser = JSON.parse(
+                                        JSON.stringify(pending.hvdataUser),
+                                    )
+                                }
+
+                                setPending(update)
                                 setVersion(version + 1)
                             }}
                             loading={loading}
@@ -445,7 +463,14 @@ function UploadSection(props: {
                     className="uploads-secondary"
                     style={{ display: isActive ? "contents" : "none" }}
                 >
-                    <div>Delay uploads until Dawn?</div>
+                    <div>
+                        <p>Delay uploads until Dawn?</p>
+                        <p className="text-muted-foreground text-[length:0.7rem]">
+                            Uploads will not be visible until the next Dawn.
+                            <br />
+                            Start date of battle will also be set to Dawn.
+                        </p>
+                    </div>
                     <MySelect
                         value={props.pending.hvdataDelayDawn}
                         options={useMemo(
@@ -474,7 +499,14 @@ function UploadSection(props: {
                         }
                     />
 
-                    <div>Anonymous?</div>
+                    <div>
+                        Anonymous?
+                        <p className="text-muted-foreground text-[length:0.7rem]">
+                            Uploads will have the HvData user name and user id
+                            hidden.
+                            <br /> (Both listed below.)
+                        </p>
+                    </div>
                     <MySelect
                         value={props.pending.hvdataAnon}
                         options={useMemo(
@@ -503,7 +535,14 @@ function UploadSection(props: {
                         }
                     />
 
-                    <div>Display Name (optional)</div>
+                    <div>
+                        <p>Display Name (optional)</p>
+                        <p className="text-muted-foreground text-[length:0.7rem]">
+                            Whatever name you want the uploads associated with.
+                            <br /> Does not have to be your real user name /
+                            unique.
+                        </p>
+                    </div>
                     <Input
                         value={namePref ?? ""}
                         type="string"
@@ -519,7 +558,7 @@ function UploadSection(props: {
 
                     <div className="flex flex-col">
                         <p>User Id</p>
-                        <p className="text-muted-foreground">
+                        <p className="text-muted-foreground text-[length:0.7rem]">
                             Do NOT edit this unless you are sure
                             <br /> the id + key is valid
                         </p>
@@ -545,7 +584,7 @@ function UploadSection(props: {
 
                     <div className="flex flex-col">
                         <p>User Key</p>
-                        <p className="text-muted-foreground">
+                        <p className="text-muted-foreground text-[length:0.7rem]">
                             Do NOT edit this unless you are sure
                             <br /> the id + key is valid
                         </p>
@@ -577,6 +616,7 @@ function UploadSection(props: {
 function PriceSection(props: {
     pending: UserscriptConfig
     setPending: Dispatch<SetStateAction<UserscriptConfig>>
+    version: number
 }) {
     const keys = useMemo(() => {
         const persistent = new Set(Object.keys(props.pending.prices.persistent))
@@ -597,6 +637,7 @@ function PriceSection(props: {
                     return (
                         <PriceInput
                             key={k}
+                            version={props.version}
                             pending={props.pending}
                             setPending={props.setPending}
                             priceKey={k}
@@ -619,6 +660,7 @@ function PriceSection(props: {
 }
 
 function PriceInput(props: {
+    version: number
     pending: UserscriptConfig
     setPending: Dispatch<SetStateAction<UserscriptConfig>>
     priceKey: string
@@ -664,11 +706,16 @@ function PriceInput(props: {
         },
     })
 
+    useEffect(() => {
+        setP(props.pending.pricesOverrides.persistent[props.priceKey] ?? null)
+        setI(props.pending.pricesOverrides.isekai[props.priceKey] ?? null)
+    }, [props.version])
+
     return (
         <>
             <Input
                 type="number"
-                value={p ?? undefined}
+                value={p ?? ""}
                 disabled={props.persistent === null}
                 placeholder={
                     props.persistent !== null ? String(props.persistent) : ""
@@ -685,7 +732,7 @@ function PriceInput(props: {
             />
             <Input
                 type="number"
-                value={i ?? undefined}
+                value={i ?? ""}
                 disabled={props.isekai === null}
                 placeholder={props.isekai !== null ? String(props.isekai) : ""}
                 min={0}
@@ -698,7 +745,7 @@ function PriceInput(props: {
                     }
                 }}
             />
-            <div>{props.priceKey}</div>
+            <div className="text-xs">{props.priceKey}</div>
         </>
     )
 }

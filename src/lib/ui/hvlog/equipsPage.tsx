@@ -8,6 +8,7 @@ import { decompressZstd, transposeForCss } from "@/lib/utils/miscUtils"
 import { SlidersHorizontal } from "lucide-react"
 import {
     alphabeticalBy,
+    clamp,
     cn,
     css,
     isEqual,
@@ -112,8 +113,11 @@ function EquipPageInner(props: {}) {
                     options: [25, 200, 500, 1000, 12345, 999999],
                     handler: (sz) => ctx.setParams({ n: sz }),
                 }}
-                pageIndex={ctx.pageIndex}
-                setPageIndex={(idx) => ctx.setParams({ p: idx + 1 })}
+                pageIndex={ctx.pageIndex - 1}
+                pageUrl={(pageIdx) => ({
+                    ...mapEntries(ctx.params, (k, v) => ({ [k]: v.raw })),
+                    p: String(pageIdx + 1),
+                })}
                 isLoading={ctx.isLoading}
                 filter={{
                     content: <Filter />,
@@ -141,6 +145,19 @@ function EquipPageInner(props: {}) {
 // #region filter
 function Filter() {
     const ctx = EQUIP_PAGE.useContext()
+
+    const [d0, setD0] = useDebouncedWrite({
+        value: ctx.params.d0.v,
+        onUpdate: (x) => {
+            ctx.setParams({ d0: x })
+        },
+    })
+    const [d1, setD1] = useDebouncedWrite({
+        value: ctx.params.d1.v,
+        onUpdate: (x) => {
+            ctx.setParams({ d1: x })
+        },
+    })
 
     return (
         <form className="rounded-md border p-4 text-xs flex flex-col gap-2">
@@ -206,9 +223,9 @@ function Filter() {
                     <Input
                         className="text-[length:inherit]! p-[0.5em] h-min"
                         type="date"
-                        value={ctx.params.d0.v?.toISOString().split("T")[0]}
+                        value={d0?.toISOString().split("T")[0] ?? ""}
                         onInput={(ev) => {
-                            ctx.setParams({ d0: ev.target.valueAsDate })
+                            setD0(ev.target.valueAsDate)
                         }}
                     />
                 </div>
@@ -217,9 +234,9 @@ function Filter() {
                     <Input
                         className="text-[length:inherit]! p-[0.5em] h-min"
                         type="date"
-                        value={ctx.params.d1.v?.toISOString().split("T")[0]}
+                        value={d1?.toISOString().split("T")[0] ?? ""}
                         onInput={(ev) => {
-                            ctx.setParams({ d1: ev.target.valueAsDate })
+                            setD1(ev.target.valueAsDate)
                         }}
                     />
                 </div>
@@ -352,7 +369,7 @@ const EQUIP_PAGE = newContext(() => {
         }
     }, [])
 
-    const [page, count]: [EquipPageN.Row[], number] = useMemo(() => {
+    const filterSortIdxs = useMemo(() => {
         let idxs = range(data.length)
         if (params.et.v.length > 0) {
             idxs = idxs.filter((idx) =>
@@ -415,13 +432,18 @@ const EQUIP_PAGE = newContext(() => {
                 break
         }
 
-        const st = params.p.v * params.n.v
-        const page = idxs.slice(st, st + params.n.v)
-        return [page.map((idx) => data[idx]), idxs.length] as const
+        return idxs
     }, [
         dataVersion,
         ...objectValues(mapEntries(params, (k, v) => ({ [k]: v.raw }))),
     ])
+
+    const pageSize = params.n.v
+    const pageCount = Math.ceil(filterSortIdxs.length / pageSize)
+    const pageIndex = clamp(params.p.v, 1, pageCount)
+
+    const st = (pageIndex - 1) * pageSize
+    const page = filterSortIdxs.slice(st, st + pageSize).map((idx) => data[idx])
 
     const paginationParams = useMemo(
         () => new Set(["p", "n", "s", "d", "nm"]),
@@ -442,10 +464,10 @@ const EQUIP_PAGE = newContext(() => {
 
     return {
         page,
-        pageSize: params.n.v,
-        pageIndex: params.p.v,
-        pageCount: Math.ceil(count / params.n.v),
-        count,
+        pageSize,
+        pageIndex,
+        pageCount,
+        count: filterSortIdxs.length,
         params,
         setParams,
         sortCol: params.s,
@@ -543,7 +565,6 @@ export namespace EquipPageN {
         // Pagination options
         p: {
             type: "number",
-            deser: (x) => (x !== null && x >= 1 ? x - 1 : 0),
             init: () => 0,
         },
         n: {
@@ -569,7 +590,6 @@ export namespace EquipPageN {
             type: "bitmask",
             deser: (xs) => {
                 let battleTypes = xs.map((idx) => BTS[idx]).filter((x) => !!x)
-
                 return battleTypes.flatMap((bt) => [...bt.ids])
             },
         },

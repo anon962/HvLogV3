@@ -166,7 +166,6 @@ const TableInner = <T,>(
     } & CommonProps,
 ) => {
     const headerRow = useMemo(() => {
-        console.log("header")
         return props.cols.map((col) => {
             let icon: ReactNode = null
             let onClick = () => {}
