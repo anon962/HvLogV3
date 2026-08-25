@@ -1,15 +1,8 @@
 import { DbN, LogEntries } from "@/lib/db/dbN"
-import {
-    DetailsSummary,
-    SearchSummary,
-    summarizeSearchStats,
-} from "@/lib/stats/summary"
-import { decompressZstd } from "@/lib/utils/miscUtils"
+import { DetailsSummary, SearchSummary } from "@/lib/stats/summary"
 import {
     alphabeticalBy,
-    AsyncLock,
     compressGzip,
-    isChrome,
     isTruthy,
     newContext,
     objectEntries,
@@ -19,17 +12,12 @@ import {
     zip,
 } from "myutils"
 import { useEffect, useRef } from "react"
-import { IS_REMOTE } from "../constants"
-import { MetaSummary } from "../stats/metaStats"
-import { parseLogWithDetails } from "../worker"
-import { LogDb, LogDbConn } from "./db"
-import { LogSourceN as N } from "./logSourceN"
-// @ts-ignore
-import parseLogWithDetailsSrc from "../worker?workerfn=parseLogWithDetails"
-import { USERSCRIPT_CONFIG, UserscriptConfig } from "./userscriptConfig"
+import { IS_REMOTE, LOG_PROCESSING_LOCK } from "../constants"
 import { IndexMap } from "../stats/indexMap"
-
-export const LOG_PROCESSING_LOCK = new AsyncLock()
+import { MetaSummary } from "../stats/metaStats"
+import { LOG_DB_CACHE, LogDb, LogDbCache, LogDbConn } from "./db"
+import { LogSourceN as N } from "./logSourceN"
+import { USERSCRIPT_CONFIG, UserscriptConfig } from "./userscriptConfig"
 
 // #region remote
 class LogSourceRemote implements N.Protocol {
@@ -266,16 +254,16 @@ const newLocalCache = <T>(
 class LogSourceLocal implements N.Protocol {
     ainit: Promise<void>
     db: Promise<LogDb<true>>
-    pool: ReturnType<LogSourceLocal["initWorkerPool"]>
     prices: Promise<UserscriptConfig["prices"]>
+    mgr: LogDbCache
     private logIds: Set<DbN.LogId>
     private bcSub: Unsub
 
     constructor(prices: Promise<UserscriptConfig["prices"]>) {
         this.db = new LogDb().connect()
-        this.pool = this.initWorkerPool()
         this.logIds = new Set<DbN.LogId>()
         this.prices = prices
+        this.mgr = LOG_DB_CACHE()
 
         const self: LogSourceLocal = this
         this.bcSub = DbN.listenIdbEvent((ev, details) => {
@@ -303,22 +291,27 @@ class LogSourceLocal implements N.Protocol {
         return [...this.logIds]
     }
     async fetchMeta(id: DbN.LogId) {
-        return await this.metaCache.fetch(id)
+        return await this.mgr.metaCache.fetch(id)
     }
     async fetchLog(id: DbN.LogId) {
-        return await this.rawCache.fetch(id)
+        return await this.mgr.rawCache.fetch(id)
     }
     async fetchDetails(id: DbN.LogId) {
-        return (await this.entriesDetailsCache.fetch(id)).details
+        return (await this.mgr.entriesDetailsCache.fetch(id)).details
     }
     async fetchMetaSummary(id: DbN.LogId) {
-        return (await this.metaSearchCache.fetch(id)).meta
+        return (
+            await this.mgr.metaSearchCache.fetch({
+                id,
+                prices: await this.prices,
+            })
+        ).meta
     }
     async fetchSearch(req: N.SearchRequest): Promise<N.SearchResponse> {
         return await this.searchResponseCache.fetch(req)
     }
     async fetchEntries(id: DbN.LogId) {
-        return (await this.entriesDetailsCache.fetch(id)).entries
+        return (await this.mgr.entriesDetailsCache.fetch(id)).entries
     }
     async fetchPrices(world: DbN.HvWorld) {
         return (await this.prices)[world]
@@ -364,16 +357,16 @@ class LogSourceLocal implements N.Protocol {
 
     // #region local prefetch
     async prefetchMeta(id: DbN.LogId) {
-        this.metaCache.fetch(id, true)
+        this.mgr.metaCache.fetch(id, true)
     }
     async prefetchLog(id: DbN.LogId) {
-        this.rawCache.fetch(id, true)
+        this.mgr.rawCache.fetch(id, true)
     }
     async prefetchEntries(id: DbN.LogId) {
-        this.entriesDetailsCache.fetch(id, true)
+        this.mgr.entriesDetailsCache.fetch(id, true)
     }
     async prefetchDetails(id: DbN.LogId) {
-        this.entriesDetailsCache.fetch(id, true)
+        this.mgr.entriesDetailsCache.fetch(id, true)
     }
     async prefetchSearch(req: N.SearchRequest) {
         this.searchResponseCache.fetch(req, true)
@@ -381,97 +374,7 @@ class LogSourceLocal implements N.Protocol {
     // #endregion
 
     // #region local caches
-    private metaCache = newLocalCache<DbN.LogMeta>(this, {
-        fetch: async (db, conn, id) => {
-            const r = (await conn.get("logsMeta", id))!
-            return {
-                startedAt: r.startedAt,
-                endedAt: r.endedAt,
-                world: r.world,
-                user_id: null,
-                user_name: null,
-                importedAt: null,
-                errors: {
-                    missingTurns: false,
-                },
-            }
-        },
-    })
-    private rawCache = newLocalCache<string>(this, {
-        size: 3,
-        fetch: async (db, conn, id) => {
-            const r = (await conn.get("logsRaw", id))!
-            if (r.raw !== null) {
-                return r.raw
-            } else {
-                const decompressed = await decompressZstd({ x: r.raw_c })
-                return await new Blob([decompressed]).text()
-            }
-        },
-    })
-    private entriesDetailsCache = newLocalCache(this, {
-        size: isChrome() ? 10 : 3,
-        fetch: async (db, conn, id) => {
-            const raw = await this.rawCache.fetch(id)
-            return await this.pool.parseLogWithDetails({
-                log: raw,
-                createdAt: null,
-            })
-            // const st = performance.now()
-            // const result = await parseLogWithDetails({
-            //     log: raw,
-            //     createdAt: null,
-            // })
-            // const elapsed = performance.now() - st
-            // console.debug(
-            //     `Parsed ${result.entries.length} entries in ${elapsed}ms (${((1000 * elapsed) / result.entries.length).toFixed(1)}us per)`,
-            // )
-            // return result
-        },
-    })
-    private metaSearchCache = newLocalCache<{
-        search: SearchSummary
-        meta: MetaSummary
-    }>(this, {
-        fetch: async (db, conn, id) => {
-            const logMeta: DbN.LogMeta = await this.metaCache.fetch(id)
 
-            let meta: MetaSummary
-            const metaFromDb = await conn.get("summariesForMeta", id)
-            if (!metaFromDb || metaFromDb.version !== LogDb.parserVersion) {
-                const details = (await this.entriesDetailsCache.fetch(id))
-                    .details
-                await conn.put("summariesForMeta", {
-                    id,
-                    version: LogDb.parserVersion,
-                    data: details.meta,
-                })
-                meta = details.meta
-            } else {
-                meta = metaFromDb.data
-            }
-
-            let search: SearchSummary
-            const searchFromDb = await conn.get("summariesForSearch", id)
-            if (!searchFromDb || searchFromDb.version !== LogDb.parserVersion) {
-                const details = (await this.entriesDetailsCache.fetch(id))
-                    .details
-                search = summarizeSearchStats(
-                    details,
-                    await this.fetchPrices(logMeta.world),
-                )
-                await conn.put("summariesForSearch", {
-                    id,
-                    version: LogDb.parserVersion,
-                    data: search,
-                })
-            } else {
-                search = searchFromDb.data
-            }
-
-            return { meta, search }
-        },
-    })
     // #region: local search
     private searchResponseCache = new N.AsyncCache<
         N.SearchRequest,
@@ -489,16 +392,21 @@ class LogSourceLocal implements N.Protocol {
             let toFetch = Promise.resolve<any>(null)
             const pushToFetch = (id: DbN.LogId) => {
                 toFetch = toFetch.then(async () => {
-                    if (!LOG_PROCESSING_LOCK.locked) {
-                        await this.metaSearchCache.fetch(id)
-                        await sleep(1)
-                    }
+                    const lock = await LOG_PROCESSING_LOCK.acquire()
+                    await this.mgr.metaSearchCache.fetch({
+                        id,
+                        prices: await this.prices,
+                    })
+                    lock.release()
                 })
             }
 
             const xs: Array<{ meta: MetaSummary; search: SearchSummary }> = []
             for (const id of this.logIds) {
-                const fromCache = this.metaSearchCache.cache.get(id)?.data
+                const fromCache = this.mgr.metaSearchCache.cache.get({
+                    id,
+                    prices: await this.prices,
+                })?.data
                 if (fromCache) {
                     xs.push(fromCache)
                     ids.push(id)
@@ -509,7 +417,7 @@ class LogSourceLocal implements N.Protocol {
             const hasPending = xs.length !== this.logIds.size
 
             const metas = await Promise.all(
-                ids.map((id) => this.metaCache.fetch(id)),
+                ids.map((id) => this.mgr.metaCache.fetch(id)),
             )
 
             const matches = zip(metas, xs, ids).filter(([m, x]) => {
@@ -585,38 +493,6 @@ class LogSourceLocal implements N.Protocol {
         },
     })
     // #endregion
-
-    private initWorkerPool() {
-        return window.HV_LOG.workerPool.registerModule(
-            "LogSourceLocal",
-            () => ({
-                reps: {
-                    '"parseLogWithDetailsSrc"': JSON.stringify(
-                        parseLogWithDetailsSrc,
-                    ),
-                },
-                initCtx: async () => {
-                    ;(globalThis as any).parseLogWithDetails = globalThis.eval(
-                        "parseLogWithDetailsSrc",
-                    )
-                },
-                fns: {
-                    parseLogWithDetails: async (opts: {
-                        log: string
-                        createdAt: Date | null
-                    }) => {
-                        // const st = performance.now()
-                        const result = await parseLogWithDetails(opts)
-                        // const elapsed = performance.now() - st
-                        // console.debug(
-                        //     `Parsed ${result.entries.length} entries in ${elapsed}ms (${((1000 * elapsed) / result.entries.length).toFixed(1)}us per)`,
-                        // )
-                        return result
-                    },
-                },
-            }),
-        )
-    }
 }
 // #endregion
 

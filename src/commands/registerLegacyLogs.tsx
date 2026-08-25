@@ -307,7 +307,7 @@ function ActionButton(
                 {props.label}
             </span>
             <span className="absolute">
-                <Loader show={props.loading} />
+                <Loader show={props.loading} className="text-sky-400" />
             </span>
         </Button>
     )

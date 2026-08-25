@@ -1,9 +1,8 @@
 import { ISODate, uuidWithFallback } from "myutils"
+import { MetaSummary } from "../stats/metaStats"
 import { SearchSummary } from "../stats/summary"
 import { BaseHvEvent } from "../utils/eventParser"
-import { MetaSummary } from "../stats/metaStats"
 import { UserscriptConfig } from "./userscriptConfig"
-import { EquipPageN } from "../ui/hvlog/equipsPage"
 
 export type LogEntry<TEvent extends BaseHvEvent = BaseHvEvent> =
     | { type: "event"; event: TEvent }
@@ -96,6 +95,17 @@ export namespace DbN {
                 equips: Uint8Array<ArrayBuffer>
                 pending: boolean
             }
+            detailsCacheHistory: Record<
+                DbN.LogId,
+                {
+                    lastFetch: ISODate
+                }
+            >
+            searchDone: {
+                version: number
+                done: Set<LogId>
+                pending: boolean
+            }
         }
         live: Record<`${LogId}_${number}`, { logId: LogId; lines: string[] }>
         logsMeta: Record<
@@ -120,6 +130,22 @@ export namespace DbN {
                   raw_size: number
                   raw_c: Uint8Array<ArrayBuffer>
               }
+        >
+        entriesCache: Record<
+            LogId,
+            {
+                id: LogId
+                version: number
+                data: Uint8Array<ArrayBuffer> // LogEntries
+            }
+        >
+        summariesForDetails: Record<
+            LogId,
+            {
+                id: LogId
+                version: number
+                data: Uint8Array<ArrayBuffer> // DetailsSummary
+            }
         >
         summariesForMeta: Record<
             LogId,

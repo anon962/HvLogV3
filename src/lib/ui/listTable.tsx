@@ -365,7 +365,7 @@ const Row = ReactMemo(
 
                         const fn = props.onHover.fn
                         const newTimer = setTimeout(() => {
-                            // L.debug("Prefetching", id, props.d)
+                            L.debug("Prefetching", id, props.d)
                             fn(props.d)
                             props.prefetchTimer.current = 0
                         }, props.onHover.delay)

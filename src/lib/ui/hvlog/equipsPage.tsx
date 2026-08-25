@@ -283,12 +283,14 @@ const EQUIP_PAGE = newContext(() => {
     useEffect(() => {
         let done = false
         async function poll() {
-            const dbP = await new LogDb().connect()
+            const db = await new LogDb().connect()
             const dummy: any = {}
 
             let equips: EquipPageN.IdbStorage
             while (!done) {
-                const equipTally = await dbP.get("kv", "equipTally")
+                const equipTally = await db.get("kv", "equipTally")
+
+                // not generated yet
                 if (!equipTally || equipTally.equips.byteLength === 0) {
                     setIsLoading(true)
                     await sleep(5_000)

@@ -1,25 +1,30 @@
 import {
     AsyncLock,
+    AsyncLockReturn,
     batched,
     enumerate,
     L,
+    last,
+    objectEntries,
     pluralfy,
     sleep,
+    sort,
     throttle,
 } from "myutils"
+import { HV_WORLDS, LOG_PROCESSING_LOCK } from "../constants"
+import { EquipPageN } from "../ui/hvlog/equipsPage"
 import { compressZstd, decompressZstd } from "../utils/miscUtils"
-import { LogDb } from "./db"
-import { UserscriptConfig } from "./userscriptConfig"
+import { LOG_DB_CACHE, LogDb } from "./db"
 import { DbN } from "./dbN"
 import { LogSourceN } from "./logSourceN"
-import { EquipPageN } from "../ui/hvlog/equipsPage"
-import { HV_WORLDS } from "../constants"
+import { UserscriptConfig } from "./userscriptConfig"
 
-export const TASK_LOCK = new AsyncLock()
 const TASKS: Array<(opts: TaskOpts) => TaskGen> = [
     pollPrices,
+    populateSearch,
     compressLogs,
     tallyEquips,
+    trimDetailsCache,
 ]
 const ACTIVE_TASK = {
     task: null as TaskGen | null,
@@ -46,7 +51,7 @@ export function runUserscriptTasks(opts: TaskOpts) {
         Promise.withResolvers<null>()
     async function poll() {
         while (!isCancelled) {
-            const lock = await TASK_LOCK.acquire()
+            const lock = await LOG_PROCESSING_LOCK.acquire()
             try {
                 if (ACTIVE_TASK.task === null) {
                     const idleTaskIdx = TASK_DATA.findIndex(
@@ -78,7 +83,10 @@ export function runUserscriptTasks(opts: TaskOpts) {
                     result = await ACTIVE_TASK.task.next(opts)
                 } catch (e) {
                     // Should only throw when logs are deleted after key query
-                    L.error(e)
+                    if (e instanceof Error) {
+                        L.error(e.stack)
+                    }
+                    L.error(e, ACTIVE_TASK)
                     const idx = ACTIVE_TASK.idx
                     ACTIVE_TASK.task = null
                     TASK_DATA[idx].delay = sleep(30_000).then(() => idx)
@@ -91,7 +99,7 @@ export function runUserscriptTasks(opts: TaskOpts) {
                     TASK_DATA[idx].delay = result.value().then(() => idx)
                 }
             } finally {
-                lock.release()
+                lock?.release()
             }
         }
     }
@@ -207,11 +215,9 @@ async function* compressLogs(opts: TaskOpts): TaskGen {
         logCount: 0,
     }
 
-    const conn = await db.conn
-    const ids = new Set(await conn.getAllKeys("logsMeta"))
+    const existing = new Set(await db.getAllKeys("logsMeta"))
     const done = (await db.get("kv", "compressDone")) ?? new Set<string>()
-
-    const missing = ids.difference(done)
+    const missing = existing.difference(done)
     if (missing.size === 0) {
         if (done.size > 0) {
             return () => sleep(DELAY)
@@ -296,37 +302,37 @@ async function* tallyEquips(opts: TaskOpts): TaskGen {
     }
 
     type EquipTally = DbN.IdbSchema["kv"]["equipTally"]
-    const init: () => EquipTally = () => ({
+    const init: () => Promise<EquipTally> = async () => ({
         version: LogDb.parserVersion,
         done: new Set(),
-        equips: new Uint8Array(),
+        equips: await compressZstd({
+            x: JSON.stringify({
+                id: [],
+                idx: [],
+                name: [],
+                battleTypeId: [],
+                battleTypeCategory: [],
+                battleTypeCategoryValue: [],
+                roundMax: [],
+                date: [],
+                isBonus: [],
+                world: [],
+            }),
+            level: 10,
+            pool: false,
+        }),
         pending: false,
     })
-    let equipTally = (await db.get("kv", "equipTally")) ?? init()
+    let equipTally = await db.get("kv", "equipTally")
 
     if (!equipTally || equipTally.version < LogDb.parserVersion) {
-        equipTally = init()
+        equipTally = await init()
+        await db.put("kv", equipTally, "equipTally")
     }
 
-    let equips: EquipPageN.IdbStorage
-    if (equipTally.equips.byteLength > 0) {
-        const decompressed = await decompressZstd({ x: equipTally.equips })
-        const text = await new Blob([decompressed]).text()
-        equips = JSON.parse(text)
-    } else {
-        equips = {
-            id: [],
-            idx: [],
-            name: [],
-            battleTypeId: [],
-            battleTypeCategory: [],
-            battleTypeCategoryValue: [],
-            roundMax: [],
-            date: [],
-            isBonus: [],
-            world: [],
-        }
-    }
+    const decompressed = await decompressZstd({ x: equipTally.equips })
+    const text = await new Blob([decompressed]).text()
+    const equips: EquipPageN.IdbStorage = JSON.parse(text)
 
     const conn = await db.conn
     const ids = new Set(await conn.getAllKeys("logsMeta"))
@@ -406,6 +412,129 @@ async function* tallyEquips(opts: TaskOpts): TaskGen {
         await db.put("kv", equipTally, "equipTally")
     }
 
+    return () => sleep(DELAY)
+}
+// #endregion
+
+// #region trimDetailsCache
+async function* trimDetailsCache(opts: TaskOpts): TaskGen {
+    const DELAY = 5 * 60 * 1000
+    const SOFT_SIZE_CAP = 50
+    const HARD_SIZE_CAP = 100
+    const MIN_TTL = 15 * 60 * 1000
+
+    const db = await new LogDb().connect()
+
+    const idsEntries = new Set(await db.getAllKeys("entriesCache"))
+    const idsDetails = new Set(await db.getAllKeys("summariesForDetails"))
+    const ids = idsEntries.union(idsDetails)
+
+    const history = (await db.get("kv", "detailsCacheHistory")) ?? {}
+
+    let mode, overflowCount
+
+    if (ids.size > HARD_SIZE_CAP) {
+        mode = "hard"
+        overflowCount = ids.size - HARD_SIZE_CAP
+    } else if (ids.size > SOFT_SIZE_CAP) {
+        mode = "soft"
+        overflowCount = ids.size - SOFT_SIZE_CAP
+    } else {
+        return () => sleep(DELAY)
+    }
+
+    let candidates: Array<{ id: DbN.LogId; age: number }> = []
+    const now = new Date().getTime()
+    for (const id of ids) {
+        let lastFetch = 0
+        if (id in history) {
+            lastFetch = new Date(history[id].lastFetch).getTime()
+        }
+
+        const age = now - lastFetch
+        if (age > MIN_TTL || mode === "hard") {
+            candidates.push({ id, age })
+        }
+    }
+    candidates = sort(candidates, (x) => x.age, true)
+
+    const overflow = candidates.slice(0, overflowCount)
+    L.info(`Evicting ${overflow.length} logs from entries + details caches`)
+    for (const { id } of overflow) {
+        const txn = await db.transaction(
+            ["entriesCache", "summariesForDetails"],
+            "readwrite",
+        )
+        if (await txn.objectStore("entriesCache").getKey(id)) {
+            txn.objectStore("entriesCache").delete(id)
+        }
+        if (await txn.objectStore("summariesForDetails").getKey(id)) {
+            txn.objectStore("summariesForDetails").delete(id)
+        }
+    }
+
+    await db.put("kv", history, "detailsCacheHistory")
+    return () => sleep(DELAY)
+}
+// #endregion
+
+// #region populateSearch
+async function* populateSearch(opts: TaskOpts): TaskGen {
+    const DELAY = 5 * 60 * 1000
+
+    const db = await new LogDb().connect()
+    const cache = LOG_DB_CACHE()
+
+    let searchDone = await db.get("kv", "searchDone")
+    if (!searchDone || searchDone.version !== LogDb.parserVersion) {
+        searchDone = {
+            version: LogDb.parserVersion,
+            done: new Set(),
+            pending: true,
+        }
+    }
+
+    const ids = new Set(await db.getAllKeys("logsMeta"))
+    const missing = new Set(ids).difference(searchDone.done)
+    if (missing.size === 0) {
+        return () => sleep(DELAY)
+    }
+
+    let idx = -1
+    const [pbar, cancelPbar] = throttle({
+        fn: () =>
+            L.info(
+                `Generating search cache (${idx + 1} / ${missing.size}) ...`,
+            ),
+        interval: 5000,
+    })
+
+    if (!searchDone.pending) {
+        searchDone.pending = true
+        await db.put("kv", searchDone, "searchDone")
+    }
+
+    const batches = batched([...missing], 50)
+    for (const batch of batches) {
+        opts = yield
+
+        for (const id of batch) {
+            idx += 1
+            pbar()
+
+            await cache.metaSearchCache.fetch({
+                id,
+                prices: opts.config.prices,
+            })
+            searchDone.done.add(id)
+        }
+
+        searchDone.pending = batch !== last(batches)!
+        await db.put("kv", searchDone, "searchDone")
+    }
+
+    L.info(`Added ${missing.size} logs to search cache`)
+    cancelPbar()
     return () => sleep(DELAY)
 }
 // #endregion

@@ -114,7 +114,11 @@ export namespace LogSourceN {
     }
     export class AsyncCache<TReq, TResp, TMapKey extends string = string> {
         cache: CustomMap<TReq, Dated<TResp>, TMapKey>
-        pending: CustomMap<TReq, Promise<TResp>, TMapKey>
+        pending: CustomMap<
+            TReq,
+            { promise: Promise<TResp>; id: number },
+            TMapKey
+        >
         history: Array<TReq>
 
         activeCount: number
@@ -127,7 +131,8 @@ export namespace LogSourceN {
                 toRaw: (req: TReq) => TMapKey
                 fromRaw: (raw: TMapKey) => TReq
                 fetch: (req: TReq) => Promise<TResp>
-                size?: number
+                cbPost?: (req: TReq, resp: TResp, hit: boolean) => Promise<void>
+                size?: number | null
                 concurrency?: number
                 prefetchSize?: number
             },
@@ -149,7 +154,6 @@ export namespace LogSourceN {
 
         async fetch(req: TReq, isPrefetch = false): Promise<TResp> {
             if (this.cache.has(req)) {
-                // return from cache
                 const fromCache = this.cache.get(req)!
 
                 const ttl =
@@ -157,20 +161,24 @@ export namespace LogSourceN {
                         ? this.opts.ttl(fromCache.data, req)
                         : this.opts.ttl
                 if (ttl === null || !isExpired(fromCache, ttl)) {
+                    await this.opts.cbPost?.(req, fromCache.data, true)
                     return fromCache.data
                 }
             }
 
             // send request
             if (this.pending.has(req)) {
-                return this.pending.get(req)!
+                const resp = await this.pending.get(req)!.promise
+                await this.opts.cbPost?.(req, resp, false)
+                return resp
             }
+            const id = Math.random()
             const {
                 promise: resp,
                 resolve: resolveResp,
                 reject: rejectResp,
             } = Promise.withResolvers<TResp>()
-            this.pending.set(req, resp)
+            this.pending.set(req, { promise: resp, id })
 
             const job: AsyncCacheJob<TResp> = {
                 start: () => this.opts.fetch(req),
@@ -184,11 +192,14 @@ export namespace LogSourceN {
             // save response
             try {
                 const data = await resp
-                this.cache.set(req, {
-                    data,
-                    createdAt: new Date(),
-                })
-                this.pushHistory(req)
+                if (this.pending.get(req)?.id === id) {
+                    this.cache.set(req, {
+                        data,
+                        createdAt: new Date(),
+                    })
+                    this.pushHistory(req)
+                }
+                await this.opts.cbPost?.(req, data, false)
                 return data
             } catch (e) {
                 if (!isPrefetch) {
@@ -198,6 +209,12 @@ export namespace LogSourceN {
             } finally {
                 this.pending.delete(req)
             }
+        }
+
+        clear() {
+            this.cache.clear()
+            this.pending.clear()
+            this.history = []
         }
 
         private checkQueue() {

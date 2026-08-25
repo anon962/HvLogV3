@@ -96,7 +96,9 @@ export function Table() {
             onHover={{
                 delay: config.prefetchDelay || DEFAULT_PREFETCH_DELAY,
                 fn: (r) => {
-                    logSource.fetchPrices()
+                    if (IS_REMOTE) {
+                        logSource.fetchPrices("persistent")
+                    }
                     logSource.prefetchDetails(r.id)
                 },
             }}

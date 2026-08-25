@@ -505,10 +505,7 @@ export namespace UrlParamN {
                     case "number[]":
                     case "boolean[]":
                     case "bitmask": {
-                        initParams[key] = s.init?.() ?? []
-                        if (s.deser) {
-                            initParams[key] = s.deser(initParams[key])
-                        }
+                        initParams[key] = s.init?.() ?? s.deser?.([]) ?? []
 
                         if (key in params && s.deser) {
                             params[key] = s.deser(params[key] ?? [])

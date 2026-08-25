@@ -1,8 +1,6 @@
-import { HV_WORLDS } from "@/lib/constants"
-import { deleteLogs, LogDb } from "@/lib/db/db"
+import { HV_WORLDS, LOG_PROCESSING_LOCK } from "@/lib/constants"
+import { deleteLogs, LOG_DB_CACHE, LogDb } from "@/lib/db/db"
 import { DbN } from "@/lib/db/dbN"
-import { LOG_PROCESSING_LOCK } from "@/lib/db/logSource"
-import { TASK_LOCK } from "@/lib/db/userscriptTasks"
 import { Loader } from "@/lib/ui/loader"
 import { Button } from "@/lib/ui/shadcn/button"
 import { Input } from "@/lib/ui/shadcn/input"
@@ -319,7 +317,7 @@ function ActionButton(
                 {props.label}
             </span>
             <span className="absolute">
-                <Loader show={props.loading} />
+                <Loader show={props.loading} className="text-sky-400" />
             </span>
         </Button>
     )
@@ -622,6 +620,8 @@ function useManagerState() {
     // #endregion
     // #region importLogs
     async function importLogs(opts: { files: File[] }) {
+        const locks = [await LOG_PROCESSING_LOCK.acquire()]
+
         for (const file of opts.files) {
             const name = file.name.toLowerCase()
 
@@ -696,11 +696,6 @@ function useManagerState() {
                     L.error(`Unable to read text file ${x.blame.join("->")}`)
                 }
             }
-
-            const locks = [
-                await TASK_LOCK.acquire(),
-                await LOG_PROCESSING_LOCK.acquire(),
-            ]
 
             const db = await dbFetch
             const stats = {
@@ -777,8 +772,9 @@ function useManagerState() {
                 ((await db.get("kv", "compressDone")) as Set<DbN.LogId>) ??
                 new Set()
             await db.put("kv", done.union(stats.ids), "compressDone")
-            locks.forEach((lock) => lock.release())
         }
+
+        locks.forEach((lock) => lock.release())
     }
     // #endregion
     // #region deleteLogs

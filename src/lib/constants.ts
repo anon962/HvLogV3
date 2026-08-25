@@ -1,3 +1,4 @@
+import { AsyncLock } from "myutils"
 import { DbN } from "./db/dbN"
 
 export const IS_BROWSER = typeof window !== "undefined"
@@ -13,6 +14,7 @@ export const HV_WORLDS = [
 ] as const satisfies Array<DbN.HvWorld>
 
 export const DEFAULT_PREFETCH_DELAY = IS_REMOTE ? 50 : 300
+export const LOG_PROCESSING_LOCK = new AsyncLock()
 
 /**
 https://tailwindcss.com/docs/colors

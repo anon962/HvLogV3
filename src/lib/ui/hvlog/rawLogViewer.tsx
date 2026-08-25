@@ -73,11 +73,14 @@ function TurnExpander(props: { region: N.Region }) {
     const ctx = N.ctx.useContext()
 
     useEffect(() => {
-        const cb = () => {
-            setExpand(false)
+        const expand = () => setExpand(true)
+        const collapse = () => setExpand(false)
+        window.addEventListener("hvlog:raw-expand", expand)
+        window.addEventListener("hvlog:raw-collapse", collapse)
+        return () => {
+            window.removeEventListener("hvlog:raw-expand", expand)
+            window.removeEventListener("hvlog:raw-collapse", collapse)
         }
-        window.addEventListener("hvlog:raw-collapse", cb)
-        return () => window.removeEventListener("hvlog:raw-collapse", cb)
     }, [])
 
     const turnIdx = ctx.indexMap.l2t(props.region.idxs[0])
@@ -219,6 +222,16 @@ function Filter(props: {}) {
                     className="py-[0.5em] px-[1em] h-max"
                 >
                     Clear
+                </Button>
+                <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                        window.dispatchEvent(new Event("hvlog:raw-expand"))
+                    }}
+                    className="py-[0.5em] px-[1em] h-max"
+                >
+                    Expand All
                 </Button>
                 <Button
                     type="button"
