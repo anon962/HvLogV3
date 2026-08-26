@@ -330,9 +330,9 @@ class LogSourceLocal implements N.Protocol {
         battleType: (d, s, m, ms) =>
             d.some((bt) => s.meta.battleType?.id === bt),
         primaryStyle: (d, s, m, ms) =>
-            d.some((style) => style === s.style.primary?.id),
+            d.some((style) => style === s.style.primary),
         secondaryStyle: (d, s, m, ms) =>
-            d.some((style) => style === s.style.primary?.id),
+            d.some((style) => style === s.style.secondary),
         isImperil: (d, s, m, ms) => s.style.isImperil === d,
         startDate: (d, s, m, ms) => d <= m.startedAt,
         endDate: (d, s, m, ms) => d >= m.startedAt,

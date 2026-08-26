@@ -4,9 +4,10 @@ export function summarizeStyle(
     spell: CombatSummary["spell"],
     attack: CombatSummary["attack"],
     skill: CombatSummary["skill"],
+    debuff: CombatSummary["debuff"],
 ): {
-    primary: FightingStyle | null
-    secondary: FightingStyle | null
+    primary: FightingStyle["id"] | null
+    secondary: FightingStyle["id"] | null
     isImperil: boolean
 } {
     const weights = {} as Record<string, number>
@@ -43,11 +44,11 @@ export function summarizeStyle(
     let sStyleWeight = weights[candidates[1]]
 
     const isImperil =
-        (spell["Imperil"]?.events.logIdx.length ?? 0) >= pStyleWeight / 3
+        (debuff["Imperil"]?.events.logIdx.length ?? 0) >= pStyleWeight / 3
 
     return {
-        primary: pStyleWeight > 0 ? pStyle : null,
-        secondary: pStyleWeight > 0 && sStyleWeight > 0 ? sStyle : null,
+        primary: pStyleWeight > 0 ? pStyle.id : null,
+        secondary: pStyleWeight > 0 && sStyleWeight > 0 ? sStyle.id : null,
         isImperil,
     }
 }
@@ -66,8 +67,8 @@ export type CombatSummary = {
     >
 } & {
     style: {
-        primary: FightingStyle | null
-        secondary: FightingStyle | null
+        primary: FightingStyle["id"] | null
+        secondary: FightingStyle["id"] | null
         isImperil: boolean
     }
 } & {
@@ -226,11 +227,11 @@ export const MELEE_STYLES = {
 
 type FightingStyle = ValueOf<typeof MAGE_STYLES> | ValueOf<typeof MELEE_STYLES>
 
-export function humanizeFightingType(style: CombatSummary["style"]) {
+export function humanizeFightingStyle(style: CombatSummary["style"]) {
     let result
 
-    const p = FIGHTING_STYLE_NAMES[style.primary?.id as any]
-    const s = FIGHTING_STYLE_NAMES[style.secondary?.id as any]
+    const p = FIGHTING_STYLE_NAMES[style.primary as any]
+    const s = FIGHTING_STYLE_NAMES[style.secondary as any]
 
     if (p && s) {
         result = `${p.short} + ${s.short}`

@@ -231,19 +231,21 @@ const TableInner = <T,>(
                                 <div
                                     onClick={onClick}
                                     className={cn(
-                                        "flex",
+                                        "flex items-center",
                                         props.sortCols?.has(col.id)
                                             ? "cursor-pointer"
                                             : "",
                                         flexJustify[col.align ?? "text-center"],
-                                        flexAlign[col.align ?? "text-center"],
+                                        // flexAlign[col.align ?? "text-center"],
                                         col.header.tooltip
                                             ? "tooltip pb-[0.2em]"
                                             : "",
                                         `col-${col.id}`,
                                     )}
                                 >
-                                    {col.header.content}
+                                    <span className="font-bold text-muted-foreground">
+                                        {col.header.content}
+                                    </span>
                                     {icon}
                                 </div>
                             </TooltipTrigger>

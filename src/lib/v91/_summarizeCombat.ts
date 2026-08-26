@@ -977,7 +977,12 @@ export function _summarizeCombat(
     )
 
     return {
-        style: summarizeStyle(spell, attack, skill) as CombatSummary["style"],
+        style: summarizeStyle(
+            spell,
+            attack,
+            skill,
+            debuff,
+        ) as CombatSummary["style"],
         effectBlame,
         downtime,
         spell,

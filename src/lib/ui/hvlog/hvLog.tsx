@@ -31,7 +31,6 @@ import { LogDetailsPage } from "./logDetailsPage"
 // @todo: rotate web cli log
 // @todo: monster cast rate
 // @todo: faster local parse
-// @todo: deletion option
 // @todo: off by one charts
 // @todo: cast chains
 

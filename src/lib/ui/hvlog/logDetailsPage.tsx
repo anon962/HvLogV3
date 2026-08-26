@@ -1,5 +1,5 @@
 import { DbN, LogEntries } from "@/lib/db/dbN"
-import { humanizeFightingType } from "@/lib/stats/combatStats"
+import { humanizeFightingStyle } from "@/lib/stats/combatStats"
 import { IndexMap } from "@/lib/stats/indexMap"
 import { humanizeBattleType } from "@/lib/stats/metaStats"
 import { DetailsSummary } from "@/lib/stats/summary"
@@ -54,7 +54,7 @@ export function LogDetailsPage(props: { id: DbN.LogId }) {
         title = [
             humanizeBattleType(m.battleType, m.round?.end ?? null, true),
             IS_REMOTE ? (meta.user_name ?? "(anonymous)") : "",
-            humanizeFightingType(details.combat.style),
+            humanizeFightingStyle(details.combat.style),
             `${d.getFullYear()}-${zfill(d.getMonth() + 1)}-${zfill(d.getDate())} ${zfill(d.getHours())}:${zfill(d.getMinutes())}`,
         ]
             .filter((x) => x.length > 0)

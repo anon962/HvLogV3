@@ -1,7 +1,7 @@
 import { LOG_SOURCE } from "@/lib/db/logSource"
 import { LogSourceN } from "@/lib/db/logSourceN"
 import {
-    humanizeFightingType,
+    humanizeFightingStyle,
     MAGE_STYLES,
     MELEE_STYLES,
 } from "@/lib/stats/combatStats"
@@ -109,12 +109,18 @@ export namespace LogListN {
             align: "text-center",
             cell: (x) => formatCompletionType(x),
         },
+        actions: {
+            id: "actions",
+            header: { content: "" },
+            align: "text-center",
+            cell: (x) => formatCompletionType(x),
+        },
         style: {
             id: "style",
             header: { content: "Style" },
             align: "text-left",
             cell: (x) => ({
-                content: humanizeFightingType(x.search.style),
+                content: humanizeFightingStyle(x.search.style),
                 className: "style",
             }),
         },
@@ -207,6 +213,7 @@ export namespace LogListN {
         },
         n: {
             type: "number",
+            init: () => 15,
         },
         s: {
             type: "string",
@@ -283,17 +290,13 @@ export namespace LogListN {
             schema: PARAM_SCHEMA,
         })
 
-        const [pageSizeStorage, setPageSizeStorage] = useLocalJsonState(
-            15,
-            "hvlog_log_list_page_size",
-        )
-
-        const pageSize = params["n"].v ?? pageSizeStorage
+        const pageSize = params["n"].v
+        const pageIdx = params["p"].v
 
         const request = useMemo(
             () =>
                 ({
-                    pageIdx: params["p"].v,
+                    pageIdx,
                     pageSize,
                     idUser: params["id_user"].v,
                     keyUser: params["key_user"].v,
@@ -334,7 +337,7 @@ export namespace LogListN {
                               ),
                 }) as const,
             [
-                params["p"].v,
+                pageIdx,
                 pageSize,
                 params["id_user"].v,
                 params["key_user"].v,
@@ -424,11 +427,32 @@ export namespace LogListN {
             return () => clearTimeout(refetchTimer)
         }, [fetcher.data, fetcher.request])
 
+        useEffect(() => {
+            if (fetcher.isPending) {
+                return
+            }
+            if (!fetcher.data) {
+                return
+            }
+            if (
+                fetcher.data.resultCount !== 0 ||
+                fetcher.request.pageIdx === 0
+            ) {
+                return
+            }
+
+            const lastPageIdx = Math.floor(
+                fetcher.data.resultCount / fetcher.data.pageSize,
+            )
+            fetcher.setRequest({
+                ...fetcher.request,
+                pageIdx: lastPageIdx,
+            })
+        }, [fetcher.isPending, fetcher.data, fetcher.request])
+
         return {
             params,
             setParams,
-            pageSizeStorage,
-            setPageSizeStorage,
             fetcher,
             logSource,
         }

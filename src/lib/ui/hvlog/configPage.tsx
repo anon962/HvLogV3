@@ -292,7 +292,7 @@ export function ConfigPage(props: {}) {
 
                     <div className="buttons">
                         <ActionButton
-                            label="Default"
+                            label="Defaults"
                             onClick={() => {
                                 let clearUser = false
                                 if (pending.hvdataUser?.id) {
@@ -408,8 +408,8 @@ function UploadSection(props: {
                     <div>
                         Whether to upload logs to{" "}
                         <a href="https://hvdata.gisadan.dev/logs">HvData</a>.
-                        Uploaded logs are assigned a share-able link.{" "}
-                        <b>Uploads cannot be removed!</b>
+                        Uploaded logs can be shared by link.{" "}
+                        <b>Uploads are public and cannot be deleted!</b>
                     </div>
                 }
                 labelProps={{ className: "mb-2!" }}
@@ -546,6 +546,7 @@ function UploadSection(props: {
                     <Input
                         value={namePref ?? ""}
                         type="string"
+                        placeholder={props.pending.hvdataUser?.name ?? ""}
                         onInput={(ev) => {
                             const v = ev.target.value.trim()
                             if (v.length > 0) {
