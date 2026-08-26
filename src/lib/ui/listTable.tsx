@@ -7,13 +7,12 @@ import {
     TableRow,
 } from "@/lib/ui/shadcn/table"
 import { CommonProps } from "@/lib/utils/miscUtils"
-import { clamp, cn, L, range, ReactMemo, sort } from "myutils"
+import { clamp, cn, range, ReactMemo, sort } from "myutils"
 import React, {
     ReactNode,
     RefObject,
     useCallback,
     useDeferredValue,
-    useEffect,
     useMemo,
     useRef,
     useState,
@@ -289,7 +288,7 @@ const TableInner = <T,>(
         const isSelected = id === props.selectedId
         const isNextSelected = nextId === props.selectedId
         const rowExtras = props.cols.map(
-            (_, colIdx) => extras[colIdx][idx] ?? null,
+            (_, colIdx) => extras[colIdx]?.[idx] ?? null,
         )
 
         return (

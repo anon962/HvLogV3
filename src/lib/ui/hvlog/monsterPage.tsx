@@ -16,7 +16,7 @@ import { MonsterPageN } from "./monsterPageN"
 
 export function MonsterPage(props: {}) {
     return (
-        <MonsterPageN.ctx.Provider>
+        <MonsterPageN.ctx.Provider arg={null}>
             <Inner />
         </MonsterPageN.ctx.Provider>
     )
@@ -36,7 +36,7 @@ function Inner() {
                 })
             }}
         >
-            <Tabs.TabsList className="grid grid-cols-2 w-full max-w-[50em] mx-auto">
+            <Tabs.TabsList className="w-full max-w-[50em] mx-auto">
                 <Tabs.TabsTrigger value="monsters" className="font-bold py-1">
                     Monsters
                 </Tabs.TabsTrigger>

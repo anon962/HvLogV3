@@ -1,4 +1,5 @@
 import { formatNumber } from "@/lib/utils/miscUtils"
+import { Eye, Shield, Sword } from "lucide-react"
 import {
     alphabetical,
     clamp,
@@ -17,7 +18,6 @@ import { useMemo, useState } from "react"
 import { LOG_SOURCE } from "../../db/logSource"
 import { ListTableN } from "../listTable"
 import { UrlParamN } from "./router"
-import { Eye, Shield, Sword } from "lucide-react"
 
 // region cols
 const COLS_ = {
@@ -542,20 +542,17 @@ export namespace MonsterPageN {
         }, [allRows])
 
         return {
-            value: {
-                data,
-                pageIndex,
-                pageSize,
-                pageCount,
-                params,
-                setParams,
-                sortCol: params.s,
-                options,
-                mode,
-                setMode,
-                hasFilters,
-            },
-            setValue: () => {},
+            data,
+            pageIndex,
+            pageSize,
+            pageCount,
+            params,
+            setParams,
+            sortCol: params.s,
+            options,
+            mode,
+            setMode,
+            hasFilters,
         }
     })
 }
