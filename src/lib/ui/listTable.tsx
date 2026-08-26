@@ -54,6 +54,7 @@ export namespace ListTableN {
             className?: string
             tooltip?: ReactNode
         }
+        skipUrl?: boolean
         // cell() should be pure, hooks go in preprocess
         cell: (
             x: TValue,
@@ -365,7 +366,7 @@ const Row = ReactMemo(
                     className={cn(col.align, cell.className, `col-${col.id}`)}
                     title={cell.title}
                     content={cell.content}
-                    href={href}
+                    href={col.skipUrl ? null : href}
                 />
             )
         })
@@ -405,7 +406,7 @@ const Cell = ReactMemo(
         className: string
         title?: string
         content: ReactNode
-        href?: string
+        href?: string | null
     }) => {
         let child
         if (props.href) {

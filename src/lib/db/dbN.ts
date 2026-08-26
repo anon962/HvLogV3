@@ -95,8 +95,9 @@ export namespace DbN {
                 equips: Uint8Array<ArrayBuffer>
                 pending: boolean
             }
+            equipDeletions: Set<LogId>
             detailsCacheHistory: Record<
-                DbN.LogId,
+                LogId,
                 {
                     lastFetch: ISODate
                 }
@@ -201,7 +202,10 @@ export namespace DbN {
     }
 
     export const IDB_BC_ID = "hvlog"
-    export type IdbEvent = IdbLogInsertEvent | IdbConfigChangeEvent
+    export type IdbEvent =
+        | IdbLogInsertEvent
+        | IdbConfigChangeEvent
+        | IdbDeleteEvent
     export const IDB_LOG_INSERT_EVENT = "hvlog_log_insert"
     export type IdbLogInsertEvent = {
         type: typeof IDB_LOG_INSERT_EVENT
@@ -212,5 +216,10 @@ export namespace DbN {
     export type IdbConfigChangeEvent = {
         type: typeof IDB_CONFIG_CHANGE_EVENT
         config: UserscriptConfig
+    }
+    export const IDB_DELETE_EVENT = "hvlog_delete"
+    export type IdbDeleteEvent = {
+        type: typeof IDB_DELETE_EVENT
+        ids: Array<LogId>
     }
 }

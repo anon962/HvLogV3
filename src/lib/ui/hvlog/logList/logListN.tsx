@@ -22,6 +22,11 @@ import { RunIcon, Skull2Icon } from "../../icons/misc"
 import { CheckIcon } from "../../icons/tailwind"
 import { ListTableN } from "../../listTable"
 import { UrlParamN } from "../router"
+import { Button } from "../../shadcn/button"
+import { CloudUploadIcon, Trash2Icon } from "lucide-react"
+import { USERSCRIPT_CONFIG, UserscriptConfig } from "@/lib/db/userscriptConfig"
+import { DbN } from "@/lib/db/dbN"
+import { LogDb } from "@/lib/db/db"
 
 export namespace LogListN {
     export const COLS = {
@@ -49,7 +54,7 @@ export namespace LogListN {
         },
         turns: {
             id: "turns",
-            header: { content: "Turns" },
+            header: { content: "Turns", className: "min-w-[10ch]" },
             align: "text-right",
             cell: (x) => ({
                 content: `${formatNumber(x.search.meta.turnCount)} turns`,
@@ -112,12 +117,37 @@ export namespace LogListN {
         actions: {
             id: "actions",
             header: { content: "" },
-            align: "text-center",
-            cell: (x) => formatCompletionType(x),
-        },
+            align: "text-right",
+            skipUrl: true,
+            preprocess: useActionsPreproc,
+            cell: (x, extras) => ({
+                className: "actions",
+                content: (
+                    <div className="flex h-full">
+                        {extras?.showDelete && (
+                            <Button
+                                onClick={() => extras.onDelete(x)}
+                                variant="ghost"
+                                size="sm"
+                            >
+                                <Trash2Icon />
+                            </Button>
+                        )}
+                        {extras?.showUpload && (
+                            <Button variant="ghost" size="sm">
+                                <CloudUploadIcon />
+                            </Button>
+                        )}
+                    </div>
+                ),
+            }),
+        } as const satisfies ListTableN.Column<
+            LogSourceN.SearchResult,
+            ReturnType<typeof useActionsPreproc>[number]
+        >,
         style: {
             id: "style",
-            header: { content: "Style" },
+            header: { content: "Style", className: "min-w-[12ch]" },
             align: "text-left",
             cell: (x) => ({
                 content: humanizeFightingStyle(x.search.style),
@@ -427,6 +457,7 @@ export namespace LogListN {
             return () => clearTimeout(refetchTimer)
         }, [fetcher.data, fetcher.request])
 
+        // Refetch when page index is out of bounds
         useEffect(() => {
             if (fetcher.isPending) {
                 return
@@ -436,7 +467,8 @@ export namespace LogListN {
             }
             if (
                 fetcher.data.resultCount !== 0 ||
-                fetcher.request.pageIdx === 0
+                fetcher.request.pageIdx === 0 ||
+                fetcher.data.stale
             ) {
                 return
             }
@@ -449,6 +481,20 @@ export namespace LogListN {
                 pageIdx: lastPageIdx,
             })
         }, [fetcher.isPending, fetcher.data, fetcher.request])
+
+        // Refetch on log deletion
+        useEffect(
+            () =>
+                DbN.listenIdbEvent((ev) => {
+                    switch (ev.type) {
+                        case "hvlog_delete":
+                            console.log("set", fetcher.request, fetcher.data)
+                            fetcher.setRequest({ ...fetcher.request })
+                            return
+                    }
+                }),
+            [request],
+        )
 
         return {
             params,
@@ -565,7 +611,8 @@ function formatCompletionType(x: LogSourceN.SearchResult) {
 
     let roundEl = round ? (
         <span>
-            {round.end} / {round.max}
+            {round.end}
+            {/* / {round.max} */}
         </span>
     ) : (
         <></>
@@ -620,4 +667,60 @@ function formatCompletionType(x: LogSourceN.SearchResult) {
         content: statusEl,
         title: titleEl,
     }
+}
+
+function useActionsPreproc(xs: Array<LogSourceN.SearchResult>) {
+    const config = USERSCRIPT_CONFIG.useContext().config
+    const db = useMemo(() => new LogDb(), [])
+
+    const showDelete =
+        config.showDelete === "yes" || config.showDelete === "warn"
+    const showUpload =
+        config.hvdataUploadMode !== "default" &&
+        config.hvdataUploadMode !== "disabled"
+
+    const onDelete = async (x: LogSourceN.SearchResult) => {
+        if (config.showDelete === "warn") {
+            if (
+                !confirm(
+                    `Delete ${x.search.meta.battleType?.id ?? "???"} log from ${x.meta.startedAt}?`,
+                )
+            ) {
+                return
+            }
+        }
+
+        const stores = [
+            "logsMeta",
+            "logsRaw",
+            "summariesForMeta",
+            "summariesForSearch",
+        ] as const
+        const txn = await db.transaction([...stores], "readwrite")
+        for (const sid of stores) {
+            const s = txn.objectStore(sid)
+            if (await s.getKey(x.id)) {
+                await s.delete(x.id)
+            }
+        }
+        txn.commit()
+
+        DbN.broadcastIdbEvent({
+            type: "hvlog_delete",
+            ids: [x.id],
+        })
+
+        const equipDeletions =
+            (await db.get("kv", "equipDeletions")) ?? new Set()
+        equipDeletions.add(x.id)
+        await db.put("kv", equipDeletions, "equipDeletions")
+    }
+
+    const extras = {
+        showDelete,
+        onDelete,
+        showUpload,
+    }
+
+    return xs.map((x) => extras)
 }

@@ -51,6 +51,7 @@ export function Table() {
                       LogListN.COLS.date,
                       LogListN.COLS.duration,
                       LogListN.COLS.status,
+                      LogListN.COLS.actions,
                   ],
         [],
     )
@@ -382,6 +383,29 @@ const CSS = css`
         table {
             border-radius: 0.5em;
             overflow: hidden;
+        }
+
+        .col-actions {
+            height: 1px;
+
+            button {
+                width: 2em;
+                height: 100%;
+                border-radius: 2em;
+
+                &:hover {
+                    background-color: color-mix(
+                        in oklab,
+                        var(--foreground),
+                        transparent 90%
+                    );
+                }
+            }
+
+            & > * {
+                height: 100%;
+                padding: 0.25em !important;
+            }
         }
     }
 `

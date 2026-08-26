@@ -3,6 +3,7 @@ import {
     enumerate,
     L,
     last,
+    objectEntries,
     objectKeys,
     pluralfy,
     sleep,
@@ -323,7 +324,6 @@ async function* tallyEquips(opts: TaskOpts): TaskGen {
         pending: false,
     })
     let equipTally = await db.get("kv", "equipTally")
-
     if (!equipTally || equipTally.version < LogDb.parserVersion) {
         equipTally = await init()
         await db.put("kv", equipTally, "equipTally")
@@ -332,6 +332,26 @@ async function* tallyEquips(opts: TaskOpts): TaskGen {
     const decompressed = await decompressZstd({ x: equipTally.equips })
     const text = await new Blob([decompressed]).text()
     const equips: EquipPageN.IdbStorage = JSON.parse(text)
+
+    const deleted = await db.get("kv", "equipDeletions")
+    if (deleted?.size) {
+        const txn = await db.transaction(["kv"], "readwrite")
+        const deadIdxs = new Set(
+            equips.id.flatMap((id, idx) => (deleted.has(id) ? [idx] : [])),
+        )
+        for (const kv of objectEntries(equips)) {
+            equips[kv[0]] = kv[1].filter((_, idx) => !deadIdxs.has(idx)) as any
+        }
+        await txn.objectStore("kv").put(new Set(), "equipDeletions")
+        txn.commit()
+
+        equipTally.equips = await compressZstd({
+            x: JSON.stringify(equips),
+            level: 10,
+            pool: true,
+        })
+        await db.put("kv", equipTally, "equipTally")
+    }
 
     const conn = await db.conn
     const ids = new Set(await conn.getAllKeys("logsMeta"))

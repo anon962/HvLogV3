@@ -232,25 +232,6 @@ class LogSourceRemote implements N.Protocol {
 // #endregion
 
 // #region local
-const newLocalCache = <T>(
-    self: LogSourceLocal,
-    opts: {
-        fetch: (db: LogDb<true>, conn: LogDbConn, id: DbN.LogId) => Promise<T>
-        size?: number
-        ttl?: number | null
-    },
-) =>
-    new N.AsyncCache<DbN.LogId, T>({
-        ttl: opts.ttl ?? null,
-        size: opts.size,
-        fromRaw: (raw) => JSON.parse(raw),
-        toRaw: (k) => JSON.stringify(k),
-        fetch: async (k) => {
-            const db = await self.db
-            const conn = await db.conn
-            return opts.fetch(db, conn, k)
-        },
-    })
 class LogSourceLocal implements N.Protocol {
     ainit: Promise<void>
     db: Promise<LogDb<true>>
@@ -276,6 +257,13 @@ class LogSourceLocal implements N.Protocol {
                 case "hvlog_config_change":
                     this.prices = prices
                     break
+                case DbN.IDB_DELETE_EVENT: {
+                    for (const id of ev.ids) {
+                        self.logIds.delete(id)
+                        self.searchResponseCache.clear()
+                    }
+                    break
+                }
             }
         })
 
