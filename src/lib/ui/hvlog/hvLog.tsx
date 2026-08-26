@@ -1,24 +1,20 @@
 import { USERSCRIPT_CONFIG } from "@/lib/db/userscriptConfig"
-import { humanizeFightingType } from "@/lib/stats/combatStats"
-import { IndexMap } from "@/lib/stats/indexMap"
-import { humanizeBattleType } from "@/lib/stats/metaStats"
+import { runUserscriptTasks } from "@/lib/db/userscriptTasks"
 // @ts-ignore
 import "@/lib/ui/global.css"
-import { runUserscriptTasks } from "@/lib/db/userscriptTasks"
 import { ScrollText } from "lucide-react"
-import { CustomMap, normalizeUrlParts, sleep, useAsync } from "myutils"
+import { CustomMap, normalizeUrlParts } from "myutils"
 import { useEffect, useMemo } from "react"
 import { IS_LOCAL, IS_REMOTE } from "../../constants"
 import { LOG_SOURCE } from "../../db/logSource"
+import { Cog6Icon } from "../icons/tailwind"
 import { Sidebar, SidebarItem } from "../sidebar"
+import { ConfigPage } from "./configPage"
 import { EquipPage } from "./equipsPage"
-import { LogDetailsPane } from "./logDetailsPane"
 import { LogList } from "./logList/logList"
 import { MonsterPage } from "./monsterPage"
-import { RouteDef, RouteLink, ROUTER, Router } from "./router"
-import { DbN } from "@/lib/db/dbN"
-import { ConfigPage } from "./configPage"
-import { Cog6Icon } from "../icons/tailwind"
+import { RouteDef, ROUTER, Router } from "./router"
+import { LogDetailsPage } from "./logDetailsPage"
 
 // @fixme: profit history (bar graph, day month)
 // @fixme: avg drops per battle type (including equips)
@@ -48,7 +44,7 @@ export const HvLog = (props: { prefix?: string[] }) => {
                 redirect: ["logs"],
             }),
             "/logs/*": (parts) => ({
-                component: <LogDetailsRoute id={parts[1]} />,
+                component: <LogDetailsPage id={parts[1]} />,
             }),
             "/logs": () => ({
                 component: <LogList />,
@@ -170,105 +166,4 @@ function UserscriptTaskRunner(props: {}) {
     }, [config, ready, setConfig])
 
     return <></>
-}
-
-function LogDetailsRoute(props: { id: DbN.LogId }) {
-    const logSource = LOG_SOURCE.useContext()
-
-    const { data: pricesData } = useAsync(async () => {
-        const [pricesP, pricesI] = await Promise.all([
-            logSource.fetchPrices("persistent"),
-            logSource.fetchPrices("isekai"),
-        ])
-        return { persistent: pricesP, isekai: pricesI }
-    }, null)
-    const { data: details } = useAsync(
-        async () => await logSource.fetchDetails(props.id),
-        null,
-    )
-    const { data: metaEntries } = useAsync(async () => {
-        let st = performance.now()
-        while (true) {
-            const elapsed = performance.now() - st
-            if (!pricesData && !details && elapsed < 500) {
-                await sleep(100)
-                continue
-            } else {
-                break
-            }
-        }
-        return Promise.all([
-            logSource.fetchMeta(props.id),
-            logSource.fetchEntries(props.id),
-        ] as const)
-    }, null)
-    const [meta, entries] = metaEntries ?? [null, null]
-
-    let title
-    if (meta && details) {
-        const d = new Date(meta.startedAt)
-        const m = details.meta
-        const zfill = (x: number, n = 2) => x.toString().padStart(n, "0")
-
-        title = [
-            humanizeBattleType(m.battleType, m.round?.end ?? null),
-            IS_REMOTE ? (meta.user_name ?? "(anonymous)") : "",
-            humanizeFightingType(details.combat.style),
-            `${d.getFullYear()}-${zfill(d.getMonth() + 1)}-${zfill(d.getDate())} ${zfill(d.getHours())}:${zfill(d.getMinutes())}`,
-        ]
-            .filter((x) => x.length > 0)
-            .join(" - ")
-    } else {
-        title = "-"
-    }
-
-    let indexMap = new IndexMap([], {}, 0)
-    if (details) {
-        indexMap = new IndexMap(
-            details.meta.turnIndices,
-            details.meta.roundIndices,
-            details.meta.eventCount,
-        )
-    }
-
-    const { history, prefix } = ROUTER.useContext()
-    const backHref = useMemo(() => {
-        let backHref = [...prefix, "logs"].join("/")
-        if (history.length >= 2) {
-            const u = history[history.length - 2].url
-            backHref = u.pathname + u.search + u.hash
-        }
-        return backHref
-    }, [])
-
-    return (
-        <div className="w-full h-full flex flex-col overflow-hidden gap-4 p-4 pb-8">
-            <div className="flex justify-between gap-4">
-                <RouteLink
-                    href={backHref}
-                    ignorePrefix={true}
-                    // action="popState"
-                    className="max-w-1/4"
-                >
-                    Back
-                </RouteLink>
-
-                <span className="font-bold">{title}</span>
-
-                <span></span>
-            </div>
-
-            <div className="w-full max-w-[60rem] h-full mx-auto">
-                {pricesData && meta && (
-                    <LogDetailsPane
-                        id={props.id}
-                        entries={entries}
-                        prices={pricesData[meta.world]}
-                        details={details}
-                        indexMap={indexMap}
-                    />
-                )}
-            </div>
-        </div>
-    )
 }

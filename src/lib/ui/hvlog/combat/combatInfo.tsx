@@ -16,8 +16,8 @@ export function CombatInfo({
     indexMap: IndexMap
 }) {
     return (
-        <div className="combat-info p-8 overflow-auto h-full flex flex-col gap-12">
-            <div className="flex gap-8">
+        <div className="combat-info h-full flex flex-col gap-12 p-8 mt-2 bg-card w-max m-auto rounded-md border-2 border-border/66 max-w-full">
+            <div className="flex gap-16 w-max mx-auto">
                 {MiscTable(details)}
                 {ActionTable(details)}
             </div>
@@ -26,12 +26,12 @@ export function CombatInfo({
 
             {details.combat.critMults.length > 0 ? CritTable(details) : null}
 
-            <div className="flex gap-8">
+            {DamageTakenTable(details)}
+
+            <div className="flex gap-16 w-max mx-auto items-center justify-center flex-col lg:flex-row">
                 {HealTable(details)}
                 {DebuffTable(details)}
             </div>
-
-            {DamageTakenTable(details)}
 
             <ActionChartWrapper details={details} indexMap={indexMap} />
             <HealChartWrapper details={details} indexMap={indexMap} />
@@ -456,7 +456,7 @@ function DamageTable({ combat }: DetailsSummary) {
             label="Damage"
             rows={rows}
             columns={columns}
-            className="offensive"
+            className="offensive max-w-[60rem] mx-auto"
             rowStyle={{
                 gridTemplateColumns: `minmax(20ch, 1fr) repeat(${columns.length}, minmax(6ch, 1fr))`,
             }}
@@ -625,7 +625,7 @@ function DebuffTable({ combat }: DetailsSummary) {
             label="Debuffs"
             rows={rows}
             columns={columns}
-            className="debuffs w-max max-w-[50%]"
+            className="debuffs w-max"
             hideTotal
         />
     ) : (
@@ -767,7 +767,7 @@ function HealChartWrapper(props: {
     }, [el, container.current])
 
     return (
-        <div className="flex flex-col">
+        <div className="chart-wrapper flex flex-col">
             <h1 className="text-base font-bold">Heals</h1>
             <span className="text-sm text-muted-foreground py-1">
                 Red tick marks denote Spark of Life triggers.
@@ -801,7 +801,7 @@ function ActionChartWrapper(props: {
     }, [el, container.current])
 
     return (
-        <div className="flex flex-col">
+        <div className="chart-wrapper flex flex-col">
             <h1 className="text-base font-bold">Actions</h1>
             <span className="text-sm text-muted-foreground py-1">
                 Averaged over {(meta.round?.end ?? 1) > 300 ? 30 : 10} rounds.
@@ -1025,7 +1025,7 @@ function DamageTakenTable({ meta, combat }: DetailsSummary) {
             rows={rows}
             columns={columns.filter((col) => col !== null)}
             subColumns={subColumns}
-            className="damage-taken max-w-full overflow-x-auto text-sm!"
+            className="damage-taken max-w-[60rem] mx-auto overflow-x-auto"
             hideTotal
         />
     ) : (

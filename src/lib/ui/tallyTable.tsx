@@ -82,9 +82,9 @@ export function TallyTable({
 
     // CSS
     const sectionClasses = `tally-table ${className ?? ""}`
-    const titleClasses = `pb-4`
+    const titleClasses = ``
     const titleRowClasses = `row ${active.has(0) ? "next-active" : ""}`
-    const layoutClasses = `min-w-min rounded-md`
+    const layoutClasses = `body min-w-min`
 
     // Col widths
     const colWidths = range(columns.length + 1).map(() => 0)

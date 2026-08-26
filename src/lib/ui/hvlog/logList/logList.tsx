@@ -9,10 +9,12 @@ import { MonthYearPicker } from "../../monthYearPicker"
 import { USERSCRIPT_CONFIG } from "@/lib/db/userscriptConfig"
 import { useMemo } from "react"
 import { LogSourceN } from "@/lib/db/logSourceN"
+import { Css, css } from "myutils"
 
 export function LogList() {
     return (
         <LogListN.ctx.Provider arg={null}>
+            <Css css={CSS} />
             <div className="log-list w-full flex flex-col items-center pt-4">
                 <Table />
             </div>
@@ -327,3 +329,59 @@ function Filter() {
         </form>
     )
 }
+
+const CSS = css`
+    .log-list {
+        h2 {
+            font-size: 1.1em;
+            font-weight: 500;
+            padding-bottom: 0.25em;
+        }
+
+        tbody tr {
+            border: 0;
+        }
+        thead tr {
+            border-bottom: 0.1em solid rgba(50, 50, 50, 1);
+        }
+
+        tr:nth-child(2n + 1) {
+            background-color: color-mix(
+                in oklab,
+                var(--color-muted) 35%,
+                transparent
+            ) !important;
+        }
+        tr:nth-child(2n + 2) {
+            background-color: color-mix(
+                in oklab,
+                var(--color-muted) 65%,
+                transparent
+            ) !important;
+        }
+        tr:hover:not(.selected) {
+            background-color: color-mix(
+                in oklab,
+                var(--color-muted) 100%,
+                transparent
+            ) !important;
+        }
+
+        tr > :first-child {
+            padding-left: 1em;
+        }
+        tr > :last-child {
+            padding-right: 1em;
+        }
+        thead > tr > * {
+            padding-top: 1em;
+        }
+        tbody > tr:last-child > * {
+            /* padding-bottom: 1em; */
+        }
+        table {
+            border-radius: 0.5em;
+            overflow: hidden;
+        }
+    }
+`

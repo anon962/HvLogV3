@@ -667,6 +667,23 @@ const CSS = css`
             ) !important;
         }
 
+        tr > :first-child {
+            padding-left: 1em;
+        }
+        tr > :last-child {
+            padding-right: 1em;
+        }
+        thead > tr > * {
+            padding-top: 1em;
+        }
+        tbody > tr:last-child > * {
+            /* padding-bottom: 1em; */
+        }
+        table {
+            border-radius: 0.5em;
+            overflow: hidden;
+        }
+
         .input-container {
             display: flex;
             flex-flow: column;

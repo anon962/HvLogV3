@@ -25,26 +25,24 @@ export function DropInfo({
     }
 
     return (
-        <div className="drop-stats h-full flex flex-col">
-            <div className="overview">
-                <CalculationPreview prices={prices} details={stats} />
-                <EquipSummary stats={stats} />
+        <div className="drop-stats">
+            <div className="flex flex-col gap-12 items-center p-8 mt-2 bg-card w-max m-auto rounded-md border-2">
+                <div className="h-full flex gap-16 w-max">
+                    <div className="flex flex-col gap-16">
+                        <CalculationPreview prices={prices} details={stats} />
+                        <EquipSummary stats={stats} />
+                    </div>
+
+                    <IncomeSummaryTable prices={prices} stats={stats} />
+                    <UsageSummaryTable
+                        prices={prices}
+                        staminaUsage={staminaUsage}
+                        stats={stats}
+                    />
+                </div>
+
+                <DropChart prices={prices} stats={stats} indexMap={indexMap} />
             </div>
-
-            <hr className="my-12" />
-
-            <div className="income-expense">
-                <IncomeSummaryTable prices={prices} stats={stats} />
-                <UsageSummaryTable
-                    prices={prices}
-                    staminaUsage={staminaUsage}
-                    stats={stats}
-                />
-            </div>
-
-            <hr className="my-12" />
-
-            <DropChart prices={prices} stats={stats} indexMap={indexMap} />
         </div>
     )
 }
@@ -350,7 +348,7 @@ function DropChart({
         return () => el.remove()
     }, [el, container.current])
 
-    return <div ref={container} className="w-full flex"></div>
+    return <div ref={container} className="chart-wrapper flex"></div>
 }
 
 function EquipSummary({ stats: { drops } }: { stats: DetailsSummary }) {

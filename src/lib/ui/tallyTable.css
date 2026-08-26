@@ -1,12 +1,15 @@
 .tally-table {
+    font-family: monospace;
     font-size: 0.9em;
     line-height: 1.25;
     overflow-x: auto;
     height: max-content;
 
     h1 {
-        font-size: 1em;
+        font-size: 1rem;
         font-weight: bold;
+        padding-bottom: 1em;
+        color: color-mix(in oklch, var(--color-blue-200), var(--foreground) 0%);
     }
 
     .row {
@@ -31,6 +34,16 @@
         padding-left: 1em;
     }
 
+    --r: 0.33em;
+    .body {
+        border-top-right-radius: var(--r);
+        border-top-left-radius: var(--r);
+    }
+    .body:last-child {
+        border-bottom-right-radius: var(--r);
+        border-bottom-left-radius: var(--r);
+    }
+
     .row {
         border-bottom: 1px solid var(--border);
         border-left: 1px solid var(--border);
@@ -38,6 +51,12 @@
     }
     .row:first-child {
         border-top: 1px solid var(--border);
+        border-top-right-radius: var(--r);
+        border-top-left-radius: var(--r);
+    }
+    .body:last-child .row:last-child {
+        border-bottom-right-radius: var(--r);
+        border-bottom-left-radius: var(--r);
     }
 
     .row:first-child {
@@ -45,6 +64,8 @@
     }
     .footer-row {
         border-top: 2px solid var(--border);
+        border-bottom-right-radius: var(--r);
+        border-bottom-left-radius: var(--r);
     }
 
     .row > * {
@@ -152,5 +173,22 @@
         .subcell {
             padding-top: 0.5em;
         }
+    }
+
+    & > div {
+        background-color: color-mix(
+            in srgb,
+            var(--background),
+            var(--foreground) 5%
+        );
+    }
+    & .body .row:first-child,
+    & > .footer-row {
+        background-color: color-mix(
+            in srgb,
+            var(--background),
+            var(--foreground) 7%
+        );
+        color: color-mix(in srgb, var(--foreground), var(--background) 27%);
     }
 }

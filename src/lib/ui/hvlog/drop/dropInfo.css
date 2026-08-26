@@ -1,4 +1,7 @@
 .drop-stats {
+    font-family: monospace;
+    container-type: inline-size;
+
     .income .footer:nth-child(2) {
         color: var(--color-green-300);
     }
@@ -12,42 +15,9 @@
         color: var(--color-red-100);
     }
 
-    container-type: inline-size;
-
-    figure {
-        max-width: 60rem !important;
-        padding-right: 1rem;
-    }
-
     .calc-preview {
         & > span {
             height: min-content;
         }
-    }
-}
-
-.income-expense {
-    display: flex;
-    flex-flow: column;
-    align-items: center;
-    gap: 2rem;
-}
-@container (width > 50rem) {
-    .income-expense {
-        flex-flow: row;
-        /* justify-content: center; */
-        align-items: start;
-    }
-}
-
-.overview {
-    display: grid;
-    flex-flow: column;
-    gap: 2rem;
-}
-@container (width > 40rem) {
-    .overview {
-        display: grid;
-        grid-template-columns: minmax(17rem, 1fr) 2fr;
     }
 }

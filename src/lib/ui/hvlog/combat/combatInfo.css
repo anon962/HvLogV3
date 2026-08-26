@@ -1,13 +1,17 @@
-.casts.tally-table {
-    max-width: 60ch;
-}
-.casts.tally-table .row {
-    grid-template-columns: minmax(8ch, 1fr) repeat(2, minmax(8ch, 1fr)) !important;
-}
-.casts.tally-table .row > *:not(:first-child):not(.subtable) {
-    padding-left: 1.25rem !important;
-}
-.casts .subcell,
-.casts .subheader {
-    padding-right: 0.75rem !important;
+.combat-info {
+    .casts {
+        .tally-table {
+            max-width: 60ch;
+        }
+        .tally-table .row {
+            grid-template-columns: minmax(8ch, 1fr) repeat(2, minmax(8ch, 1fr)) !important;
+        }
+        .tally-table .row > *:not(:first-child):not(.subtable) {
+            padding-left: 1.25rem !important;
+        }
+        .subcell,
+        .subheader {
+            padding-right: 0.75rem !important;
+        }
+    }
 }
