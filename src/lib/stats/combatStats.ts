@@ -43,7 +43,7 @@ export function summarizeStyle(
     let sStyleWeight = weights[candidates[1]]
 
     const isImperil =
-        (spell["Imperil"]?.events.logIdx.length ?? 0) >= pStyleWeight / 8
+        (spell["Imperil"]?.events.logIdx.length ?? 0) >= pStyleWeight / 3
 
     return {
         primary: pStyleWeight > 0 ? pStyle : null,
@@ -235,7 +235,11 @@ export function humanizeFightingType(style: CombatSummary["style"]) {
     if (p && s) {
         result = `${p.short} + ${s.short}`
     } else if (p) {
-        result = p.long
+        if (style.isImperil) {
+            result = p.long
+        } else {
+            result = p.short + " (non-imp)"
+        }
     } else {
         result = "???"
     }

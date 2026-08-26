@@ -52,7 +52,7 @@ export function LogDetailsPage(props: { id: DbN.LogId }) {
         const zfill = (x: number, n = 2) => x.toString().padStart(n, "0")
 
         title = [
-            humanizeBattleType(m.battleType, m.round?.end ?? null),
+            humanizeBattleType(m.battleType, m.round?.end ?? null, true),
             IS_REMOTE ? (meta.user_name ?? "(anonymous)") : "",
             humanizeFightingType(details.combat.style),
             `${d.getFullYear()}-${zfill(d.getMonth() + 1)}-${zfill(d.getDate())} ${zfill(d.getHours())}:${zfill(d.getMinutes())}`,

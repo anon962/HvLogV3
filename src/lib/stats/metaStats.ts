@@ -80,6 +80,7 @@ export interface MetaSummary {
 export function humanizeBattleType(
     bt: MetaSummary["battleType"],
     roundMax: number | null | undefined,
+    long = false,
 ) {
     const ARENA_ALIASES = {
         "33": "Arena - DwD",
@@ -111,7 +112,7 @@ export function humanizeBattleType(
         case "Tower":
             return `Tower ${bt.categoryValue!}f`
         case "RE":
-            return "Random Encounter"
+            return long ? "Random Encounter" : "RE"
         default:
             return bt.category
     }

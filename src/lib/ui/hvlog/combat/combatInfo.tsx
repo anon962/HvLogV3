@@ -28,7 +28,7 @@ export function CombatInfo({
 
             {DamageTakenTable(details)}
 
-            <div className="flex gap-16 w-max mx-auto items-center justify-center flex-col lg:flex-row">
+            <div className="flex gap-16 w-max mx-auto items-center lg:items-start justify-center flex-col lg:flex-row">
                 {HealTable(details)}
                 {DebuffTable(details)}
             </div>
@@ -769,7 +769,7 @@ function HealChartWrapper(props: {
     return (
         <div className="chart-wrapper flex flex-col">
             <h1 className="text-base font-bold">Heals</h1>
-            <span className="text-sm text-muted-foreground py-1">
+            <span className="text-xs text-muted-foreground py-1">
                 Red tick marks denote Spark of Life triggers.
             </span>
 
@@ -803,7 +803,7 @@ function ActionChartWrapper(props: {
     return (
         <div className="chart-wrapper flex flex-col">
             <h1 className="text-base font-bold">Actions</h1>
-            <span className="text-sm text-muted-foreground py-1">
+            <span className="text-xs text-muted-foreground py-1">
                 Averaged over {(meta.round?.end ?? 1) > 300 ? 30 : 10} rounds.
                 Red tick marks denote Spark of Life triggers.
             </span>

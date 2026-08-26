@@ -27,18 +27,20 @@ export function DropInfo({
     return (
         <div className="drop-stats">
             <div className="flex flex-col gap-12 items-center p-8 mt-2 bg-card w-max m-auto rounded-md border-2">
-                <div className="h-full flex gap-16 w-max">
-                    <div className="flex flex-col gap-16">
-                        <CalculationPreview prices={prices} details={stats} />
+                <div className="h-full flex gap-16 w-max flex-col lg:flex-row">
+                    <div className="flex gap-8 lg:max-w-[36ch] lg:items-center lg:flex-col flex-row-reverse">
                         <EquipSummary stats={stats} />
+                        <CalculationPreview prices={prices} details={stats} />
                     </div>
 
-                    <IncomeSummaryTable prices={prices} stats={stats} />
-                    <UsageSummaryTable
-                        prices={prices}
-                        staminaUsage={staminaUsage}
-                        stats={stats}
-                    />
+                    <div className="flex gap-8 lg:contents">
+                        <IncomeSummaryTable prices={prices} stats={stats} />
+                        <UsageSummaryTable
+                            prices={prices}
+                            staminaUsage={staminaUsage}
+                            stats={stats}
+                        />
+                    </div>
                 </div>
 
                 <DropChart prices={prices} stats={stats} indexMap={indexMap} />
@@ -348,7 +350,15 @@ function DropChart({
         return () => el.remove()
     }, [el, container.current])
 
-    return <div ref={container} className="chart-wrapper flex"></div>
+    return (
+        <div
+            ref={container}
+            className="chart-wrapper flex"
+            style={{
+                maxWidth: "min(80vw, 55rem)",
+            }}
+        ></div>
+    )
 }
 
 function EquipSummary({ stats: { drops } }: { stats: DetailsSummary }) {
@@ -389,11 +399,13 @@ function EquipSummary({ stats: { drops } }: { stats: DetailsSummary }) {
         </li>
     ))
 
-    return (
+    return els.length > 0 ? (
         <div className="equips">
-            <h1 className="font-bold">Notable Equips:</h1>
+            <h1 className="font-bold text-[length:1.1em] pb-1">
+                Notable Equips:
+            </h1>
 
-            <ul className="pl-6 font-mono">
+            <ul className="pl-1 text-[length:0.85em] font-mono">
                 {equips.length ? (
                     <>{...els}</>
                 ) : (
@@ -401,5 +413,7 @@ function EquipSummary({ stats: { drops } }: { stats: DetailsSummary }) {
                 )}
             </ul>
         </div>
+    ) : (
+        <></>
     )
 }

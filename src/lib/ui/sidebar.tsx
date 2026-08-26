@@ -1,5 +1,5 @@
 import { cn, compareArrays, normalizeUrlParts } from "myutils"
-import { ReactNode } from "react"
+import { Fragment, ReactNode } from "react"
 import { CommonProps } from "../utils/miscUtils"
 import { RouteLink, ROUTER } from "./hvlog/router"
 import { MyTooltip } from "./myTooltip"
@@ -19,11 +19,11 @@ export function Sidebar(props: {
     return (
         <div className="sidebar-container flex flex-row min-h-screen sticky top-0 h-screen">
             <div className="sidebar flex flex-col border-r-2">
-                {...props.items.map((it) => (
-                    <>
-                        <SidebarLink key={it.path} item={it} />
+                {props.items.map((it) => (
+                    <Fragment key={it.path}>
+                        <SidebarLink item={it} />
                         <hr />
-                    </>
+                    </Fragment>
                 ))}
 
                 <div className="grow"></div>
@@ -80,7 +80,7 @@ function SidebarLink({
             trigger={
                 <div
                     className={cn(
-                        "sidebar-button",
+                        "sidebar-button group",
                         isActive ? "active" : "",
                         isDisabled ? "disabled" : "",
                     )}

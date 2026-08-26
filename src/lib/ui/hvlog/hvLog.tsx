@@ -73,13 +73,17 @@ export const HvLog = (props: { prefix?: string[] }) => {
         [
             IS_LOCAL
                 ? {
-                      icon: <Cog6Icon />,
+                      icon: (
+                          <Cog6Icon className="stroke-[1.5] group-[.active]:stroke-2" />
+                      ),
                       path: "/config",
                       tooltip: "Settings",
                   }
                 : null,
             {
-                icon: <ScrollText />,
+                icon: (
+                    <ScrollText className="stroke-[1.5] group-[.active]:stroke-2" />
+                ),
                 path: "/logs/",
                 isActive: (parts) => parts[0] === "logs",
                 tooltip: "Battle Logs",
