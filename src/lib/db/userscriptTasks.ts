@@ -29,7 +29,7 @@ const ACTIVE_TASK = {
     task: null as TaskGen | null,
     idx: -1,
 }
-const TASK_DATA: Array<{
+export const TASK_DATA: Array<{
     state: any
     delay: null | Promise<number>
 }> = TASKS.map((t) => ({
@@ -422,6 +422,8 @@ async function* tallyEquips(opts: TaskOpts): TaskGen {
         L.info(
             `Saved equip tally (total: ${equips.id.length} equips / ${equipTally.done.size} logs / ${(equipTally.equips.byteLength / 1024 / 1024).toFixed(2)} MiB compressed)`,
         )
+
+        await trimDetailsCache(opts).next()
     }
 
     cancelStatus()
@@ -561,6 +563,8 @@ async function* populateSearch(opts: TaskOpts): TaskGen {
 
         searchDone.pending = batch !== last(batches)!
         await db.put("kv", searchDone, "searchDone")
+
+        await trimDetailsCache(opts).next()
     }
 
     L.info(`Added ${missing.size} logs to search cache`)

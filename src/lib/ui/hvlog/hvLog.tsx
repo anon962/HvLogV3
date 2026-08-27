@@ -1,10 +1,10 @@
 import { USERSCRIPT_CONFIG } from "@/lib/db/userscriptConfig"
-import { runUserscriptTasks } from "@/lib/db/userscriptTasks"
+import { runUserscriptTasks, TASK_DATA } from "@/lib/db/userscriptTasks"
 // @ts-ignore
 import "@/lib/ui/global.css"
 import { ScrollText } from "lucide-react"
-import { CustomMap, normalizeUrlParts } from "myutils"
-import { useEffect, useMemo } from "react"
+import { CustomMap, normalizeUrlParts, range } from "myutils"
+import { useEffect, useMemo, useState } from "react"
 import { IS_LOCAL, IS_REMOTE } from "../../constants"
 import { LOG_SOURCE } from "../../db/logSource"
 import { Cog6Icon } from "../icons/tailwind"
@@ -16,14 +16,12 @@ import { MonsterPage } from "./monsterPage"
 import { RouteDef, ROUTER, Router } from "./router"
 import { LogDetailsPage } from "./logDetailsPage"
 import { Toaster } from "../toaster"
+import { DbN } from "@/lib/db/dbN"
 
 // @fixme: profit history (bar graph, day month)
 // @fixme: avg drops per battle type (including equips)
 
 // @fixme: isekai
-// @fixme: uploads / deletes
-// @fixme: item world
-// @fixme: clear cache command
 
 // @todo: per round / avgs (config?)
 // @todo: effect blame
@@ -155,6 +153,19 @@ function UserscriptTaskRunner(props: {}) {
 
     const logSource = LOG_SOURCE.useContext()
 
+    const [taskVersion, setTaskVersion] = useState(0)
+    useEffect(() => {
+        return DbN.listenIdbEvent((ev) => {
+            switch (ev.type) {
+                case "hvlog_import":
+                    for (const idx of range(TASK_DATA.length)) {
+                        TASK_DATA[idx] = { state: null, delay: null }
+                    }
+                    setTaskVersion((curr) => curr + 1)
+            }
+        })
+    }, [])
+
     useEffect(() => {
         if (!ready) {
             return
@@ -169,7 +180,7 @@ function UserscriptTaskRunner(props: {}) {
                     ...update,
                 })),
         })
-    }, [config, ready, setConfig])
+    }, [config, ready, setConfig, taskVersion])
 
     return <></>
 }

@@ -214,6 +214,7 @@ export namespace DbN {
         | IdbLogInsertEvent
         | IdbConfigChangeEvent
         | IdbDeleteEvent
+        | IdbImportEvent
     export const IDB_LOG_INSERT_EVENT = "hvlog_log_insert"
     export type IdbLogInsertEvent = {
         type: typeof IDB_LOG_INSERT_EVENT
@@ -229,5 +230,9 @@ export namespace DbN {
     export type IdbDeleteEvent = {
         type: typeof IDB_DELETE_EVENT
         ids: Array<LogId>
+    }
+    export const IDB_IMPORT_EVENT = "hvlog_import"
+    export type IdbImportEvent = {
+        type: typeof IDB_IMPORT_EVENT
     }
 }

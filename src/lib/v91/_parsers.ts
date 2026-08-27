@@ -708,6 +708,13 @@ const PARSERS = {
             item: t("string"),
         }
     ),
+    DROP_CHARM: new EventParser(
+        "DROP_CHARM",
+        `You received a \\[${Group("item", ".*")}\\]`,
+        {
+            item: t('string')
+        }
+    ),
     // Easter 2025
     DROP_EVENT: new EventParser(
         "DROP_EVENT",
@@ -801,10 +808,8 @@ const PARSERS = {
     ),
     POTENCY_GAIN: new EventParser(
         "POTENCY_GAIN",
-        `The equipment's potential has increased by ${Num("value")} points!`,
-        {
-            value: t("number"),
-        }
+        `The potential of your equipment has grown!`,
+        {}
     ),
     ENCHANT_GAIN: new EventParser(
         "ENCHANT_GAIN",

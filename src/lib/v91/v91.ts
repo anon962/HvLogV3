@@ -316,6 +316,15 @@ function _summarizeItemDrops(entries: LogEntries<v91N.HvEvent>) {
                         ]
                     }
                 }
+                case "DROP_CHARM": {
+                    return [
+                        {
+                            key: ev.item,
+                            count: 1,
+                            isEquip: false,
+                        },
+                    ]
+                }
                 case "EVENT_ITEM": {
                     const [name, count] = extractNameCount(ev.item)!
                     return [
@@ -833,6 +842,7 @@ const ACTION_GRAMMAR = {
             keys: [
                 "CREDITS",
                 "DROP",
+                "DROP_CHARM",
                 "DROP_EVENT",
                 "SOUL_FRAG_DROP",
                 "PROFICIENCY",

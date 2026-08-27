@@ -810,6 +810,10 @@ function useManagerState() {
             )
         }
 
+        DbN.broadcastIdbEvent({
+            type: "hvlog_import",
+        })
+
         locks.forEach((lock) => lock.release())
     }
     // #endregion

@@ -106,13 +106,10 @@ function TurnExpander(props: { region: N.Region }) {
     }, [evTypes, ctx.params.ev])
 
     return (
-        <div className={cn("turn")}>
+        <div className={cn("turn", { expand: expand })}>
             <span>{ctx.lines[props.region.idxs[0]]}</span>
 
-            <button
-                className={cn({ expand: expand })}
-                onClick={() => setExpand(!expand)}
-            >
+            <button onClick={() => setExpand(!expand)}>
                 <span>Turn {turnIdx}</span>
                 <ChevronDown />
             </button>
@@ -531,8 +528,11 @@ const CSS = css`
             width: 1.25em;
             transition: all 0.2s;
         }
-        button.expand svg {
+        .expand > button svg {
             transform: rotate(180deg);
+        }
+        .expand > span {
+            user-select: none;
         }
 
         hr {

@@ -15,6 +15,7 @@ import { CloudUploadIcon, Link, Trash2Icon } from "lucide-react"
 import {
     cn,
     isEqual,
+    L,
     newContext,
     range,
     sum,
@@ -456,11 +457,8 @@ export namespace LogListN {
                 return
             }
 
-            const currReq = fetcher.request
             const refetchTimer = setTimeout(() => {
-                if (isEqual(fetcher.request, currReq)) {
-                    fetcher.setRequest({ ...currReq })
-                }
+                fetcher.setRequest((curr) => ({ ...curr }))
             }, fetcher.data.ttl * 2)
 
             return () => clearTimeout(refetchTimer)
@@ -485,6 +483,10 @@ export namespace LogListN {
             const lastPageIdx = Math.floor(
                 fetcher.data.resultCount / fetcher.data.pageSize,
             )
+            L.debug(
+                `Ignoring oob page index ${fetcher.request.pageIdx} -> ${lastPageIdx}`,
+                fetcher.request,
+            )
             fetcher.setRequest({
                 ...fetcher.request,
                 pageIdx: lastPageIdx,
@@ -498,11 +500,11 @@ export namespace LogListN {
                     switch (ev.type) {
                         case "hvlog_log_insert":
                         case "hvlog_delete":
-                            fetcher.setRequest({ ...fetcher.request })
+                            fetcher.setRequest((curr) => ({ ...curr }))
                             return
                     }
                 }),
-            [request],
+            [],
         )
 
         return {
