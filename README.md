@@ -1,4 +1,4 @@
-HV stats based on battle logs. Sample images can be found [here](https://github.com/anon962/HvLogV3//tree/master/readme_files/samples).
+HV stats based on battle logs. [Screenshots](https://github.com/anon962/HvLogV3//tree/master/readme_files/samples).
 
 ## Features
 
