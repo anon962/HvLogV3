@@ -44,7 +44,7 @@ async function main() {
         w.document.head.innerHTML = ""
         w.document.title = "HvLog"
 
-        w.document.body.className = "hvlog-container dark"
+        w.document.body.className = "hvlog-container hvlog-bg dark"
         w.document.body.innerHTML = `<div class="hvlog-host"></div>`
 
         const hostEl = w.document.querySelector(".hvlog-host")!

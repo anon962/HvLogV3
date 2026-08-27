@@ -28,7 +28,7 @@ export function DropInfo({
         <div className="drop-stats">
             <div className="flex flex-col gap-12 items-center p-8 mt-2 bg-card w-max m-auto rounded-md border-2">
                 <div className="h-full flex gap-16 w-max flex-col lg:flex-row">
-                    <div className="flex gap-8 lg:max-w-[36ch] lg:items-center lg:flex-col flex-row-reverse">
+                    <div className="flex gap-8 lg:max-w-[36ch] justify-center lg:items-center lg:justify-start lg:flex-col flex-row-reverse">
                         <EquipSummary stats={stats} />
                         <CalculationPreview prices={prices} details={stats} />
                     </div>

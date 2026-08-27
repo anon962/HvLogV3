@@ -1,5 +1,5 @@
 import { HV_WORLDS, LOG_PROCESSING_LOCK } from "@/lib/constants"
-import { deleteLogs, LOG_DB_CACHE, LogDb } from "@/lib/db/db"
+import { deleteLogs, LogDb } from "@/lib/db/db"
 import { DbN } from "@/lib/db/dbN"
 import { Loader } from "@/lib/ui/loader"
 import { Button } from "@/lib/ui/shadcn/button"
@@ -27,7 +27,6 @@ import {
     objectValues,
     sum,
     throttle,
-    truncateString,
 } from "myutils"
 import {
     Fragment,
@@ -201,9 +200,11 @@ function Dialog() {
                 ref={dialogRef}
                 className="log-mgr max-w-[80vw] max-h-[80vh] flex flex-col"
                 onCancel={(ev) => {
-                    const didClose = tryClose()
-                    if (!didClose) {
-                        ev.preventDefault()
+                    if (ev.target === dialogRef.current) {
+                        const didClose = tryClose()
+                        if (!didClose) {
+                            ev.preventDefault()
+                        }
                     }
                 }}
                 onClick={(ev) => {
@@ -568,6 +569,7 @@ function useManagerState() {
 
                 const meta = (await db.get("logsMeta", log.id))!
                 const raw = (await db.get("logsRaw", log.id))!
+                const upload = await db.get("logsHvdata", log.id)
 
                 let text
                 if (raw.raw_c) {
@@ -589,6 +591,14 @@ function useManagerState() {
                         raw: text,
                         raw_c: null,
                     },
+                    hvdata: upload
+                        ? {
+                              id: upload.id,
+                              uid: upload.user.id,
+                              ukey: upload.user.key,
+                              uname: upload.user.name,
+                          }
+                        : null,
                 })
             }
 
@@ -700,7 +710,10 @@ function useManagerState() {
             const db = await dbFetch
             const stats = {
                 count: 0,
-                ids: new Set<string>(),
+                ids: {
+                    persistent: new Set<DbN.LogId>(),
+                    isekai: new Set<DbN.LogId>(),
+                },
                 size: 0,
                 total: jsonData.length,
             }
@@ -732,7 +745,7 @@ function useManagerState() {
                     })
 
                     const txn = db.transaction(
-                        ["logsMeta", "logsRaw"],
+                        ["logsMeta", "logsRaw", "logsHvdata"],
                         "readwrite",
                     )
                     await txn.objectStore("logsMeta").put(d.meta)
@@ -743,9 +756,19 @@ function useManagerState() {
                         raw_size: rawBytes.byteLength,
                         raw_c: compressed,
                     })
+                    if (d.hvdata) {
+                        await txn.objectStore("logsHvdata").put({
+                            id: d.id,
+                            user: {
+                                id: d.hvdata.id,
+                                key: d.hvdata.ukey,
+                                name: d.hvdata.uname,
+                            },
+                        })
+                    }
                     txn.commit()
 
-                    stats.ids.add(d.id)
+                    stats.ids[d.meta.world].add(d.id)
                     stats.size += compressed.byteLength
                     status.logs[d.id] = {
                         id: d.id,
@@ -764,14 +787,27 @@ function useManagerState() {
             }
 
             L.info(
-                `Imported ${stats.ids.size} logs from ${file.name} (${formatMiB(stats.size)} MiB compressed)`,
+                `Imported ${stats.ids.persistent.size + stats.ids.isekai.size} logs from ${file.name} (${formatMiB(stats.size)} MiB compressed)`,
             )
             cancelStatusLog()
+
+            for (const world of HV_WORLDS) {
+                if (stats.ids[world].size > 0)
+                    DbN.broadcastIdbEvent({
+                        type: "hvlog_log_insert",
+                        ids: [...stats.ids[world]],
+                        world,
+                    })
+            }
 
             const done =
                 ((await db.get("kv", "compressDone")) as Set<DbN.LogId>) ??
                 new Set()
-            await db.put("kv", done.union(stats.ids), "compressDone")
+            await db.put(
+                "kv",
+                done.union(stats.ids.persistent).union(stats.ids.isekai),
+                "compressDone",
+            )
         }
 
         locks.forEach((lock) => lock.release())
@@ -808,7 +844,8 @@ type V3Export = {
         id: string
         uid: string
         ukey: string
-    }
+        uname: string
+    } | null
 }
 
 // #region css

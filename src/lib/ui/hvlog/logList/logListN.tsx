@@ -491,13 +491,13 @@ export namespace LogListN {
             })
         }, [fetcher.isPending, fetcher.data, fetcher.request])
 
-        // Refetch on log deletion
+        // Refetch on log import / deletion
         useEffect(
             () =>
                 DbN.listenIdbEvent((ev) => {
                     switch (ev.type) {
+                        case "hvlog_log_insert":
                         case "hvlog_delete":
-                            console.log("set", fetcher.request, fetcher.data)
                             fetcher.setRequest({ ...fetcher.request })
                             return
                     }

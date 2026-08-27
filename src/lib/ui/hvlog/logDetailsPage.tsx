@@ -273,6 +273,9 @@ function UploadButton(props: { id: DbN.LogId }) {
                     </div>
                     <CloudUploadIcon
                         className={cn("size-5", loading ? "invisible" : "")}
+                        style={{
+                            color: "color-mix(in oklab, var(--color-blue-500), var(--foreground) 50%)",
+                        }}
                     />
                 </div>
             </IconButton>
@@ -284,29 +287,31 @@ function DeleteButton(props: { id: DbN.LogId; backHref: string }) {
     const { config } = USERSCRIPT_CONFIG.useContext()
 
     return (
-        <IconButton
-            onClick={async () => {
-                const db = new LogDb()
-                const cache = LOG_DB_CACHE()
+        (config.showDelete === "warn" || config.showDelete === "yes") && (
+            <IconButton
+                onClick={async () => {
+                    const db = new LogDb()
+                    const cache = LOG_DB_CACHE()
 
-                const meta = await cache.metaCache.fetch(props.id)
+                    const meta = await cache.metaCache.fetch(props.id)
 
-                if (config.showDelete === "warn") {
-                    if (
-                        !confirm(
-                            `Delete ${props.id ?? "???"} log from ${meta.startedAt}?`,
-                        )
-                    ) {
-                        return
+                    if (config.showDelete === "warn") {
+                        if (
+                            !confirm(
+                                `Delete ${props.id ?? "???"} log from ${meta.startedAt}?`,
+                            )
+                        ) {
+                            return
+                        }
                     }
-                }
-                await deleteLogs(db, [props.id])
+                    await deleteLogs(db, [props.id])
 
-                window.history.pushState(null, "", props.backHref)
-            }}
-        >
-            <Trash2Icon style={{ color: "hsl(0deg 100% 86.64%)" }} />
-        </IconButton>
+                    window.history.pushState(null, "", props.backHref)
+                }}
+            >
+                <Trash2Icon style={{ color: "hsl(0deg 100% 86.64%)" }} />
+            </IconButton>
+        )
     )
 }
 
