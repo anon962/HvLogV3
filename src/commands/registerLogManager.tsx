@@ -27,6 +27,8 @@ import {
     objectValues,
     sum,
     throttle,
+    useDebouncedWrite,
+    WorkerPoolN,
 } from "myutils"
 import {
     Fragment,
@@ -39,9 +41,16 @@ import {
 } from "react"
 
 export function registerLogManager() {
-    window.GM_registerMenuCommand("Manage Logs", () => mountReact(Dialog, {}), {
-        id: "manage_logs",
-    })
+    window.GM_registerMenuCommand(
+        "Manage Logs",
+        () => {
+            window.HV_LOG.workerPool ??= new WorkerPoolN.Pool()
+            mountReact(Dialog, {})
+        },
+        {
+            id: "manage_logs",
+        },
+    )
 }
 
 // #region dialog
@@ -85,12 +94,23 @@ function Dialog() {
     }, [status])
 
     const [importFiles, setImportFiles] = useState([] as File[])
-    const [delStart, setDelStart] = useState(new Date("2000-01-01"))
-    const [delEnd, setDelEnd] = useState(new Date("2099-01-01"))
+    const [delStart, setDelStart] = useState(
+        new Date("2000-01-01T01:01:01").toISOString().slice(0, 19),
+    )
+    const [delEnd, setDelEnd] = useState(
+        new Date("2099-01-01T01:01:01").toISOString().slice(0, 19),
+    )
 
     const dateDeletions = useMemo(() => {
-        const st = delStart.toISOString()
-        const end = delEnd.toISOString()
+        console.log("here", delStart, delEnd)
+        const d0 = new Date(delStart)
+        const d1 = new Date(delEnd)
+        if (isNaN(d0.getTime()) || isNaN(d1.getTime())) {
+            return []
+        }
+
+        const st = d0.toISOString()
+        const end = d1.toISOString()
         const ids = Object.values(status.logs)
             .filter((l) => l.startedAt >= st)
             .filter((l) => l.startedAt <= end)
@@ -104,8 +124,9 @@ function Dialog() {
         return ids
     }, [status])
 
-    const actions: Array<[ReactNode, ReactNode]> = [
-        [
+    type Action = [ReactNode, ReactNode]
+    const exportAction: Action = useMemo(
+        () => [
             <span></span>,
             <ActionButton
                 onClick={() => exportLogs()}
@@ -113,7 +134,10 @@ function Dialog() {
                 loading={isBusy}
             />,
         ],
-        [
+        [isBusy],
+    )
+    const importAction: Action = useMemo(
+        () => [
             <span className="flex flex-col gap-1 items-center">
                 <Input
                     onChange={(ev) => {
@@ -133,35 +157,21 @@ function Dialog() {
                 disabled={importFiles.length === 0}
             />,
         ],
-        [
-            <div className="flex flex-col">
+        [isBusy, importFiles],
+    )
+    const deleteAction: Action = useMemo(
+        () => [
+            <div className="flex flex-col justify-end">
                 <span className="inline-flex gap-1 w-full justify-end items-center">
-                    <span className="shrink-0">
-                        Delete {dateDeletions.length} old logs from
-                    </span>
-                    <Input
-                        className="max-w-[12em]"
-                        type="date"
-                        value={delStart.toISOString().split("T")[0]}
-                        onInput={(ev) =>
-                            ev.target.valueAsDate
-                                ? setDelStart(ev.target.valueAsDate)
-                                : null
-                        }
-                    />
-                    <span>to</span>
-                    <Input
-                        className="max-w-[12em]"
-                        type="date"
-                        value={delEnd.toISOString().split("T")[0]}
-                        onInput={(ev) =>
-                            ev.target.valueAsDate
-                                ? setDelEnd(ev.target.valueAsDate)
-                                : null
-                        }
-                    />
+                    Delete {dateDeletions.length} old logs (utc time)
                 </span>
-                <span className="text-end">(including end date, utc time)</span>
+                <div>
+                    {" "}
+                    from{" "}
+                    <DateInput defaultValue={delStart} onChange={setDelStart} />
+                    <span> to </span>
+                    <DateInput defaultValue={delEnd} onChange={setDelEnd} />
+                </div>
             </div>,
             <ActionButton
                 onClick={() => {
@@ -174,9 +184,10 @@ function Dialog() {
                 disabled={dateDeletions.length === 0}
             />,
         ],
-    ]
-    if (totals.legacyCount > 0) {
-        actions.push([
+        [isBusy, dateDeletions],
+    )
+    const legacyDeleteAction: Action = useMemo(
+        () => [
             <span>
                 Delete {legacyDeletions.length} logs from version {"<"}2.x
             </span>,
@@ -189,8 +200,9 @@ function Dialog() {
                 label="Delete Jank Logs"
                 loading={isBusy}
             />,
-        ])
-    }
+        ],
+        [legacyDeletions],
+    )
 
     return (
         <>
@@ -238,13 +250,47 @@ function Dialog() {
                             </li>
                         </ul>
                     }
-                    actions={actions}
+                    actions={useMemo(
+                        () =>
+                            [
+                                exportAction,
+                                importAction,
+                                deleteAction,
+                                legacyDeletions.length > 0
+                                    ? legacyDeleteAction
+                                    : null,
+                            ].filter((x) => x !== null),
+                        [
+                            exportAction,
+                            importAction,
+                            deleteAction,
+                            legacyDeleteAction,
+                            legacyDeletions,
+                        ],
+                    )}
                     log={log}
                 />
 
                 <hr></hr>
             </dialog>
         </>
+    )
+}
+
+function DateInput(props: {
+    defaultValue: string
+    onChange: (d: string) => void
+}) {
+    const [init] = useState(props.defaultValue)
+    return (
+        <input
+            className="max-w-[16em]"
+            type="datetime-local"
+            defaultValue={init}
+            onInput={(ev) => {
+                props.onChange((ev.target as HTMLInputElement).value)
+            }}
+        />
     )
 }
 // #endregion

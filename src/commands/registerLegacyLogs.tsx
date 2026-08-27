@@ -27,6 +27,7 @@ import {
     truncateString,
     useAsync,
     useAsync2,
+    WorkerPoolN,
 } from "myutils"
 import {
     ReactNode,
@@ -41,7 +42,10 @@ import {
 export function registerLegacyLogs() {
     window.GM_registerMenuCommand(
         "Migrate Old Logs",
-        () => mountReact(Dialog, {}),
+        () => {
+            window.HV_LOG.workerPool ??= new WorkerPoolN.Pool()
+            mountReact(Dialog, {})
+        },
         {
             id: "migrate_logs",
         },

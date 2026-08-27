@@ -335,7 +335,7 @@ export function ConfigPage(props: {}) {
                                 ) {
                                     if (
                                         !confirm(
-                                            "All existing and future logs to HvData. Are you sure?",
+                                            "All existing and future logs will be uploaded to HvData. Are you sure?",
                                         )
                                     ) {
                                         return

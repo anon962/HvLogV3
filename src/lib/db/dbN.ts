@@ -108,6 +108,10 @@ export namespace DbN {
                 done: Set<LogId>
                 pending: boolean
             }
+            hvdataDone: {
+                start: ISODate | null
+                ids: Set<LogId>
+            }
         }
         live: Record<`${LogId}_${number}`, { logId: LogId; lines: string[] }>
         logsMeta: Record<

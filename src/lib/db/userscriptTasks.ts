@@ -17,12 +17,14 @@ import { LOG_DB_CACHE, LogDb } from "./db"
 import { DbN } from "./dbN"
 import { LogSourceN } from "./logSourceN"
 import { UserscriptConfig } from "./userscriptConfig"
+import { HvDataN } from "../hvdataN"
 
 const TASKS: Array<(opts: TaskOpts) => TaskGen> = [
     pollPrices,
     populateSearch,
     compressLogs,
     tallyEquips,
+    autoUpload,
     trimDetailsCache,
 ]
 const ACTIVE_TASK = {
@@ -569,6 +571,74 @@ async function* populateSearch(opts: TaskOpts): TaskGen {
 
     L.info(`Added ${missing.size} logs to search cache`)
     cancelPbar()
+    return () => sleep(DELAY)
+}
+
+async function* autoUpload(opts: TaskOpts): TaskGen {
+    const DELAY = 5 * 60 * 1000
+
+    if (
+        ["default", "disabled", "manual"].includes(opts.config.hvdataUploadMode)
+    ) {
+        return () => sleep(DELAY)
+    }
+
+    const db = await new LogDb().connect()
+    const cache = LOG_DB_CACHE()
+
+    const ids = new Set(await db.getAllKeys("logsMeta"))
+    let hvdataDone = await db.get("kv", "hvdataDone")
+    if (!hvdataDone || hvdataDone.start !== opts.config.hvdataUploadStart) {
+        hvdataDone = {
+            start: opts.config.hvdataUploadStart,
+            ids: new Set(),
+        }
+        await db.put("kv", hvdataDone, "hvdataDone")
+    }
+
+    const missing = ids.difference(hvdataDone.ids)
+    if (!missing.size) {
+        return () => sleep(DELAY)
+    }
+
+    L.info(`Auto-uploading ${missing.size} logs`)
+    for (const batch of batched([...missing], 32)) {
+        const user = opts.config.hvdataUser
+        if (!user) {
+            L.error("No hvdata user configured")
+            return () => sleep(DELAY)
+        }
+
+        for (const id of batch) {
+            hvdataDone.ids.add(id)
+
+            const meta = await cache.metaCache.fetch(id)
+            if (hvdataDone.start && meta.startedAt <= hvdataDone.start) {
+                continue
+            }
+
+            const logText = await cache.rawCache.fetch(id)
+
+            const resp = await HvDataN.uploadLog({
+                id,
+                logText,
+                config: opts.config,
+            })
+            await db.put("logsHvdata", {
+                id: resp.id,
+                user,
+            })
+        }
+
+        await db.put("kv", hvdataDone, "hvdataDone")
+        await trimDetailsCache(opts).next()
+
+        opts = yield
+        if (hvdataDone.start !== opts.config.hvdataUploadStart) {
+            return () => sleep(DELAY)
+        }
+    }
+
     return () => sleep(DELAY)
 }
 // #endregion

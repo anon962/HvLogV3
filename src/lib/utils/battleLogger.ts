@@ -109,7 +109,9 @@ export class BattleLogger {
         const logEl = document.querySelector(
             "#textlog tbody",
         ) as HTMLElement | null
-        if (!!logEl && !this.isBattleEnd()) {
+        if (!!document.querySelector("#riddlemaster")) {
+            return
+        } else if (!!logEl && !this.isBattleEnd()) {
             for await (const { idx, lines, isBattleEnd } of this.watchLog({
                 logEl,
             })) {
@@ -177,8 +179,6 @@ export class BattleLogger {
                         ),
                 ),
             )
-            return
-        } else if (!!document.querySelector("#riddlemaster")) {
             return
         } else {
             this.flushComplete(hvlog_live)

@@ -528,7 +528,7 @@ const CSS = css`
             width: 1.25em;
             transition: all 0.2s;
         }
-        .expand > button svg {
+        .expand svg {
             transform: rotate(180deg);
         }
         .expand > span {
