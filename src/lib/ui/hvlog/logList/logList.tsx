@@ -388,17 +388,19 @@ const CSS = css`
         .col-actions {
             height: 1px;
 
-            button {
+            .icon-button {
                 width: 2.125em;
                 height: 100%;
                 border-radius: 2em;
+                padding: 0.45em;
 
+                color: color-mix(
+                    in oklab,
+                    var(--color-muted-foreground),
+                    var(--color-foreground) 40%
+                );
                 &:hover {
-                    background-color: color-mix(
-                        in oklab,
-                        var(--foreground),
-                        transparent 90%
-                    );
+                    color: inherit;
                 }
             }
 

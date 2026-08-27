@@ -24,12 +24,12 @@ import {
 } from "myutils"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { HVDATA_URL, IS_REMOTE } from "../../../constants"
+import { IconButton } from "../../iconButton"
 import { RunIcon, Skull2Icon } from "../../icons/misc"
 import { CheckIcon } from "../../icons/tailwind"
 import { ListTableN } from "../../listTable"
-import { Button } from "../../shadcn/button"
-import { UrlParamN } from "../router"
 import { TOASTER } from "../../toaster"
+import { UrlParamN } from "../router"
 
 export namespace LogListN {
     export const COLS = {
@@ -128,32 +128,24 @@ export namespace LogListN {
                 content: (
                     <div className="flex h-full">
                         {extras?.showDelete && (
-                            <Button
-                                onClick={() => extras.onDelete(x)}
-                                variant="ghost"
-                                size="sm"
-                            >
+                            <IconButton onClick={() => extras.onDelete(x)}>
                                 <Trash2Icon />
-                            </Button>
+                            </IconButton>
                         )}
                         {extras?.showUpload &&
                             (extras.upload ? (
-                                <Button variant="ghost" size="sm">
+                                <IconButton>
                                     <a
                                         href={`${HVDATA_URL}/logs/${extras.upload.id}`}
                                         target="_blank"
                                     >
                                         <Link />
                                     </a>
-                                </Button>
+                                </IconButton>
                             ) : (
-                                <Button
-                                    onClick={() => extras.onUpload(x)}
-                                    variant="ghost"
-                                    size="sm"
-                                >
+                                <IconButton onClick={() => extras.onUpload(x)}>
                                     <CloudUploadIcon />
-                                </Button>
+                                </IconButton>
                             ))}
                     </div>
                 ),
