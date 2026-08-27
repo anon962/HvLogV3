@@ -21,35 +21,11 @@ globalThis.HV_LOG = {} as any
 // const write = (x: string) => process.stdout.write(x + "\n")
 const write = (x: string) => L.info(CLI_KEY, x)
 
-const __file__ = fileURLToPath(import.meta.url)
-const ROOT_DIR = path.dirname(path.dirname(path.dirname(__file__)))
-const logDir = path.join(ROOT_DIR, "data", "logs")
-const logFile = path.join(logDir, "web_cli.log")
-const logStream = createWriteStream(logFile, { flags: "a", flush: true })
-
 const CLI_KEY = Symbol("CLI_KEY")
 L.sinks["default"].call = (level, msg, ...rest) => {
     if (msg === CLI_KEY) {
         L.originalConsoleFns[level](...rest)
     }
-}
-L.sinks["cli"] = {
-    disabled: false,
-    call: (level, ...args) => {
-        if (args[0] === CLI_KEY) {
-            args = [
-                `stdout (...)`,
-                // `stdout: ${truncateString(print(args.slice(1)), 500, "...")}`,
-            ]
-        }
-
-        const now = new Date().toISOString()
-        logStream.write(
-            `[${level.toUpperCase().padEnd(5)}] [${now}] - ` +
-                print(args) +
-                "\n",
-        )
-    },
 }
 L.patchConsole()
 
@@ -72,6 +48,8 @@ async function main() {
                 return
             }
 
+            const unhook = hookConsole()
+
             cmd = JSON.parse(stdin)
             L.debug("start", cmd.type)
             switch (cmd.type) {
@@ -88,6 +66,8 @@ async function main() {
                     throw new Error(`Unknown command ${cmd.type}`)
             }
             L.debug("done", cmd.type)
+
+            unhook()
         }
     } catch (e) {
         L.error(e)
@@ -99,6 +79,38 @@ async function main() {
         write("")
         throw e
     }
+}
+
+function hookConsole() {
+    const __file__ = fileURLToPath(import.meta.url)
+    const ROOT_DIR = path.dirname(path.dirname(path.dirname(__file__)))
+    const logDir = path.join(ROOT_DIR, "data", "logs")
+    const logFile = path.join(logDir, "web_cli.log")
+    const logStream = createWriteStream(logFile, {
+        flags: "a",
+        flush: true,
+    })
+
+    L.sinks["cli"] = {
+        disabled: false,
+        call: (level, ...args) => {
+            if (args[0] === CLI_KEY) {
+                args = [
+                    `stdout (...)`,
+                    // `stdout: ${truncateString(print(args.slice(1)), 500, "...")}`,
+                ]
+            }
+
+            const now = new Date().toISOString()
+            logStream.write(
+                `[${level.toUpperCase().padEnd(5)}] [${now}] - ` +
+                    print(args) +
+                    "\n",
+            )
+        },
+    }
+
+    return () => logStream.close()
 }
 
 function handleParse(cmd: any) {
