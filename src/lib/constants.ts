@@ -11,8 +11,8 @@ export const HVDATA_URL = IS_REMOTE
       "/"
     : //
       //
-      //   "https://hvdata.gisadan.dev"
-      "http://localhost:4545"
+      "https://hvdata.gisadan.dev"
+//   "http://localhost:4545"
 
 export const DEBUG = 0 && process.env.NODE_ENV === "development"
 
