@@ -6,6 +6,14 @@ export const IS_NODE = !IS_BROWSER
 export const IS_REMOTE = IS_BROWSER ? !!window.HV_LOG.isRemote : true
 export const IS_LOCAL = !IS_REMOTE
 
+export const HVDATA_URL = IS_REMOTE
+    ? //
+      "/"
+    : //
+      //
+      //   "https://hvdata.gisadan.dev"
+      "http://localhost:4545"
+
 export const DEBUG = 0 && process.env.NODE_ENV === "development"
 
 export const HV_WORLDS = [

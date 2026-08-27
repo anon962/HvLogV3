@@ -10,7 +10,7 @@ import {
     sort,
     throttle,
 } from "myutils"
-import { HV_WORLDS, LOG_PROCESSING_LOCK } from "../constants"
+import { HV_WORLDS, HVDATA_URL, LOG_PROCESSING_LOCK } from "../constants"
 import { EquipPageN } from "../ui/hvlog/equipsPage"
 import { compressZstd, decompressZstd } from "../utils/miscUtils"
 import { LOG_DB_CACHE, LogDb } from "./db"
@@ -149,7 +149,7 @@ async function* pollPrices(opts: TaskOpts): TaskGen {
             try {
                 for (const world of HV_WORLDS) {
                     const resp = await fetch(
-                        `https://hvdata.gisadan.dev/api/fapspreader.json?is_isekai=${world === "isekai" ? 1 : 0}`,
+                        `${HVDATA_URL}/api/fapspreader.json?is_isekai=${world === "isekai" ? 1 : 0}`,
                     )
                     if (!resp.ok) {
                         throw new Error(`${resp.status} ${resp.statusText}`)

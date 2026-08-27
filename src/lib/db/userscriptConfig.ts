@@ -3,6 +3,7 @@ import { SetStateAction, useEffect, useState } from "react"
 import { IS_LOCAL } from "../constants"
 import { LogDb } from "./db"
 import { DbN } from "./dbN"
+import { HvDataN } from "../hvdataN"
 
 const USERSCRIPT_CONFIG_ = newContext(() => {
     const [config, setConfig] = useState(DEFAULT_USERSCRIPT_CONFIG())
@@ -100,11 +101,7 @@ export const DEFAULT_USERSCRIPT_CONFIG = () => ({
         | "auto_all",
     hvdataUploadStart: null as null | ISODate,
     hvdataNamePref: null as null | string,
-    hvdataUser: null as null | {
-        name: string
-        id: string
-        key: string
-    },
+    hvdataUser: null as null | HvDataN.User,
     hvdataDelayDawn: "default" as "default" | "yes" | "no",
     hvdataAnon: "default" as "default" | "yes" | "no",
 })
@@ -141,14 +138,9 @@ export const PERSISTENT_PRICES = () => ({"Abstract Art of Bicycles": 9800.0, "Ab
 // prettier-ignore
 export const ISEKAI_PRICES = () => ({"Aether Shard": 101.0, "Black T-Shirt": 2500.0, "Broken Glasses": 1276.0, "Bubble-Gum": 14678.0, "Bunny-Girl Costume": 1284.0, "Crystallized Phazon": 8907.0, "Dalek Voicebox": 631.0, "Defense Matrix Modulator": 100.0, "Energy Cell": 200.0, "Featherweight Shard": 612.0, "Flower Vase": 12348.0, "Greater Aether Charm": 8050.0, "Greater Annihilator Charm": 1810.0, "Greater Archmage Charm": 85750.0, "Greater Butcher Charm": 97750.0, "Greater Capacitor Charm": 17100.0, "Greater Cold-proof Charm": 500.0, "Greater Cold Strike Charm": 1380.0, "Greater Dark-proof Charm": 522.0, "Greater Dark Strike Charm": 3052.0, "Greater Economizer Charm": 34000.0, "Greater Fatality Charm": 5861.0, "Greater Featherweight Charm": 17550.0, "Greater Fire-proof Charm": 313.0, "Greater Fire Strike Charm": 929.0, "Greater Hollowforged Charm": 21000.0, "Greater Holy-proof Charm": 222.0, "Greater Holy Strike Charm": 6400.0, "Greater Juggernaut Charm": 94300.0, "Greater Lightning-proof Charm": 246.0, "Greater Lightning Strike Charm": 1970.0, "Greater Overpower Charm": 49981.0, "Greater Penetrator Charm": 227500.0, "Greater Spellweaver Charm": 112000.0, "Greater Swiftness Charm": 10700.0, "Greater Voidseeker Charm": 79375.0, "Greater Wind-proof Charm": 298.0, "Greater Wind Strike Charm": 956.0, "Health Draught": 24.38, "Health Elixir": 450.0, "Health Potion": 49.36, "High-Grade Cloth": 2039.0, "High-Grade Leather": 155.0, "High-Grade Metals": 1830.0, "High-Grade Wood": 321.0, "Hinamatsuri Doll": 1284.0, "Holy Hand Grenade of Antioch": 631.0, "Infusion of Darkness": 36.0, "Infusion of Divinity": 54.0, "Infusion of Flames": 38.0, "Infusion of Frost": 49.0, "Infusion of Lightning": 85.0, "Infusion of Storms": 65.0, "Kevlar Charm Pouch": 57500.0, "Legendary Armor Core": 4426.0, "Legendary Staff Core": 19900.0, "Legendary Weapon Core": 19344.0, "Lesser Aether Charm": 58.0, "Lesser Annihilator Charm": 22.0, "Lesser Archmage Charm": 132.0, "Lesser Butcher Charm": 1160.0, "Lesser Capacitor Charm": 154.0, "Lesser Cold-proof Charm": 10.0, "Lesser Cold Strike Charm": 13.0, "Lesser Dark-proof Charm": 10.0, "Lesser Dark Strike Charm": 71.0, "Lesser Economizer Charm": 1833.0, "Lesser Fatality Charm": 30.0, "Lesser Featherweight Charm": 48.0, "Lesser Fire-proof Charm": 10.0, "Lesser Fire Strike Charm": 10.0, "Lesser Hollowforged Charm": 270.0, "Lesser Holy-proof Charm": 10.0, "Lesser Holy Strike Charm": 13.0, "Lesser Juggernaut Charm": 554.0, "Lesser Lightning-proof Charm": 15.0, "Lesser Lightning Strike Charm": 10.0, "Lesser Overpower Charm": 486.0, "Lesser Penetrator Charm": 1490.0, "Lesser Spellweaver Charm": 24.0, "Lesser Swiftness Charm": 109.0, "Lesser Voidseeker Charm": 1375.0, "Lesser Wind-proof Charm": 10.0, "Lesser Wind Strike Charm": 17.0, "Lock of Blue Hair": 633.0, "Low-Grade Cloth": 19.0, "Low-Grade Leather": 27.0, "Low-Grade Metals": 37.0, "Low-Grade Wood": 46.0, "Mana Draught": 49.62, "Mana Elixir": 993.0, "Mana Potion": 99.58, "ManBearPig Tail": 633.0, "Mid-Grade Cloth": 263.0, "Mid-Grade Leather": 229.0, "Mid-Grade Metals": 288.0, "Mid-Grade Wood": 882.0, "Mithra's Flower": 632.0, "Mithril Charm Pouch": 915000.0, "Noodly Appendage": 15509.0, "Repurposed Actuator": 4154.0, "Sapling": 2503.0, "Scrap Cloth": 98.0, "Scrap Leather": 98.0, "Scrap Metal": 100.0, "Scrap Wood": 81.0, "Scroll of Absorption": 21.0, "Scroll of Life": 207.0, "Scroll of Protection": 246.0, "Scroll of Shadows": 89.0, "Scroll of Swiftness": 67.0, "Scroll of the Avatar": 708.0, "Scroll of the Gods": 442.0, "Shade Fragment": 718.0, "Silk Charm Pouch": 1166.0, "Spirit Draught": 49.76, "Spirit Elixir": 988.0, "Spirit Potion": 99.5, "Unicorn Horn": 3900.0, "Voidseeker Shard": 1726.0, "World Seed": 83.0, "Credits": 1})
 
-export interface HvDataUser {
-    id: string
-    key: string
-    name: string
-}
-
 export async function validateConfigUser(
     config: UserscriptConfig,
+    prev: UserscriptConfig | null = null,
 ): Promise<UserscriptConfig> {
     const x: UserscriptConfig = JSON.parse(JSON.stringify(config))
 
@@ -173,55 +165,18 @@ export async function validateConfigUser(
     }
 
     if (!x.hvdataUser) {
-        x.hvdataUser = await createUser()
+        x.hvdataUser = await HvDataN.createUser()
     }
 
     if (x.hvdataNamePref && x.hvdataUser.name !== x.hvdataNamePref) {
         x.hvdataUser.name = x.hvdataNamePref
-        await updateUser(x.hvdataUser)
+    }
+    if (prev && !isEqual(x.hvdataUser, prev?.hvdataUser)) {
+        x.hvdataUser = await HvDataN.updateUser({
+            ...x.hvdataUser,
+            name: x.hvdataUser.name.length > 0 ? x.hvdataUser.name : null,
+        })
     }
 
     return x
-}
-async function createUser(): Promise<HvDataUser> {
-    const resp = await fetch("https://hvdata.gisadan.dev/api/users", {
-        method: "POST",
-    })
-
-    if (resp.status !== 200) {
-        throw new Error(String(resp.status) + " " + resp.statusText)
-    }
-
-    const data = await resp.json()
-    L.info("Created HvData user", data)
-
-    return data
-}
-async function updateUser(user: HvDataUser): Promise<HvDataUser> {
-    const resp = await fetch("https://hvdata.gisadan.dev/api/users", {
-        method: "PATCH",
-        headers: {
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify(user),
-    })
-    if (!resp.ok) {
-        console.trace(`${resp.status} ${resp.statusText}`)
-        throw new Error(`${resp.status} ${resp.statusText}`)
-    }
-    const data = await resp.json()
-    L.info("Updated HvData user", data)
-    return data
-}
-async function deleteUser(opts: Pick<HvDataUser, "id" | "key">) {
-    return await fetch("https://hvdata.gisadan.dev/api/users", {
-        method: "DELETE",
-        headers: {
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-            id: opts.id,
-            key: opts.key,
-        }),
-    })
 }

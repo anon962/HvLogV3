@@ -779,7 +779,6 @@ function useManagerState() {
     // #endregion
     // #region deleteLogs
     async function deleteLogs_(opts: { ids: Array<DbN.LogId> }) {
-        const db = await dbFetch
         for (const world of HV_WORLDS) {
             const idsForWorld = [...opts.ids].filter(
                 (id) => status.logs[id].world === world,
@@ -789,16 +788,7 @@ function useManagerState() {
             }
 
             L.info(`Deleting ${idsForWorld.length} ${world} logs ...`)
-            const txn = db.transaction(
-                [
-                    "logsRaw",
-                    "logsMeta",
-                    "summariesForMeta",
-                    "summariesForSearch",
-                ],
-                "readwrite",
-            )
-            await deleteLogs(txn, idsForWorld)
+            await deleteLogs(new LogDb(), idsForWorld)
         }
 
         for (const id of opts.ids) {

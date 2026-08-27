@@ -34,19 +34,17 @@ import {
     SelectTrigger,
     SelectValue,
 } from "../shadcn/select"
+import { TOASTER } from "../toaster"
 
 export function ConfigPage(props: {}) {
     const { config, setConfig } = USERSCRIPT_CONFIG.useContext()
-
     const [pending, setPending] = useState<UserscriptConfig>(
         JSON.parse(JSON.stringify(config)),
     )
-
     const [loading, setLoading] = useState(false)
-
     const [version, setVersion] = useState(0)
-    const toastEl = useRef<HTMLDivElement>(null)
-    const toastElTimer = useRef<any>(0)
+
+    const { toast } = TOASTER.useContext()
 
     useEffect(() => {
         if (!isEqual(config, pending)) {
@@ -274,7 +272,11 @@ export function ConfigPage(props: {}) {
                         />
                     </Setting>
 
-                    <UploadSection pending={pending} setPending={setPending} />
+                    <UploadSection
+                        config={config}
+                        pending={pending}
+                        setPending={setPending}
+                    />
 
                     <PriceSection
                         pending={pending}
@@ -286,9 +288,7 @@ export function ConfigPage(props: {}) {
                 <div className="spacer"></div>
 
                 <div className="actions">
-                    <div ref={toastEl} className="toast hide">
-                        <Check fontWeight={600} /> Saved!
-                    </div>
+                    <div></div>
 
                     <div className="buttons">
                         <ActionButton
@@ -342,18 +342,24 @@ export function ConfigPage(props: {}) {
                                     }
                                 }
 
-                                setLoading(() => true)
-                                update = await validateConfigUser(update)
+                                try {
+                                    setLoading(() => true)
+                                    update = await validateConfigUser(
+                                        update,
+                                        config,
+                                    )
+                                } catch (e) {
+                                    toast("Invalid HvData user!", {
+                                        error: true,
+                                    })
+                                    return
+                                } finally {
+                                    setLoading(() => false)
+                                }
 
                                 setConfig(JSON.parse(JSON.stringify(update)))
                                 setVersion(version + 1)
-                                setLoading(() => false)
-
-                                toastEl.current?.classList.remove("hide")
-                                clearTimeout(toastElTimer.current)
-                                toastElTimer.current = setTimeout(() => {
-                                    toastEl.current?.classList.add("hide")
-                                }, 2500)
+                                toast("Saved!")
                             }}
                             loading={loading}
                             variant="secondary"
@@ -367,6 +373,7 @@ export function ConfigPage(props: {}) {
 }
 
 function UploadSection(props: {
+    config: UserscriptConfig
     pending: UserscriptConfig
     setPending: Dispatch<SetStateAction<UserscriptConfig>>
 }) {
@@ -384,6 +391,14 @@ function UploadSection(props: {
                 ...curr,
                 hvdataNamePref: x,
             })),
+    })
+    const [userId, setUserId] = useDebouncedWrite({
+        value: props.pending.hvdataUser?.id ?? "",
+        onUpdate: (x) => setUser({ id: x }),
+    })
+    const [userKey, setUserKey] = useDebouncedWrite({
+        value: props.pending.hvdataUser?.key ?? "",
+        onUpdate: (x) => setUser({ key: x }),
     })
 
     const setUser = (x: Partial<UserscriptConfig["hvdataUser"]>) => {
@@ -447,8 +462,9 @@ function UploadSection(props: {
                             ...props.pending,
                             hvdataUploadMode: v,
                             hvdataUploadStart:
-                                v === "auto_all"
-                                    ? new Date().toISOString()
+                                v === "auto_new"
+                                    ? (props.config.hvdataUploadStart ??
+                                      new Date().toISOString())
                                     : null,
                         })
                     }
@@ -548,7 +564,7 @@ function UploadSection(props: {
                         type="string"
                         placeholder={props.pending.hvdataUser?.name ?? ""}
                         onInput={(ev) => {
-                            const v = ev.target.value.trim()
+                            const v = ev.target.value
                             if (v.length > 0) {
                                 setNamePref(v)
                             } else {
@@ -566,14 +582,12 @@ function UploadSection(props: {
                     </div>
                     <div className="flex gap-2 items-center">
                         <Input
-                            value={props.pending.hvdataUser?.id ?? ""}
+                            value={userId}
                             type="string"
                             disabled={!idEdit}
-                            onChange={(ev) => {
+                            onInput={(ev) => {
                                 const v = ev.target.value.trim()
-                                setUser({
-                                    id: v,
-                                })
+                                setUserId(v)
                             }}
                         />
                         <Input
@@ -592,14 +606,12 @@ function UploadSection(props: {
                     </div>
                     <div className="flex gap-2 items-center">
                         <Input
-                            value={props.pending.hvdataUser?.key ?? ""}
+                            value={userKey}
                             type="string"
                             disabled={!keyEdit}
-                            onChange={(ev) => {
+                            onInput={(ev) => {
                                 const v = ev.target.value.trim()
-                                setUser({
-                                    key: v,
-                                })
+                                setUserKey(v)
                             }}
                         />
                         <Input

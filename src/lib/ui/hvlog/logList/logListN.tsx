@@ -1,5 +1,9 @@
+import { deleteLogs, LOG_DB_CACHE, LogDb } from "@/lib/db/db"
+import { DbN } from "@/lib/db/dbN"
 import { LOG_SOURCE } from "@/lib/db/logSource"
 import { LogSourceN } from "@/lib/db/logSourceN"
+import { USERSCRIPT_CONFIG } from "@/lib/db/userscriptConfig"
+import { HvDataN } from "@/lib/hvdataN"
 import {
     humanizeFightingStyle,
     MAGE_STYLES,
@@ -7,26 +11,25 @@ import {
 } from "@/lib/stats/combatStats"
 import { humanizeBattleType } from "@/lib/stats/metaStats"
 import { formatNumber } from "@/lib/utils/miscUtils"
+import { CloudUploadIcon, Link, Trash2Icon } from "lucide-react"
 import {
     cn,
     isEqual,
     newContext,
     range,
     sum,
+    truncateString,
     useAsync,
-    useLocalJsonState,
+    useAsync2,
 } from "myutils"
-import { useEffect, useMemo, useState } from "react"
-import { IS_REMOTE } from "../../../constants"
+import { useCallback, useEffect, useMemo, useState } from "react"
+import { HVDATA_URL, IS_REMOTE } from "../../../constants"
 import { RunIcon, Skull2Icon } from "../../icons/misc"
 import { CheckIcon } from "../../icons/tailwind"
 import { ListTableN } from "../../listTable"
-import { UrlParamN } from "../router"
 import { Button } from "../../shadcn/button"
-import { CloudUploadIcon, Trash2Icon } from "lucide-react"
-import { USERSCRIPT_CONFIG, UserscriptConfig } from "@/lib/db/userscriptConfig"
-import { DbN } from "@/lib/db/dbN"
-import { LogDb } from "@/lib/db/db"
+import { UrlParamN } from "../router"
+import { TOASTER } from "../../toaster"
 
 export namespace LogListN {
     export const COLS = {
@@ -101,7 +104,7 @@ export namespace LogListN {
                     return () => clearInterval(timerId)
                 })
 
-                return xs.map(() => now)
+                return { extras: xs.map(() => now), deps: [now] }
             },
             cell: (x, now) => ({
                 ...formatStartDate(x.meta.startedAt, now),
@@ -133,17 +136,31 @@ export namespace LogListN {
                                 <Trash2Icon />
                             </Button>
                         )}
-                        {extras?.showUpload && (
-                            <Button variant="ghost" size="sm">
-                                <CloudUploadIcon />
-                            </Button>
-                        )}
+                        {extras?.showUpload &&
+                            (extras.upload ? (
+                                <Button variant="ghost" size="sm">
+                                    <a
+                                        href={`${HVDATA_URL}/logs/${extras.upload.id}`}
+                                        target="_blank"
+                                    >
+                                        <Link />
+                                    </a>
+                                </Button>
+                            ) : (
+                                <Button
+                                    onClick={() => extras.onUpload(x)}
+                                    variant="ghost"
+                                    size="sm"
+                                >
+                                    <CloudUploadIcon />
+                                </Button>
+                            ))}
                     </div>
                 ),
             }),
         } as const satisfies ListTableN.Column<
             LogSourceN.SearchResult,
-            ReturnType<typeof useActionsPreproc>[number]
+            ReturnType<typeof useActionsPreproc>["extras"][number]
         >,
         style: {
             id: "style",
@@ -672,55 +689,77 @@ function formatCompletionType(x: LogSourceN.SearchResult) {
 function useActionsPreproc(xs: Array<LogSourceN.SearchResult>) {
     const config = USERSCRIPT_CONFIG.useContext().config
     const db = useMemo(() => new LogDb(), [])
+    const { toast } = TOASTER.useContext()
 
     const showDelete =
         config.showDelete === "yes" || config.showDelete === "warn"
+
     const showUpload =
         config.hvdataUploadMode !== "default" &&
         config.hvdataUploadMode !== "disabled"
 
-    const onDelete = async (x: LogSourceN.SearchResult) => {
-        if (config.showDelete === "warn") {
-            if (
-                !confirm(
-                    `Delete ${x.search.meta.battleType?.id ?? "???"} log from ${x.meta.startedAt}?`,
+    const onDelete = useCallback(
+        async (x: LogSourceN.SearchResult) => {
+            if (config.showDelete === "warn") {
+                if (
+                    !confirm(
+                        `Delete ${x.search.meta.battleType?.id ?? "???"} log from ${x.meta.startedAt}?`,
+                    )
+                ) {
+                    return
+                }
+            }
+            await deleteLogs(db, [x.id])
+        },
+        [config],
+    )
+
+    const [uploadCount, setUploadCount] = useState(0)
+    const onUpload = useCallback(
+        async (x: LogSourceN.SearchResult) => {
+            try {
+                const logText = await LOG_DB_CACHE().rawCache.fetch(x.id)
+                const resp = await HvDataN.uploadLog({
+                    id: x.id,
+                    logText,
+                    config,
+                })
+
+                await db.put("logsHvdata", {
+                    id: resp.id,
+                    user: config.hvdataUser!,
+                })
+
+                setUploadCount(uploadCount + 1)
+            } catch (e) {
+                toast(
+                    `Upload failed: ${truncateString(String(e), 30, "...")}`,
+                    { error: true },
                 )
-            ) {
-                return
             }
-        }
+        },
+        [config, uploadCount],
+    )
 
-        const stores = [
-            "logsMeta",
-            "logsRaw",
-            "summariesForMeta",
-            "summariesForSearch",
-        ] as const
-        const txn = await db.transaction([...stores], "readwrite")
-        for (const sid of stores) {
-            const s = txn.objectStore(sid)
-            if (await s.getKey(x.id)) {
-                await s.delete(x.id)
-            }
-        }
-        txn.commit()
+    const req = useMemo(() => [...xs], [xs, uploadCount])
+    const uploadFetch = useAsync2(async (xs) => {
+        return await Promise.all(
+            xs.map((x) => LOG_DB_CACHE().uploadCache.fetch(x.id)),
+        )
+    }, req)
 
-        DbN.broadcastIdbEvent({
-            type: "hvlog_delete",
-            ids: [x.id],
-        })
-
-        const equipDeletions =
-            (await db.get("kv", "equipDeletions")) ?? new Set()
-        equipDeletions.add(x.id)
-        await db.put("kv", equipDeletions, "equipDeletions")
-    }
-
-    const extras = {
+    const ex = {
         showDelete,
         onDelete,
         showUpload,
+        onUpload,
     }
 
-    return xs.map((x) => extras)
+    return {
+        extras: xs.map((x, idx) => ({
+            ...ex,
+            upload: uploadFetch.data?.[idx] ?? null,
+        })),
+        deps: [config, uploadFetch],
+    }
 }

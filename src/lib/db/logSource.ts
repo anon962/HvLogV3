@@ -12,7 +12,7 @@ import {
     zip,
 } from "myutils"
 import { useEffect, useRef } from "react"
-import { IS_REMOTE, LOG_PROCESSING_LOCK } from "../constants"
+import { HVDATA_URL, IS_REMOTE, LOG_PROCESSING_LOCK } from "../constants"
 import { IndexMap } from "../stats/indexMap"
 import { MetaSummary } from "../stats/metaStats"
 import { LOG_DB_CACHE, LogDb, LogDbCache, LogDbConn } from "./db"
@@ -21,8 +21,6 @@ import { USERSCRIPT_CONFIG, UserscriptConfig } from "./userscriptConfig"
 
 // #region remote
 class LogSourceRemote implements N.Protocol {
-    private HVDATA_URL = ""
-
     private prices: Promise<Record<string, number>> | null = null
     private globalMonsterSummary: Promise<any> | null = null
     private monlab: Promise<Record<number, N.MonlabMonster>> | null = null
@@ -59,7 +57,7 @@ class LogSourceRemote implements N.Protocol {
     }
     async fetchPrices() {
         if (!this.prices) {
-            const url = this.HVDATA_URL + `/api/fapspreader.json`
+            const url = HVDATA_URL + `/api/fapspreader.json`
             this.prices = fetch(url).then(async (resp) => resp.json())
         }
 
@@ -67,7 +65,7 @@ class LogSourceRemote implements N.Protocol {
     }
     async fetchGlobalMonsterSummary() {
         if (this.globalMonsterSummary === null) {
-            const url = this.HVDATA_URL + `/api/battle_logs/monsters.json`
+            const url = HVDATA_URL + `/api/battle_logs/monsters.json`
             async function doFetch() {
                 while (true) {
                     const resp = await fetch(url)
@@ -87,7 +85,7 @@ class LogSourceRemote implements N.Protocol {
     }
     async fetchMonlab() {
         if (!this.monlab) {
-            const url = this.HVDATA_URL + `/api/hv-monsterdb.json`
+            const url = HVDATA_URL + `/api/hv-monsterdb.json`
             this.monlab = fetch(url).then(async (resp) => {
                 const data: Array<N.MonlabMonster> = await resp.json()
                 const byMid = data.reduce(
@@ -133,7 +131,7 @@ class LogSourceRemote implements N.Protocol {
         toRaw: (x) => x,
         fromRaw: (x) => x,
         fetch: async (id: DbN.LogId) => {
-            const url = this.HVDATA_URL + `/api/battle_logs/${id}` + `?events=1`
+            const url = HVDATA_URL + `/api/battle_logs/${id}` + `?events=1`
             const resp = await fetch(url).then(async (resp) => resp.json())
             return {
                 meta: {
@@ -156,8 +154,7 @@ class LogSourceRemote implements N.Protocol {
         fromRaw: (x) => x,
         toRaw: (x) => x,
         fetch: async (id: DbN.LogId) => {
-            const url =
-                this.HVDATA_URL + `/api/battle_logs/${id}` + `?details=1`
+            const url = HVDATA_URL + `/api/battle_logs/${id}` + `?details=1`
             const resp = await fetch(url).then(async (resp) => resp.json())
             return resp.parsed.details
         },
@@ -167,7 +164,7 @@ class LogSourceRemote implements N.Protocol {
         fromRaw: (x) => x,
         toRaw: (x) => x,
         fetch: async (id: DbN.LogId) => {
-            const url = this.HVDATA_URL + `/api/battle_logs/${id}` + `?raw=1`
+            const url = HVDATA_URL + `/api/battle_logs/${id}` + `?raw=1`
             const resp = await fetch(url).then(async (resp) => resp.json())
             return resp.log
         },
@@ -183,7 +180,7 @@ class LogSourceRemote implements N.Protocol {
         toRaw: (req) => JSON.stringify(req),
         fromRaw: (raw) => JSON.parse(raw),
         fetch: async (req) => {
-            const resp = await fetch(this.HVDATA_URL + "/api/search_logs", {
+            const resp = await fetch(HVDATA_URL + "/api/search_logs", {
                 method: "POST",
                 body: await compressGzip(
                     JSON.stringify({

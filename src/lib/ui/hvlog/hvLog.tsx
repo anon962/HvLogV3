@@ -15,6 +15,7 @@ import { LogList } from "./logList/logList"
 import { MonsterPage } from "./monsterPage"
 import { RouteDef, ROUTER, Router } from "./router"
 import { LogDetailsPage } from "./logDetailsPage"
+import { Toaster } from "../toaster"
 
 // @fixme: profit history (bar graph, day month)
 // @fixme: avg drops per battle type (including equips)
@@ -125,7 +126,9 @@ export const HvLog = (props: { prefix?: string[] }) => {
             <Router
                 routes={routes}
                 defaultSidebar={({ children }) => (
-                    <Sidebar items={sidebarItems}>{children}</Sidebar>
+                    <Toaster>
+                        <Sidebar items={sidebarItems}>{children}</Sidebar>
+                    </Toaster>
                 )}
             />
 

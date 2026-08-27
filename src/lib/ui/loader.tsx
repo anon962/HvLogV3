@@ -23,8 +23,8 @@ export function Loader(props: { show: boolean; delay?: number } & CommonProps) {
     return (
         <LoaderCircle
             className={cn(
-                show ? "" : "invisible pointer-none:",
-                "animate-spin text-blue-500 size-6",
+                show ? "animate-spin" : "invisible pointer-none:",
+                "text-blue-500 size-6",
                 props.className,
             )}
         />

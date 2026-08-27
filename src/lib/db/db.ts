@@ -68,6 +68,7 @@ export class LogDb<Ready extends boolean = false> {
             } else if (v === 5) {
                 conn.createObjectStore("logsMeta", { keyPath: "id" })
                 conn.createObjectStore("logsRaw", { keyPath: "id" })
+                conn.createObjectStore("logsHvdata", { keyPath: "id" })
                 conn.createObjectStore("entriesCache", { keyPath: "id" })
                 conn.createObjectStore("summariesForDetails", { keyPath: "id" })
                 conn.createObjectStore("summariesForMeta", { keyPath: "id" })
@@ -178,24 +179,7 @@ export class LogDb<Ready extends boolean = false> {
     }
 }
 
-export async function deleteLogs(
-    txn: idb.IDBPTransaction<
-        IdbSchemaRaw,
-        ("logsRaw" | "logsMeta" | "summariesForMeta" | "summariesForSearch")[],
-        "readwrite"
-    >,
-    ids: Iterable<DbN.LogId>,
-) {
-    for (const id of ids) {
-        await txn.objectStore("logsMeta").delete(id)
-        await txn.objectStore("logsRaw").delete(id)
-        await txn.objectStore("summariesForMeta").delete(id)
-        await txn.objectStore("summariesForSearch").delete(id)
-    }
-}
-
 // #region cache
-// Wraps LogDb to implement caching and common operations (generation, deletion, etc)
 export class LogDbCache {
     pool = this.initWorkerPool()
     // logIds = new Set<DbN.LogId>()
@@ -359,13 +343,28 @@ export class LogDbCache {
             return { meta, search }
         },
     })
+    uploadCache = this.newLocalCache({
+        fetch: async (db, conn, id) => {
+            const r = await db.get("logsHvdata", id)
+            return r ?? null
+        },
+        ttl: (r) => (r === null ? 0 : null),
+    })
 
-    private newLocalCache<T>(opts: {
-        fetch: (db: LogDb<true>, conn: LogDbConn, id: DbN.LogId) => Promise<T>
-        size?: number
-        ttl?: number | null
-        cbPost?: (req: DbN.LogId, resp: T, hit: boolean) => Promise<void>
-    }) {
+    private newLocalCache<T>(
+        opts: {
+            fetch: (
+                db: LogDb<true>,
+                conn: LogDbConn,
+                id: DbN.LogId,
+            ) => Promise<T>
+        } & Partial<
+            Pick<
+                LogSourceN.AsyncCache<DbN.LogId, T>["opts"],
+                "size" | "ttl" | "cbPost"
+            >
+        >,
+    ) {
         return new LogSourceN.AsyncCache<DbN.LogId, T>({
             ttl: opts.ttl ?? null,
             size: opts.size,
@@ -437,4 +436,35 @@ export const LOG_DB_CACHE = () => {
         mgr = new LogDbCache()
     }
     return mgr
+}
+
+export async function deleteLogs(db: LogDb, ids: Iterable<DbN.LogId>) {
+    const equipDeletions = (await db.get("kv", "equipDeletions")) ?? new Set()
+
+    const stores = [
+        "logsMeta",
+        "logsRaw",
+        "logsHvdata",
+        "summariesForMeta",
+        "summariesForSearch",
+    ] as const
+    const txn = await db.transaction([...stores], "readwrite")
+    for (const sid of stores) {
+        for (const id of ids) {
+            equipDeletions.add(id)
+
+            const s = txn.objectStore(sid)
+            if (await s.getKey(id)) {
+                await s.delete(id)
+            }
+        }
+    }
+    txn.commit()
+
+    DbN.broadcastIdbEvent({
+        type: "hvlog_delete",
+        ids: [...ids],
+    })
+
+    await db.put("kv", equipDeletions, "equipDeletions")
 }

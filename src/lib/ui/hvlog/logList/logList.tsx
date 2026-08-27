@@ -389,7 +389,7 @@ const CSS = css`
             height: 1px;
 
             button {
-                width: 2em;
+                width: 2.125em;
                 height: 100%;
                 border-radius: 2em;
 

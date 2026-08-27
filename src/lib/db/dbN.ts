@@ -3,6 +3,7 @@ import { MetaSummary } from "../stats/metaStats"
 import { SearchSummary } from "../stats/summary"
 import { BaseHvEvent } from "../utils/eventParser"
 import { UserscriptConfig } from "./userscriptConfig"
+import { HvDataN } from "../hvdataN"
 
 export type LogEntry<TEvent extends BaseHvEvent = BaseHvEvent> =
     | { type: "event"; event: TEvent }
@@ -131,6 +132,13 @@ export namespace DbN {
                   raw_size: number
                   raw_c: Uint8Array<ArrayBuffer>
               }
+        >
+        logsHvdata: Record<
+            LogId,
+            {
+                id: LogId
+                user: HvDataN.User
+            }
         >
         entriesCache: Record<
             LogId,

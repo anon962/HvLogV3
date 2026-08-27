@@ -7,12 +7,13 @@ import {
     TableRow,
 } from "@/lib/ui/shadcn/table"
 import { CommonProps } from "@/lib/utils/miscUtils"
-import { clamp, cn, range, ReactMemo, sort } from "myutils"
+import { clamp, cn, isEqual, range, ReactMemo, sort } from "myutils"
 import React, {
     ReactNode,
     RefObject,
     useCallback,
     useDeferredValue,
+    useEffect,
     useMemo,
     useRef,
     useState,
@@ -65,7 +66,10 @@ export namespace ListTableN {
             title?: string
         }
         // generates the y arg for each cell() in this col
-        preprocess?: (xs: Array<TValue>) => Array<TImpureValue>
+        preprocess?: (xs: Array<TValue>) => {
+            extras: Array<TImpureValue>
+            deps: any[]
+        }
         sort?: (xs: Array<TValue>) => Array<TValue>
     }
 
@@ -670,13 +674,14 @@ const Preprocessor = ReactMemo(
         data: Array<T>
         setExtras: (extras: Array<T2>) => void
     }) => {
-        // useEffect(() => {
-        if (!props.col.preprocess) {
-            props.setExtras(props.data.map((d) => null as T2))
-        } else {
-            props.setExtras(props.col.preprocess(props.data))
+        const { extras, deps } = props.col.preprocess?.(props.data) ?? {
+            extras: props.data.map(() => null) as Array<T2>,
+            deps: [],
         }
-        // }, [props.data])
+
+        useEffect(() => {
+            props.setExtras(extras)
+        }, deps)
 
         return <></>
     },
