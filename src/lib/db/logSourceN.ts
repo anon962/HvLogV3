@@ -41,6 +41,7 @@ export namespace LogSourceN {
         primaryStyle?: string[] | null
         secondaryStyle?: string[] | null
         isImperil?: boolean | null
+        world?: DbN.HvWorld | null
         startDate?: string | null
         endDate?: string | null
         errors?: Record<

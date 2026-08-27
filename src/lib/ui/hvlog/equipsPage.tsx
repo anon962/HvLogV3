@@ -1,4 +1,4 @@
-import { DEFAULT_PREFETCH_DELAY, EQUIP_TIERS } from "@/lib/constants"
+import { DEFAULT_PREFETCH_DELAY, EQUIP_TIERS, IS_LOCAL } from "@/lib/constants"
 import { LogDb } from "@/lib/db/db"
 import { DbN } from "@/lib/db/dbN"
 import { LOG_SOURCE } from "@/lib/db/logSource"
@@ -217,29 +217,54 @@ function Filter() {
                 />
             </div>
 
-            <div className="flex gap-4">
-                <div>
-                    <h2 className="pb-1">From</h2>
-                    <Input
-                        className="text-[length:inherit]! p-[0.5em] h-min"
-                        type="date"
-                        value={d0?.toISOString().split("T")[0] ?? ""}
-                        onInput={(ev) => {
-                            setD0(ev.target.valueAsDate)
-                        }}
-                    />
+            <div className="flex gap-8">
+                <div className="flex gap-4">
+                    <div>
+                        <h2 className="pb-1">From</h2>
+                        <Input
+                            className="text-[length:inherit]! p-[0.5em] h-min"
+                            type="date"
+                            value={d0?.toISOString().split("T")[0] ?? ""}
+                            onInput={(ev) => {
+                                setD0(ev.target.valueAsDate)
+                            }}
+                        />
+                    </div>
+                    <div>
+                        <h2 className="pb-1">To</h2>
+                        <Input
+                            className="text-[length:inherit]! p-[0.5em] h-min"
+                            type="date"
+                            value={d1?.toISOString().split("T")[0] ?? ""}
+                            onInput={(ev) => {
+                                setD1(ev.target.valueAsDate)
+                            }}
+                        />
+                    </div>
                 </div>
-                <div>
-                    <h2 className="pb-1">To</h2>
-                    <Input
-                        className="text-[length:inherit]! p-[0.5em] h-min"
-                        type="date"
-                        value={d1?.toISOString().split("T")[0] ?? ""}
-                        onInput={(ev) => {
-                            setD1(ev.target.valueAsDate)
+
+                {IS_LOCAL && (
+                    <CheckboxGroup
+                        header="World"
+                        direction="h"
+                        hideAll={true}
+                        options={["Persistent", "Isekai"].map((label) => ({
+                            label,
+                        }))}
+                        checked={[
+                            ctx.params["wl"].v === "persistent" ||
+                                ctx.params["wl"].v === "both",
+                            ctx.params["wl"].v === "isekai" ||
+                                ctx.params["wl"].v === "both",
+                        ]}
+                        onCheckedChange={({ checked }) => {
+                            ctx.setParams({
+                                wl: checked.map((x) => +x as 0 | 1),
+                            })
                         }}
+                        className="max-w-[20em]"
                     />
-                </div>
+                )}
             </div>
         </form>
     )
@@ -408,6 +433,11 @@ const EQUIP_PAGE = newContext(() => {
                     cl.every((word) => word.exec(data[idx].name)),
                 ),
             )
+        }
+        if (params.wl.v === "persistent") {
+            idxs = idxs.filter((idx) => data[idx].world === "persistent")
+        } else if (params.wl.v === "isekai") {
+            idxs = idxs.filter((idx) => data[idx].world === "isekai")
         }
 
         const sortId = params.s.v?.id ?? "date"
@@ -620,6 +650,22 @@ export namespace EquipPageN {
             deser: (idxs) =>
                 idxs.map((idx) => TIER_OPTIONS[idx]).filter((x) => !!x),
             init: () => ["Peerless", "Legendary"],
+        },
+        wl: {
+            type: "bitmask",
+            deser: (xs) => {
+                const hasP = xs.includes(0)
+                const hasI = xs.includes(1)
+                if (hasP && hasI) {
+                    return "both" as const
+                } else if (!hasP && !hasI) {
+                    return "neither" as const
+                } else if (hasP) {
+                    return "persistent" as const
+                } else {
+                    return "isekai" as const
+                }
+            },
         },
     } as const satisfies UrlParamN.Schema
 }

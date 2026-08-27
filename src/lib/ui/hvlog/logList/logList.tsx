@@ -1,15 +1,15 @@
+import { LogSourceN } from "@/lib/db/logSourceN"
+import { USERSCRIPT_CONFIG } from "@/lib/db/userscriptConfig"
 import { FIGHTING_STYLE_NAMES } from "@/lib/stats/combatStats"
 import { SlidersHorizontal } from "lucide-react"
-import { DEFAULT_PREFETCH_DELAY, IS_REMOTE } from "../../../constants"
+import { Css, css, isEqual, objectEntries } from "myutils"
+import { useMemo } from "react"
+import { DEFAULT_PREFETCH_DELAY, IS_LOCAL, IS_REMOTE } from "../../../constants"
 import { CheckboxGroup } from "../../checkboxGroup"
 import { ListTable } from "../../listTable"
+import { MonthYearPicker } from "../../monthYearPicker"
 import { Input } from "../../shadcn/input"
 import { LogListN } from "./logListN"
-import { MonthYearPicker } from "../../monthYearPicker"
-import { USERSCRIPT_CONFIG } from "@/lib/db/userscriptConfig"
-import { useMemo } from "react"
-import { LogSourceN } from "@/lib/db/logSourceN"
-import { Css, css } from "myutils"
 
 export function LogList() {
     return (
@@ -57,6 +57,23 @@ export function Table() {
     )
 
     const sortCols = useMemo(() => new Set(LogListN.SORT_IDS), [])
+
+    const paginationParams = useMemo(
+        () => new Set(["p", "n", "s", "desc", "id_user", "key_user"]),
+        [],
+    )
+    const hasFilters = useMemo(() => {
+        for (const [k, p] of objectEntries(params)) {
+            if (paginationParams.has(k)) {
+                continue
+            }
+
+            if (!isEqual(p.v, p.init)) {
+                return true
+            }
+        }
+        return false
+    }, [params])
 
     return (
         <ListTable
@@ -123,19 +140,7 @@ export function Table() {
             filter={{
                 trigger: <SlidersHorizontal className="size-full" />,
                 content: <Filter />,
-                active:
-                    params.bt.v.length > 0 ||
-                    params.ct.v.length > 0 ||
-                    params.sp.v.length > 0 ||
-                    params.ss.v.length > 0 ||
-                    params.e.v.length > 0 ||
-                    params.i.v === "yes" ||
-                    params.i.v === "no" ||
-                    !!params.ds.v ||
-                    !!params.de.v ||
-                    !!params.rmn.v ||
-                    !!params.rmx.v ||
-                    false,
+                active: hasFilters,
             }}
         />
     )
@@ -206,22 +211,46 @@ function Filter() {
             </div>
             <div className="border-r mx-4"></div>
             <div className="flex flex-col gap-4">
-                <CheckboxGroup
-                    header="Imperil?"
-                    direction="h"
-                    hideAll={true}
-                    options={["Yes", "No"].map((label) => ({ label }))}
-                    checked={[
-                        params["i"].v === "yes" || params["i"].v === "both",
-                        params["i"].v === "no" || params["i"].v === "both",
-                    ]}
-                    onCheckedChange={({ checked }) => {
-                        setParams({
-                            i: checked.map((x) => +x as 0 | 1),
-                        })
-                    }}
-                    className="max-w-[20em]"
-                />
+                <div className="flex gap-4">
+                    <CheckboxGroup
+                        header="Imperil?"
+                        direction="h"
+                        hideAll={true}
+                        options={["Yes", "No"].map((label) => ({ label }))}
+                        checked={[
+                            params["i"].v === "yes" || params["i"].v === "both",
+                            params["i"].v === "no" || params["i"].v === "both",
+                        ]}
+                        onCheckedChange={({ checked }) => {
+                            setParams({
+                                i: checked.map((x) => +x as 0 | 1),
+                            })
+                        }}
+                        className="max-w-[20em]"
+                    />
+                    {IS_LOCAL && (
+                        <CheckboxGroup
+                            header="World"
+                            direction="h"
+                            hideAll={true}
+                            options={["Persistent", "Isekai"].map((label) => ({
+                                label,
+                            }))}
+                            checked={[
+                                params["wl"].v === "persistent" ||
+                                    params["wl"].v === "both",
+                                params["wl"].v === "isekai" ||
+                                    params["wl"].v === "both",
+                            ]}
+                            onCheckedChange={({ checked }) => {
+                                setParams({
+                                    wl: checked.map((x) => +x as 0 | 1),
+                                })
+                            }}
+                            className="max-w-[20em]"
+                        />
+                    )}
+                </div>
 
                 <CheckboxGroup
                     header="Primary Style"

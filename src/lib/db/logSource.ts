@@ -319,6 +319,7 @@ class LogSourceLocal implements N.Protocol {
         secondaryStyle: (d, s, m, ms) =>
             d.some((style) => style === s.style.secondary),
         isImperil: (d, s, m, ms) => s.style.isImperil === d,
+        world: (d, s, m, ms) => m.world === d,
         startDate: (d, s, m, ms) => d <= m.startedAt,
         endDate: (d, s, m, ms) => d >= m.startedAt,
         errors: (d, s, m, ms) =>

@@ -21,8 +21,6 @@ import { DbN } from "@/lib/db/dbN"
 // @fixme: profit history (bar graph, day month)
 // @fixme: avg drops per battle type (including equips)
 
-// @fixme: isekai
-
 // @todo: per round / avgs (config?)
 // @todo: effect blame
 // @todo: chart utils

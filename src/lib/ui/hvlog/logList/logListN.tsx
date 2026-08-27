@@ -307,6 +307,22 @@ export namespace LogListN {
                 }
             },
         },
+        wl: {
+            type: "bitmask",
+            deser: (xs) => {
+                const hasP = xs.includes(0)
+                const hasI = xs.includes(1)
+                if (hasP && hasI) {
+                    return "both" as const
+                } else if (!hasP && !hasI) {
+                    return "neither" as const
+                } else if (hasP) {
+                    return "persistent" as const
+                } else {
+                    return "isekai" as const
+                }
+            },
+        },
         ds: {
             type: "date",
         },
@@ -358,6 +374,12 @@ export namespace LogListN {
                             : params["i"].v === "no"
                               ? false
                               : null,
+                    world:
+                        params["wl"].v === "persistent"
+                            ? "persistent"
+                            : params["wl"].v === "isekai"
+                              ? "isekai"
+                              : null,
                     startDate: params["ds"].v?.toISOString() ?? null,
                     endDate: params["de"].v?.toISOString() ?? null,
                     completionType: withMaxMin(
@@ -379,6 +401,8 @@ export namespace LogListN {
             [
                 pageIdx,
                 pageSize,
+                pageIdx,
+                pageSize,
                 params["id_user"].v,
                 params["key_user"].v,
                 params["s"].v,
@@ -387,6 +411,7 @@ export namespace LogListN {
                 params["sp"].v.join("|"),
                 params["ss"].v.join("|"),
                 params["i"].v,
+                params["wl"].v,
                 params["ds"].v?.toISOString(),
                 params["de"].v?.toISOString(),
                 params["ct"].v.join("|"),
