@@ -38,13 +38,14 @@ var process = {
                 `
 // ==UserScript==
 // @name         HvLog
-// @version      3.0.1
+// @version      3.0.2
 // @downloadURL  https://github.com/anon962/HvLogV3/releases/download/latest/hvlog.user.js
 // @updateURL    https://github.com/anon962/HvLogV3/releases/download/latest/hvlog.user.js
 // @match        https://hentaiverse.org/*
 // @match        https://alt.hentaiverse.org/*
 // @grant        GM_registerMenuCommand
 // @grant        unsafeWindow
+// @run-at       document-idle
 // ==/UserScript==    
                 `,
             ),
@@ -62,8 +63,8 @@ var process = {
             },
         },
         build: {
-            minify: false,
-            cssMinify: false,
+            minify: config.mode === "production",
+            cssMinify: config.mode === "production",
             cssCodeSplit: false,
             emptyOutDir: false,
             lib: {
