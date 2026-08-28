@@ -7,7 +7,6 @@ export function registerViewLogs(init: (w: Window) => Promise<void>) {
             let w: Window
             if (
                 isSomeEqual(window.HV_LOG.userscriptConfig.samePageLoad, [
-                    "default",
                     "always",
                 ])
             ) {
