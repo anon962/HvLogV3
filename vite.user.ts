@@ -38,7 +38,7 @@ var process = {
                 `
 // ==UserScript==
 // @name         HvLog
-// @version      3.0.2
+// @version      3.0.3
 // @downloadURL  https://github.com/anon962/HvLogV3/releases/download/latest/hvlog.user.js
 // @updateURL    https://github.com/anon962/HvLogV3/releases/download/latest/hvlog.user.js
 // @match        https://hentaiverse.org/*
@@ -63,8 +63,8 @@ var process = {
             },
         },
         build: {
-            minify: config.mode === "production",
-            cssMinify: config.mode === "production",
+            minify: false,
+            cssMinify: false,
             cssCodeSplit: false,
             emptyOutDir: false,
             lib: {
